@@ -1716,7 +1716,9 @@ function renderCatStages(gameId, stages) {
         ${md.map((d, i) => {
           const gList = (d.gimmickTypes || []).join(', ');
           const gPart = gList ? ` · 기믹: ${gList}` : '';
-          return `${i+1}회: base <b>${d.base}</b> → 맵스코어 <b>${d.score}</b> (카드 ${d.field}장${gPart})`;
+          const gs = d.score - d.base;
+          const gsStr = gs !== 0 ? ` + 기믹 ${gs >= 0 ? '+' : ''}${gs}` : '';
+          return `${i+1}회: base ${d.base}${gsStr} = <b>${d.score}</b> (카드 ${d.field}장${gPart})`;
         }).join('<br>')}
       </td></tr>`;
     }).join('');
