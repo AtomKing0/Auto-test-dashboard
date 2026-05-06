@@ -1659,10 +1659,23 @@ function renderCatStages(gameId, stages) {
         else if (e.startsWith('gimmick:')) detailGimmicks.add(e.slice(8).split(' (')[0].trim());
       }
       if (d.plus_card_count > 0) detailGimmicks.add('플러스카드');
+      const cr = d.clear_rewards || {};
       byStage[key].mapDetails.push({
         score: d.map_score, base: d.map_score_base || 0,
         gimmick: d.gimmick_score || 0, field: d.field_total || 0,
         gimmickTypes: [...detailGimmicks],
+        rewards: {
+          coin: cr.coin || '0',
+          hammer: cr.hammer || '0',
+          star: cr.star || '0',
+          combo: cr.combo_count || 0,
+          streak: cr.streak_rewards || [],
+          eventPoints: cr.event_points || [],
+          eventProgress: cr.event_progress || [],
+        },
+        levelReward: d.level_reward || 0,
+        entryFee: d.entry_fee || 0,
+        goldPnl: d.gold_pnl || 0,
       });
     }
     if (d.turns != null) byStage[key].turns.push(d.turns);
@@ -1718,7 +1731,19 @@ function renderCatStages(gameId, stages) {
           const gPart = gList ? ` · 기믹: ${gList}` : '';
           const gs = d.score - d.base;
           const gsStr = gs !== 0 ? ` + 기믹 ${gs >= 0 ? '+' : ''}${gs}` : '';
-          return `${i+1}회: base ${d.base}${gsStr} = <b>${d.score}</b> (카드 ${d.field}장${gPart})`;
+          const r = d.rewards || {};
+          const rewardParts = [];
+          if (r.coin && r.coin !== '0') rewardParts.push(`골드 ${r.coin}`);
+          if (r.hammer && r.hammer !== '0') rewardParts.push(`해머 ${r.hammer}`);
+          if (r.star && r.star !== '0') rewardParts.push(`별 ${r.star}`);
+          if (r.combo) rewardParts.push(`콤보 ${r.combo}`);
+          if (r.streak && r.streak.length) rewardParts.push(`스트릭 ${r.streak.length}건`);
+          if (r.eventPoints && r.eventPoints.length) rewardParts.push(`이벤트 ${r.eventPoints.join(',')}`);
+          const rewardStr = rewardParts.length ? `<br><span style="color:#10b981">보상:</span> ${rewardParts.join(' · ')}` : '';
+          const econStr = d.entryFee ? `<br><span style="color:#94a3b8">입장료 ${d.entryFee.toLocaleString()} · 손익 <span style="color:${d.goldPnl >= 0 ? '#10b981' : '#ef4444'}">${d.goldPnl >= 0 ? '+' : ''}${d.goldPnl.toLocaleString()}</span></span>` : '';
+          const evtProg = (r.eventProgress || []).map(e => `${e.title}: ${e.gauge} (${e.rank || ''})`).join(', ');
+          const evtStr = evtProg ? `<br><span style="color:#8b5cf6">이벤트:</span> ${evtProg}` : '';
+          return `${i+1}회: base ${d.base}${gsStr} = <b>${d.score}</b> (카드 ${d.field}장${gPart})${rewardStr}${econStr}${evtStr}`;
         }).join('<br>')}
       </td></tr>`;
     }).join('');
