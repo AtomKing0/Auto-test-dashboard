@@ -1676,6 +1676,7 @@ function renderCatStages(gameId, stages) {
         levelReward: d.level_reward || 0,
         entryFee: d.entry_fee || 0,
         goldPnl: d.gold_pnl || 0,
+        betting: d.betting_multiplier || 1,
       });
     }
     if (d.turns != null) byStage[key].turns.push(d.turns);
@@ -1731,8 +1732,9 @@ function renderCatStages(gameId, stages) {
           const gPart = gList ? ` · 기믹: ${gList}` : '';
           const gs = d.score - d.base;
           const gsStr = gs !== 0 ? ` + 기믹 ${gs >= 0 ? '+' : ''}${gs}` : '';
+          const bet = d.betting || 1;
+          const betStr = bet > 1 ? ` <span style="color:#f59e0b;font-weight:600">[x${bet}]</span>` : '';
           const r = d.rewards || {};
-          const rewardParts = [];
           if (r.coin && r.coin !== '0') rewardParts.push(`골드 ${r.coin}`);
           if (r.hammer && r.hammer !== '0') rewardParts.push(`해머 ${r.hammer}`);
           if (r.star && r.star !== '0') rewardParts.push(`별 ${r.star}`);
@@ -1743,7 +1745,7 @@ function renderCatStages(gameId, stages) {
           const econStr = d.entryFee ? `<br><span style="color:#94a3b8">입장료 ${d.entryFee.toLocaleString()} · 손익 <span style="color:${d.goldPnl >= 0 ? '#10b981' : '#ef4444'}">${d.goldPnl >= 0 ? '+' : ''}${d.goldPnl.toLocaleString()}</span></span>` : '';
           const evtProg = (r.eventProgress || []).map(e => `${e.title}: ${e.gauge} (${e.rank || ''})`).join(', ');
           const evtStr = evtProg ? `<br><span style="color:#8b5cf6">이벤트:</span> ${evtProg}` : '';
-          return `${i+1}회: base ${d.base}${gsStr} = <b>${d.score}</b> (카드 ${d.field}장${gPart})${rewardStr}${econStr}${evtStr}`;
+          return `${i+1}회${betStr}: base ${d.base}${gsStr} = <b>${d.score}</b> (카드 ${d.field}장${gPart})${rewardStr}${econStr}${evtStr}`;
         }).join('<br>')}
       </td></tr>`;
     }).join('');
