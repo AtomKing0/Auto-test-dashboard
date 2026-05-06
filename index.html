@@ -1664,6 +1664,7 @@ function renderCatStages(gameId, stages) {
         score: d.map_score, base: d.map_score_base || 0,
         gimmick: d.gimmick_score || 0, field: d.field_total || 0,
         gimmickTypes: [...detailGimmicks],
+        persona: s.persona,
         rewards: {
           coin: cr.coin || '0',
           hammer: cr.hammer || '0',
@@ -1750,7 +1751,10 @@ function renderCatStages(gameId, stages) {
           const evtProg = (r.eventProgress || []).map(e => `${e.title}: ${e.gauge} (${e.rank || ''})`).join(', ');
           const evtStr = evtProg ? `<br><span style="color:#8b5cf6">이벤트:</span> ${evtProg}` : '';
           const scoreColor = d.score >= 901 ? '#ef4444' : d.score >= 701 ? '#f59e0b' : '#10b981';
-          return `${i+1}회${betStr}: base ${d.base}${gsStr} = <b style="color:${scoreColor}">${d.score}</b> (카드 ${d.field}장${gPart})${rewardStr}${econStr}${evtStr}`;
+          const pName = PERSONA_KO[d.persona] || d.persona || '';
+          const pColor = PERSONA_COLORS[d.persona] || '#999';
+          const pStr = pName ? `<span style="color:${pColor};font-weight:600">${pName}</span> ` : '';
+          return `${i+1}회${betStr} ${pStr}: base ${d.base}${gsStr} = <b style="color:${scoreColor}">${d.score}</b> (카드 ${d.field}장${gPart})${rewardStr}${econStr}${evtStr}`;
         }).join('<br>')}
       </td></tr>`;
     }).join('');
