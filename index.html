@@ -1733,7 +1733,8 @@ function renderCatStages(gameId, stages) {
           const gs = d.score - d.base;
           const gsStr = gs !== 0 ? ` + 기믹 ${gs >= 0 ? '+' : ''}${gs}` : '';
           const bet = d.betting || 1;
-          const betStr = bet > 1 ? ` <span style="color:#f59e0b;font-weight:600">[x${bet}]</span>` : '';
+          const betColor = bet >= 4 ? '#ef4444' : bet >= 2 ? '#f59e0b' : '#10b981';
+          const betStr = ` <span style="color:${betColor};font-weight:600">[x${bet}]</span>`;
           const r = d.rewards || {};
           const rewardParts = [];
           if (r.coin && r.coin !== '0') rewardParts.push(`골드 ${r.coin}`);
