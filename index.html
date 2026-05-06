@@ -1749,7 +1749,8 @@ function renderCatStages(gameId, stages) {
           const econStr = d.entryFee ? `<br><span style="color:#94a3b8">입장료 ${d.entryFee.toLocaleString()} · 손익 <span style="color:${d.goldPnl >= 0 ? '#10b981' : '#ef4444'}">${d.goldPnl >= 0 ? '+' : ''}${d.goldPnl.toLocaleString()}</span></span>` : '';
           const evtProg = (r.eventProgress || []).map(e => `${e.title}: ${e.gauge} (${e.rank || ''})`).join(', ');
           const evtStr = evtProg ? `<br><span style="color:#8b5cf6">이벤트:</span> ${evtProg}` : '';
-          return `${i+1}회${betStr}: base ${d.base}${gsStr} = <b>${d.score}</b> (카드 ${d.field}장${gPart})${rewardStr}${econStr}${evtStr}`;
+          const scoreColor = d.score >= 901 ? '#ef4444' : d.score >= 701 ? '#f59e0b' : '#10b981';
+          return `${i+1}회${betStr}: base ${d.base}${gsStr} = <b style="color:${scoreColor}">${d.score}</b> (카드 ${d.field}장${gPart})${rewardStr}${econStr}${evtStr}`;
         }).join('<br>')}
       </td></tr>`;
     }).join('');
