@@ -1645,7 +1645,7 @@ function renderCatStages(gameId, stages) {
   const byStage = {};
   for (const s of stages) {
     const key = s.stage_number || s.game_level || '?';
-    if (!byStage[key]) byStage[key] = { played: 0, times: [], level: s.game_level, mapScores: [], mapDetails: [], turns: [], goldPnl: 0, difficulty: s.difficulty || 0 };
+    if (!byStage[key]) byStage[key] = { played: 0, times: [], level: s.game_level, mapScores: [], mapDetails: [], turns: [], goldPnl: 0, difficulty: s.difficulty || 0, bets: [] };
     byStage[key].played++;
     if (s.time_sec) byStage[key].times.push(s.time_sec);
     const d = s.details || {};
@@ -1681,6 +1681,7 @@ function renderCatStages(gameId, stages) {
     }
     if (d.turns != null) byStage[key].turns.push(d.turns);
     byStage[key].goldPnl += d.gold_pnl || 0;
+    byStage[key].bets.push(d.betting_multiplier || 1);
     if (s.difficulty) byStage[key].difficulty = s.difficulty;
   }
   const rows = Object.entries(byStage)
@@ -1724,8 +1725,9 @@ function renderCatStages(gameId, stages) {
         <td style="color:${goldColor}">${avgGold.toLocaleString()}</td>
         <td style="color:${turnsColor};font-weight:600">${avgTurns}</td>
         <td style="color:${msColor};font-weight:600">${avgMS}</td>
-        <td style="color:${diffColor};font-weight:600">${diffName}</td></tr>
-      <tr id="${rowId}" style="display:none;background:rgba(56,189,248,.04)"><td></td><td colspan="7" style="padding:8px 12px;font-size:11px;color:var(--text-muted)">
+        <td style="color:${diffColor};font-weight:600">${diffName}</td>
+        <td>${v.bets.map(b => {const c = b>=4?'#ef4444':b>=2?'#f59e0b':'#10b981'; return `<span style="color:${c};font-weight:600">x${b}</span>`;}).join(', ')}</td></tr>
+      <tr id="${rowId}" style="display:none;background:rgba(56,189,248,.04)"><td></td><td colspan="8" style="padding:8px 12px;font-size:11px;color:var(--text-muted)">
         <b>맵스코어 상세</b> (${md.length}회 플레이)<br>
         ${md.map((d, i) => {
           const gList = (d.gimmickTypes || []).join(', ');
@@ -1785,6 +1787,12 @@ function renderCatStages(gameId, stages) {
         <option value="mid">40~50</option>
         <option value="high">&gt;50 (비효율)</option>
       </select>
+      <select id="stg-bet-${gameId}" onchange="filterStages('${gameId}')" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-secondary);font-size:12px">
+        <option value="">전체 배수</option>
+        <option value="1">x1</option>
+        <option value="2">x2</option>
+        <option value="4">x4</option>
+      </select>
       <button onclick="resetStageFilters('${gameId}')" style="padding:4px 10px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-muted);font-size:11px;cursor:pointer">필터 초기화</button>
       <button onclick="resetStageSort('${gameId}')" style="padding:4px 10px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-muted);font-size:11px;cursor:pointer">정렬 원복 ↺</button>
     </div>
@@ -1798,6 +1806,7 @@ function renderCatStages(gameId, stages) {
         <th class="sortable" onclick="sortStageTable('${gameId}',5,'num')">평균 턴수</th>
         <th class="sortable" onclick="sortStageTable('${gameId}',6,'num')">맵 스코어</th>
         <th class="sortable" onclick="sortStageTable('${gameId}',7,'str')">난이도</th>
+        <th class="sortable" onclick="sortStageTable('${gameId}',8,'num')">배수</th>
       </tr></thead>
       <tbody>${rows}</tbody></table></div>
   `;
@@ -2431,13 +2440,19 @@ function filterStages(gameId) {
     if (turnsVal === 'low' && turns >= 40) show = false;
     if (turnsVal === 'mid' && (turns < 40 || turns > 50)) show = false;
     if (turnsVal === 'high' && turns <= 50) show = false;
+    // 배수 필터
+    const betVal = document.getElementById(`stg-bet-${gameId}`)?.value || '';
+    if (betVal) {
+      const betText = cells[8]?.textContent || '';
+      if (!betText.includes(`x${betVal}`)) show = false;
+    }
 
     row.style.display = show ? '' : 'none';
   });
 }
 
 function resetStageFilters(gameId) {
-  ['diff', 'gold', 'ms', 'turns'].forEach(f => {
+  ['diff', 'gold', 'ms', 'turns', 'bet'].forEach(f => {
     const el = document.getElementById(`stg-${f}-${gameId}`);
     if (el) el.value = '';
   });
