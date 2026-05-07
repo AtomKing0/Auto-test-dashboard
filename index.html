@@ -742,7 +742,24 @@ function renderCatSummary(gameId, stages, runs) {
 
   /* 게임별 상단 메트릭 */
   let topMetrics;
-  if (gameId === 'CTZ') {
+  if (gameId === 'PBM') {
+    const avgScore = totalPlayed ? Math.round(totalScore / totalPlayed).toLocaleString() : '-';
+    const maxScore = Math.max(0, ...runs.map(r => (r.metrics || {}).max_score || 0));
+    let totalMoves = 0, moveCount = 0;
+    for (const r of runs) {
+      const am = (r.metrics || {}).avg_moves;
+      if (am) { totalMoves += am * (r.levels_played || 1); moveCount += r.levels_played || 1; }
+    }
+    const avgMoves = moveCount ? (totalMoves / moveCount).toFixed(1) : '-';
+    const avgTime = totalPlayed ? (totalTime / totalPlayed).toFixed(1) : '-';
+    topMetrics = `
+      <div class="metric-box"><div class="label">평균 점수</div><div class="value">${avgScore}</div></div>
+      <div class="metric-box"><div class="label">최고 점수</div><div class="value">${maxScore.toLocaleString()}</div></div>
+      <div class="metric-box"><div class="label">평균 수</div><div class="value">${avgMoves}</div></div>
+      <div class="metric-box"><div class="label">판당 평균 시간</div><div class="value">${avgTime}초</div></div>
+      <div class="metric-box"><div class="label">총 플레이</div><div class="value">${totalPlayed.toLocaleString()}판</div></div>
+      <div class="metric-box"><div class="label">총 런</div><div class="value">${runs.length}</div></div>`;
+  } else if (gameId === 'CTZ') {
     const avgScore = totalPlayed ? Math.round(totalScore / totalPlayed).toLocaleString() : '-';
     const avgTime = totalPlayed ? (totalTime / totalPlayed).toFixed(1) : '-';
     topMetrics = `
@@ -766,7 +783,13 @@ function renderCatSummary(gameId, stages, runs) {
   const personaCards = Object.entries(personas).sort(([a],[b]) => (PERSONA_ORDER.indexOf(a)===-1?99:PERSONA_ORDER.indexOf(a)) - (PERSONA_ORDER.indexOf(b)===-1?99:PERSONA_ORDER.indexOf(b))).map(([p, d]) => {
     const avgTime = d.played ? (d.time / d.played).toFixed(1) : 0;
     let statsHtml;
-    if (gameId === 'CTZ') {
+    if (gameId === 'PBM') {
+      const pScore = d.played ? Math.round(d.score / d.played).toLocaleString() : '-';
+      statsHtml = `
+        <div class="stat"><span class="stat-label">판 수</span><span class="stat-value">${d.played}판 (${d.runs}런)</span></div>
+        <div class="stat"><span class="stat-label">평균 점수</span><span class="stat-value">${pScore}</span></div>
+        <div class="stat"><span class="stat-label">평균 시간</span><span class="stat-value">${avgTime}초</span></div>`;
+    } else if (gameId === 'CTZ') {
       const pScore = d.played ? Math.round(d.score / d.played).toLocaleString() : '-';
       statsHtml = `
         <div class="stat"><span class="stat-label">판 수</span><span class="stat-value">${d.played}판 (${d.runs}런)</span></div>
