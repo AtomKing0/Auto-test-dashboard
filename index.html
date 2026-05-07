@@ -2168,6 +2168,7 @@ function renderCatLogApi(gameId, runs) {
   const byMethod = {};
   const topUrls = {};
   const byLevel = {};
+  const allErrors = [];
 
   for (const r of runs) {
     const m = r.metrics || {};
@@ -2185,6 +2186,9 @@ function renderCatLogApi(gameId, runs) {
     const conS = m.console_summary || {};
     for (const [lvl, cnt] of Object.entries(conS.by_level || {})) {
       byLevel[lvl] = (byLevel[lvl] || 0) + cnt;
+    }
+    for (const e of (conS.errors || [])) {
+      allErrors.push({ ...e, run_date: r.run_date, persona: r.persona });
     }
   }
 
@@ -2224,7 +2228,67 @@ function renderCatLogApi(gameId, runs) {
     <div class="tbl-wrap"><h4>상위 API URL (Top 10)</h4>
       <table><thead><tr><th>URL</th><th>건수</th></tr></thead>
       <tbody>${urlRows || '<tr><td colspan="2" style="color:var(--text-muted)">데이터 없음</td></tr>'}</tbody></table></div>
+    ${renderConsoleErrors(allErrors)}
   `;
+}
+
+function renderConsoleErrors(allErrors) {
+  if (!allErrors.length) return '';
+
+  // 반복 에러 패턴 집계 (메시지 앞 80자 기준 그룹핑)
+  const patternMap = {};
+  for (const e of allErrors) {
+    const key = (e.message || '').slice(0, 80);
+    if (!patternMap[key]) patternMap[key] = { level: e.level, message: e.message, count: 0, runs: new Set() };
+    patternMap[key].count++;
+    patternMap[key].runs.add(e.run_date + '_' + e.persona);
+  }
+  const topPatterns = Object.values(patternMap).sort((a, b) => b.count - a.count).slice(0, 10);
+
+  const patternRows = topPatterns.map(p => {
+    const lvlColor = p.level === 'error' ? 'var(--status-err)' : 'var(--status-warn)';
+    const short = p.message.length > 100 ? p.message.slice(0, 97) + '...' : p.message;
+    return `<tr>
+      <td style="color:${lvlColor};font-weight:600;width:50px">${p.level}</td>
+      <td style="font-size:11px;word-break:break-all" title="${p.message.replace(/"/g, '&quot;')}">${short}</td>
+      <td style="text-align:center">${p.count}</td>
+      <td style="text-align:center;color:var(--text-muted)">${p.runs.size}</td>
+    </tr>`;
+  }).join('');
+
+  // 최근 에러 목록 (최신순 20건)
+  const recent = [...allErrors].sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || '')).slice(0, 20);
+  const recentRows = recent.map(e => {
+    const lvlColor = e.level === 'error' ? 'var(--status-err)' : 'var(--status-warn)';
+    const short = (e.message || '').length > 120 ? e.message.slice(0, 117) + '...' : (e.message || '');
+    const ts = e.timestamp ? e.timestamp.split('T')[1]?.slice(0, 8) || '' : '';
+    return `<tr>
+      <td style="color:${lvlColor};font-weight:600;width:50px">${e.level}</td>
+      <td style="font-size:11px;word-break:break-all" title="${(e.message || '').replace(/"/g, '&quot;')}">${short}</td>
+      <td style="white-space:nowrap;color:var(--text-muted);font-size:11px">${e.persona || ''}</td>
+      <td style="white-space:nowrap;color:var(--text-muted);font-size:11px">${ts}</td>
+    </tr>`;
+  }).join('');
+
+  const errCount = allErrors.filter(e => e.level === 'error').length;
+  const warnCount = allErrors.filter(e => e.level === 'warn').length;
+
+  return `
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <h4 style="margin:0">콘솔 에러/경고 로그</h4>
+        <span class="badge ${errCount > 0 ? 'badge-err' : 'badge-ok'}" style="font-size:11px">Error ${errCount}</span>
+        <span class="badge" style="font-size:11px;background:var(--status-warn);color:#000">Warn ${warnCount}</span>
+      </div>
+      <div class="chart-grid">
+        <div class="tbl-wrap"><h4>반복 에러 패턴 (Top 10)</h4>
+          <table><thead><tr><th>레벨</th><th>메시지</th><th>횟수</th><th>런 수</th></tr></thead>
+          <tbody>${patternRows}</tbody></table></div>
+        <div class="tbl-wrap"><h4>최근 에러/경고 (최신 20건)</h4>
+          <table><thead><tr><th>레벨</th><th>메시지</th><th>페르소나</th><th>시간</th></tr></thead>
+          <tbody>${recentRows}</tbody></table></div>
+      </div>
+    </div>`;
 }
 
 /* ══════════════════════════════════════════════
@@ -2233,6 +2297,13 @@ function renderCatLogApi(gameId, runs) {
 function renderCatPerf(gameId, runs) {
   const perfs = runs.map(r => (r.metrics || {}).perf).filter(Boolean);
   if (!perfs.length) return '<div style="color:var(--text-muted);padding:20px">성능 데이터 없음</div>';
+
+  // PBM 판별 용어: "레벨" 대신 "판" 사용
+  const isPBM = gameId === 'PBM';
+  const unitName = isPBM ? '판' : '레벨';
+  const unitPerName = isPBM ? '판당' : '레벨당';
+  const startTag = isPBM ? 'freeplay_start' : 'level_start';
+  const endTag = isPBM ? 'freeplay_end' : 'level_end';
 
   // snapshots 수집
   const allSnaps = [];
@@ -2253,9 +2324,9 @@ function renderCatPerf(gameId, runs) {
 
   const fmtMB = (v) => (v / 1048576).toFixed(1);
 
-  // 레벨별 start/end 분리
-  const starts = allSnaps.filter(s => s.tag === 'level_start').sort((a,b) => a.level - b.level);
-  const ends = allSnaps.filter(s => s.tag === 'level_end').sort((a,b) => a.level - b.level);
+  // start/end 분리 (PBM: freeplay_start/end, 기타: level_start/end)
+  const starts = allSnaps.filter(s => s.tag === startTag).sort((a,b) => a.level - b.level);
+  const ends = allSnaps.filter(s => s.tag === endTag).sort((a,b) => a.level - b.level);
 
   // 메트릭 카드 1행: 시작/종료/총증가
   const firstStart = starts.length ? starts[0] : null;
@@ -2267,7 +2338,7 @@ function renderCatPerf(gameId, runs) {
   const growthSign = totalGrowth >= 0 ? '+' : '-';
   const growthColor = totalGrowth > 0 ? 'var(--status-err)' : 'var(--status-ok)';
 
-  // 메트릭 카드 2행: 레벨당 평균 증가, 피크 메모리, CPU 부하
+  // 메트릭 카드 2행: 단위당 평균 증가, 피크 메모리, CPU 부하
   const levelDeltas = [];
   const levelSet = new Set(starts.map(s => s.level));
   for (const lvl of levelSet) {
@@ -2293,7 +2364,7 @@ function renderCatPerf(gameId, runs) {
   // 메모리 급증 Top 3
   const top3 = [...levelDeltas].sort((a,b) => b.delta - a.delta).slice(0, 3);
   const top3Rows = top3.map(d =>
-    `<tr><td>Lv${d.level}</td><td style="color:var(--status-err)">+${fmtMB(d.delta)} MB</td><td>${fmtMB(d.endHeap)} MB</td></tr>`
+    `<tr><td>${isPBM ? '#' + d.level : 'Lv' + d.level}</td><td style="color:var(--status-err)">+${fmtMB(d.delta)} MB</td><td>${fmtMB(d.endHeap)} MB</td></tr>`
   ).join('');
 
   // DOM / 리스너
@@ -2303,12 +2374,12 @@ function renderCatPerf(gameId, runs) {
 
   return `
     <div class="metric-row">
-      <div class="metric-box"><div class="label">시작 메모리</div><div class="value">${startMB} MB</div><div class="sub">첫 레벨 시작 시 JS Heap</div></div>
-      <div class="metric-box"><div class="label">종료 메모리</div><div class="value">${endMB} MB</div><div class="sub">마지막 레벨 종료 시 JS Heap</div></div>
+      <div class="metric-box"><div class="label">시작 메모리</div><div class="value">${startMB} MB</div><div class="sub">첫 ${unitName} 시작 시 JS Heap</div></div>
+      <div class="metric-box"><div class="label">종료 메모리</div><div class="value">${endMB} MB</div><div class="sub">마지막 ${unitName} 종료 시 JS Heap</div></div>
       <div class="metric-box"><div class="label">총 증가량</div><div class="value" style="color:${growthColor}">${growthSign}${totalGrowthMB} MB</div></div>
     </div>
     <div class="metric-row">
-      <div class="metric-box"><div class="label">레벨당 평균 증가</div><div class="value">${avgDeltaMB} MB</div></div>
+      <div class="metric-box"><div class="label">${unitPerName} 평균 증가</div><div class="value">${avgDeltaMB} MB</div></div>
       <div class="metric-box"><div class="label">피크 메모리</div><div class="value">${peakMB} MB</div></div>
       <div class="metric-box"><div class="label">CPU 부하 (task_duration)</div><div class="value">${avgTaskDur}초</div><div class="sub">스냅샷 평균</div></div>
     </div>
@@ -2326,16 +2397,16 @@ function renderCatPerf(gameId, runs) {
       ${+leakPct >= 20 ? '<div style="font-size:12px;color:var(--status-err);margin-top:4px">⚠ 후반부 메모리가 20% 이상 증가 — 메모리 누수 의심</div>' : '<div style="font-size:12px;color:var(--status-ok);margin-top:4px">메모리 증가 정상 범위</div>'}
     </div>
     ${top3.length ? `<div class="tbl-wrap"><h4>메모리 급증 Top 3</h4>
-      <table><thead><tr><th>레벨</th><th>힙 증가</th><th>종료 힙</th></tr></thead>
+      <table><thead><tr><th>${unitName}</th><th>힙 증가</th><th>종료 힙</th></tr></thead>
       <tbody>${top3Rows}</tbody></table></div>` : ''}
     <div class="metric-row">
-      <div class="metric-box"><div class="label">DOM 노드 변화</div><div class="value">${firstDom.toLocaleString()} → ${lastDom.toLocaleString()}</div><div class="sub">첫 레벨 → 마지막 레벨</div></div>
+      <div class="metric-box"><div class="label">DOM 노드 변화</div><div class="value">${firstDom.toLocaleString()} → ${lastDom.toLocaleString()}</div><div class="sub">첫 ${unitName} → 마지막 ${unitName}</div></div>
       <div class="metric-box"><div class="label">평균 이벤트 리스너 수</div><div class="value">${avgListeners.toLocaleString()}</div></div>
     </div>
     <div class="chart-grid" style="grid-template-columns:1fr 1fr 1fr">
-      <div class="chart-box"><h4>레벨별 메모리 사용량</h4><canvas id="chart-perf-mem-${gameId}"></canvas></div>
-      <div class="chart-box"><h4>레벨별 DOM 수 변화</h4><canvas id="chart-perf-dom-${gameId}"></canvas></div>
-      <div class="chart-box"><h4>레벨별 CPU 부하</h4><canvas id="chart-perf-cpu-${gameId}"></canvas></div>
+      <div class="chart-box"><h4>${unitName}별 메모리 사용량</h4><canvas id="chart-perf-mem-${gameId}"></canvas></div>
+      <div class="chart-box"><h4>${unitName}별 DOM 수 변화</h4><canvas id="chart-perf-dom-${gameId}"></canvas></div>
+      <div class="chart-box"><h4>${unitName}별 CPU 부하</h4><canvas id="chart-perf-cpu-${gameId}"></canvas></div>
     </div>
     <div class="chart-grid">
       <div class="chart-box"><h4>경과시간별 메모리 변화</h4><canvas id="chart-perf-timemem-${gameId}"></canvas></div>
@@ -2361,13 +2432,19 @@ function renderPerfCharts(gameId, runs) {
   }
   if (!allSnaps.length) return;
 
-  const starts = allSnaps.filter(s => s.tag === 'level_start').sort((a,b) => a.level - b.level);
-  const ends = allSnaps.filter(s => s.tag === 'level_end').sort((a,b) => a.level - b.level);
+  // PBM: freeplay_start/end 태그 + "판" 단위 라벨
+  const isPBM = gameId === 'PBM';
+  const startTag = isPBM ? 'freeplay_start' : 'level_start';
+  const endTag = isPBM ? 'freeplay_end' : 'level_end';
+  const lblFn = isPBM ? (l => `#${l}`) : (l => `Lv${l}`);
+
+  const starts = allSnaps.filter(s => s.tag === startTag).sort((a,b) => a.level - b.level);
+  const ends = allSnaps.filter(s => s.tag === endTag).sort((a,b) => a.level - b.level);
   const levels = [...new Set(allSnaps.map(s => s.level))].sort((a,b) => a - b);
 
   const fmtMB = (v) => +(v / 1048576).toFixed(1);
 
-  // 1) 레벨별 메모리 (이중축: 시작/종료 힙 + 레벨당 증감)
+  // 1) 메모리 (이중축: 시작/종료 힙 + 단위당 증감)
   const memStartData = levels.map(l => { const s = starts.find(x => x.level === l); return s ? fmtMB(s.heap) : null; });
   const memEndData = levels.map(l => { const s = ends.find(x => x.level === l); return s ? fmtMB(s.heap) : null; });
   const memDeltaData = levels.map(l => {
@@ -2383,7 +2460,7 @@ function renderPerfCharts(gameId, runs) {
     _charts[memKey] = new Chart(memCanvas, {
       type: 'line',
       data: {
-        labels: levels.map(l => `Lv${l}`),
+        labels: levels.map(lblFn),
         datasets: [
           { label: '시작 Heap (MB)', data: memStartData, borderColor: '#3b82f6', backgroundColor: '#3b82f622', tension: 0.3, fill: false, yAxisID: 'y' },
           { label: '종료 Heap (MB)', data: memEndData, borderColor: '#ef4444', backgroundColor: '#ef444422', tension: 0.3, fill: false, yAxisID: 'y' },
@@ -2401,7 +2478,7 @@ function renderPerfCharts(gameId, runs) {
     });
   }
 
-  // 2) 레벨별 DOM 수 변화 (시작/종료)
+  // 2) DOM 수 변화 (시작/종료)
   const domStartData = levels.map(l => { const s = starts.find(x => x.level === l); return s ? s.dom : null; });
   const domEndData = levels.map(l => { const s = ends.find(x => x.level === l); return s ? s.dom : null; });
 
@@ -2412,7 +2489,7 @@ function renderPerfCharts(gameId, runs) {
     _charts[domKey] = new Chart(domCanvas, {
       type: 'line',
       data: {
-        labels: levels.map(l => `Lv${l}`),
+        labels: levels.map(lblFn),
         datasets: [
           { label: '시작 DOM', data: domStartData, borderColor: '#10b981', tension: 0.3, fill: false },
           { label: '종료 DOM', data: domEndData, borderColor: '#f59e0b', tension: 0.3, fill: false },
@@ -2422,7 +2499,7 @@ function renderPerfCharts(gameId, runs) {
     });
   }
 
-  // 3) 레벨별 CPU 부하 (task_duration)
+  // 3) CPU 부하 (task_duration)
   const cpuStartData = levels.map(l => { const s = starts.find(x => x.level === l); return s ? +s.taskDuration.toFixed(3) : null; });
   const cpuEndData = levels.map(l => { const s = ends.find(x => x.level === l); return s ? +s.taskDuration.toFixed(3) : null; });
 
@@ -2433,7 +2510,7 @@ function renderPerfCharts(gameId, runs) {
     _charts[cpuKey] = new Chart(cpuCanvas, {
       type: 'bar',
       data: {
-        labels: levels.map(l => `Lv${l}`),
+        labels: levels.map(lblFn),
         datasets: [
           { label: '시작 시 task_duration', data: cpuStartData, backgroundColor: '#3b82f699', borderColor: '#3b82f6', borderWidth: 1, borderRadius: 3 },
           { label: '종료 시 task_duration', data: cpuEndData, backgroundColor: '#ef444499', borderColor: '#ef4444', borderWidth: 1, borderRadius: 3 },
