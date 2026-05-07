@@ -2264,12 +2264,19 @@ function renderPerfCharts(gameId, runs) {
     });
   }
 
-  // 4) 경과시간별 메모리 변화 (x축: 분)
-  const baseTime = allSnaps.length ? Math.min(...allSnaps.filter(s => s.timestamp).map(s => s.timestamp)) : 0;
+  // 4) 경과시간별 메모리 변화 (x축: 분) — 런 간 갭 제거
   const timeSnaps = allSnaps.filter(s => s.timestamp).sort((a,b) => a.timestamp - b.timestamp);
 
-  if (timeSnaps.length && baseTime) {
-    const timeMemLabels = timeSnaps.map(s => ((s.timestamp - baseTime) / 60).toFixed(1));
+  if (timeSnaps.length) {
+    // 연속 경과시간: 런 간 10분 이상 갭은 제거하여 실제 플레이 시간만 표시
+    const GAP_THRESHOLD = 600; // 10분 (초)
+    const elapsedMins = [0];
+    for (let i = 1; i < timeSnaps.length; i++) {
+      const delta = timeSnaps[i].timestamp - timeSnaps[i - 1].timestamp;
+      const inc = delta > GAP_THRESHOLD ? 0 : delta / 60;
+      elapsedMins.push(+(elapsedMins[i - 1] + inc).toFixed(1));
+    }
+    const timeMemLabels = elapsedMins.map(v => v.toFixed(1));
     const timeMemData = timeSnaps.map(s => fmtMB(s.heap));
 
     const tmKey = `perf-timemem-${gameId}`;
