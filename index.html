@@ -588,6 +588,162 @@ async function switchTab(id, btn) {
   }
 }
 
+/* ══════════════════════════════════════════════
+   카테고리: 라운드 분석 (PBM)
+   ══════════════════════════════════════════════ */
+function renderCatRounds(gameId, stages, runs) {
+  if (!stages.length) return '<div style="color:var(--text-muted);padding:20px">라운드 데이터 없음</div>';
+
+  const pAgg = {};
+  const allScores = [], allMoves = [];
+  for (const s of stages) {
+    const d = s.details || {};
+    const score = d.score || 0, moves = d.moves || 0;
+    allScores.push(score);
+    allMoves.push(moves);
+    const p = s.persona;
+    if (!pAgg[p]) pAgg[p] = { scores: [], moves: [], count: 0 };
+    pAgg[p].scores.push(score);
+    pAgg[p].moves.push(moves);
+    pAgg[p].count++;
+  }
+
+  const avgScore = allScores.length ? Math.round(allScores.reduce((a, v) => a + v, 0) / allScores.length) : 0;
+  const maxScore = Math.max(0, ...allScores);
+  const minScore = allScores.length ? Math.min(...allScores) : 0;
+  const avgMoves = allMoves.length ? (allMoves.reduce((a, v) => a + v, 0) / allMoves.length).toFixed(1) : '-';
+  const variance = allScores.length ? allScores.reduce((a, v) => a + (v - avgScore) ** 2, 0) / allScores.length : 0;
+  const stdDev = Math.round(Math.sqrt(variance));
+
+  const personaRows = _sortPersona(Object.entries(pAgg)).map(([p, d]) => {
+    const pAvg = Math.round(d.scores.reduce((a, v) => a + v, 0) / d.count);
+    const pMax = Math.max(...d.scores);
+    const pAvgM = (d.moves.reduce((a, v) => a + v, 0) / d.count).toFixed(1);
+    return `<tr>
+      <td style="color:${PERSONA_COLORS[p] || '#999'};font-weight:600">${PERSONA_KO[p] || p}</td>
+      <td>${d.count}</td><td>${pAvg.toLocaleString()}</td><td>${pMax.toLocaleString()}</td><td>${pAvgM}</td>
+    </tr>`;
+  }).join('');
+
+  return `
+    <div class="metric-row">
+      <div class="metric-box"><div class="label">총 라운드</div><div class="value">${allScores.length}</div></div>
+      <div class="metric-box"><div class="label">평균 점수</div><div class="value">${avgScore.toLocaleString()}</div></div>
+      <div class="metric-box"><div class="label">최고 점수</div><div class="value">${maxScore.toLocaleString()}</div></div>
+      <div class="metric-box"><div class="label">최저 점수</div><div class="value">${minScore.toLocaleString()}</div></div>
+      <div class="metric-box"><div class="label">점수 표준편차</div><div class="value">${stdDev.toLocaleString()}</div></div>
+      <div class="metric-box"><div class="label">평균 수</div><div class="value">${avgMoves}</div></div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-box"><h4>점수 분포</h4><canvas id="chart-rounds-dist-${gameId}"></canvas></div>
+      <div class="chart-box"><h4>점수 vs 수 상관관계</h4><canvas id="chart-rounds-scatter-${gameId}"></canvas></div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-box"><h4>페르소나별 평균 점수</h4><canvas id="chart-rounds-persona-${gameId}"></canvas></div>
+      <div class="chart-box"><h4>런별 점수 추이</h4><canvas id="chart-rounds-trend-${gameId}"></canvas></div>
+    </div>
+    <div class="tbl-wrap">
+      <h4>페르소나별 라운드 요약</h4>
+      <table><thead><tr><th>페르소나</th><th>라운드</th><th>평균 점수</th><th>최고 점수</th><th>평균 수</th></tr></thead>
+      <tbody>${personaRows}</tbody></table>
+    </div>
+  `;
+}
+
+function renderRoundCharts(gameId, stages, runs) {
+  if (!stages.length) return;
+  const allScores = stages.map(s => (s.details || {}).score || 0);
+
+  // 1) 점수 분포 히스토그램
+  const maxS = Math.max(1, ...allScores);
+  const bucketSize = Math.max(500, Math.ceil(maxS / 10 / 500) * 500);
+  const buckets = {};
+  for (const s of allScores) {
+    const key = Math.floor(s / bucketSize) * bucketSize;
+    buckets[key] = (buckets[key] || 0) + 1;
+  }
+  const sortedKeys = Object.keys(buckets).map(Number).sort((a, b) => a - b);
+
+  const distKey = `rounds-dist-${gameId}`;
+  if (_charts[distKey]) _charts[distKey].destroy();
+  const distCanvas = document.getElementById(`chart-rounds-dist-${gameId}`);
+  if (distCanvas) {
+    _charts[distKey] = new Chart(distCanvas, {
+      type: 'bar',
+      data: {
+        labels: sortedKeys.map(k => `${k}~${k + bucketSize - 1}`),
+        datasets: [{ label: '라운드 수', data: sortedKeys.map(k => buckets[k]), backgroundColor: '#3b82f699', borderColor: '#3b82f6', borderWidth: 1, borderRadius: 4 }],
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { title: { display: true, text: '라운드 수' } } } },
+    });
+  }
+
+  // 2) 점수 vs 수 스캐터
+  const scatterKey = `rounds-scatter-${gameId}`;
+  if (_charts[scatterKey]) _charts[scatterKey].destroy();
+  const scatterCanvas = document.getElementById(`chart-rounds-scatter-${gameId}`);
+  if (scatterCanvas) {
+    const pData = {};
+    for (const s of stages) {
+      const d = s.details || {}, p = s.persona;
+      if (!pData[p]) pData[p] = [];
+      pData[p].push({ x: d.moves || 0, y: d.score || 0 });
+    }
+    const datasets = _sortPersona(Object.entries(pData)).map(([p, pts]) => ({
+      label: PERSONA_KO[p] || p, data: pts,
+      backgroundColor: (PERSONA_COLORS[p] || '#999') + '99',
+      borderColor: PERSONA_COLORS[p] || '#999', pointRadius: 4,
+    }));
+    _charts[scatterKey] = new Chart(scatterCanvas, {
+      type: 'scatter', data: { datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: { x: { title: { display: true, text: '수 (moves)' } }, y: { title: { display: true, text: '점수' } } },
+        plugins: { legend: { labels: { color: '#94a3b8', font: { size: 10 } } } },
+      },
+    });
+  }
+
+  // 3) 페르소나별 평균 점수
+  const pKey = `rounds-persona-${gameId}`;
+  if (_charts[pKey]) _charts[pKey].destroy();
+  const pCanvas = document.getElementById(`chart-rounds-persona-${gameId}`);
+  if (pCanvas) {
+    const pAgg = {};
+    for (const s of stages) { const p = s.persona, sc = (s.details || {}).score || 0; if (!pAgg[p]) pAgg[p] = { t: 0, n: 0 }; pAgg[p].t += sc; pAgg[p].n++; }
+    const sorted = _sortPersona(Object.entries(pAgg));
+    _charts[pKey] = new Chart(pCanvas, {
+      type: 'bar',
+      data: {
+        labels: sorted.map(([p]) => PERSONA_KO[p] || p),
+        datasets: [{ label: '평균 점수', data: sorted.map(([, d]) => Math.round(d.t / d.n)),
+          backgroundColor: sorted.map(([p]) => (PERSONA_COLORS[p] || '#999') + '99'),
+          borderColor: sorted.map(([p]) => PERSONA_COLORS[p] || '#999'), borderWidth: 1.5, borderRadius: 6 }],
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.raw.toLocaleString() + '점' } } } },
+    });
+  }
+
+  // 4) 런별 점수 추이
+  const tKey = `rounds-trend-${gameId}`;
+  if (_charts[tKey]) _charts[tKey].destroy();
+  const tCanvas = document.getElementById(`chart-rounds-trend-${gameId}`);
+  if (tCanvas) {
+    const pts = runs.filter(r => (r.metrics || {}).avg_score).map(r => ({
+      label: (r.run_date || '').slice(5) + ' ' + ((r.source_path || '').split('/').pop() || '').replace('freeplay_', '').replace('.json', ''),
+      score: r.metrics.avg_score,
+    }));
+    _charts[tKey] = new Chart(tCanvas, {
+      type: 'line',
+      data: {
+        labels: pts.map(p => p.label),
+        datasets: [{ label: '런 평균 점수', data: pts.map(p => p.score), borderColor: '#f59e0b', tension: 0.3, fill: false, pointRadius: 4 }],
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxRotation: 45 } } } },
+    });
+  }
+}
+
 /* ── 카테고리별 렌더러 매핑 ── */
 const CATEGORY_RENDERERS = {
   // 공통
@@ -604,6 +760,8 @@ const CATEGORY_RENDERERS = {
   tiles: (gid, stages, runs) => renderCatTiles(gid, stages, runs),
   items: (gid, stages, runs) => renderCatCtzItems(gid, stages, runs),
   time_analysis: (gid, stages, runs) => renderCatTimeAnalysis(gid, stages, runs),
+  // PBM 전용
+  rounds: (gid, stages, runs) => renderCatRounds(gid, stages, runs),
 };
 
 const CHART_RENDERERS = {
@@ -615,6 +773,8 @@ const CHART_RENDERERS = {
   tiles: (id, stages, runs) => renderTileCharts(id, stages, runs),
   time_analysis: (id, stages, runs) => renderTimeCharts(id, stages, runs),
   perf: (id, stages, runs) => renderPerfCharts(id, runs),
+  // PBM
+  rounds: (id, stages, runs) => renderRoundCharts(id, stages, runs),
 };
 
 function renderGameDetail(gameId, stages, runs) {
