@@ -832,7 +832,7 @@ function renderHealthCheck(checks) {
   // 체크 항목 정의: 카테고리 + 사람이 읽을 수 있는 이름 + 설명 + 중요도 라벨
   const CHECK_META = {
     GAME_LOOP:      { cat: 'game', name: '게임 루프',    desc: '레벨이 정상 플레이되는지 확인',                   imp: '필수', impColor: '#dc2626' },
-    API_ERROR:      { cat: 'stability', name: 'API 에러', desc: '콘솔 에러/경고 발생 여부',                      imp: '중요', impColor: '#d97706' },
+    API_ERROR:      { cat: 'stability', name: 'API 에러', desc: '콘솔 에러/경고 발생 여부 (게임 영향 없을 수 있음)', imp: '관찰', impColor: '#0d9488' },
     PERF_HEAP:      { cat: 'perf', name: '메모리(힙)',    desc: '힙 사용량 500MB 초과 여부',                     imp: '참고', impColor: '#6366f1' },
     PERF_DOM:       { cat: 'perf', name: 'DOM 노드',     desc: 'DOM 노드 10,000개 초과 여부',                   imp: '참고', impColor: '#6366f1' },
     TIMEOUT:        { cat: 'stability', name: '타임아웃', desc: '스테이지 300초 초과 여부',                      imp: '중요', impColor: '#d97706' },
