@@ -795,7 +795,7 @@ function renderOverview(games) {
   `;
   panel.style.display = 'block';
   if (_allRuns.length) renderRunManager(_allRuns);
-  if (_nruRuns.length) renderNruSummary(_nruRuns);
+  if (_nruRuns.length) { renderNruSummary(_nruRuns); renderNruManager(); }
   renderDbUsage();
 
   renderAvgTimeChart(games);
@@ -3892,6 +3892,72 @@ async function deleteSelectedRuns() {
   const games = aggregateOverview(_allRuns);
   renderOverview(games);
   renderCronHistory(await fetchCronHistory());
+}
+
+/* ── NRU 런 관리 ── */
+
+function renderNruManager() {
+  const section = document.getElementById('nru-section');
+  if (!section || !_nruRuns.length) return;
+  // nru-section 하단에 관리 테이블 삽입 (이미 renderNruSummary가 렌더 완료된 상태)
+  let mgr = document.getElementById('nru-manager');
+  if (!mgr) {
+    mgr = document.createElement('div');
+    mgr.id = 'nru-manager';
+    section.appendChild(mgr);
+  }
+
+  const rows = _nruRuns.map(r => {
+    const passStyle = r.ready ? 'color:var(--status-ok);font-weight:600' : 'color:var(--status-err);font-weight:600';
+    const timeStr = (r.total_time_sec || 0) >= 60 ? `${((r.total_time_sec || 0) / 60).toFixed(1)}분` : `${Math.round(r.total_time_sec || 0)}초`;
+    return `<div class="rm-row">
+      <input type="checkbox" class="nru-check" value="${r.id}">
+      <span style="min-width:80px">${r.run_date || '-'}</span>
+      <span style="min-width:40px">${r.run_time || '-'}</span>
+      <span style="${passStyle};min-width:40px">${r.ready ? 'PASS' : 'FAIL'}</span>
+      <span style="min-width:60px">${r.levels_cleared}/${r.total_levels || 24}</span>
+      <span style="min-width:50px">${timeStr}</span>
+      <span style="min-width:40px">${r.total_retries || 0}회</span>
+      <span style="color:var(--text-muted);font-size:10px">${(r.reason || '').slice(0, 30) || '-'}</span>
+      <span style="color:var(--text-muted);font-size:10px;margin-left:auto">${r.id.slice(0, 8)}</span>
+    </div>`;
+  }).join('');
+
+  mgr.innerHTML = `
+    <div class="tbl-wrap" style="margin-top:12px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <h4 style="margin:0">NRU 데이터 관리</h4>
+        <label style="font-size:11px;color:var(--text-muted);margin-left:auto"><input type="checkbox" id="nru-select-all" onclick="document.querySelectorAll('.nru-check').forEach(c=>c.checked=this.checked)"> 전체 선택</label>
+        <button class="rm-btn rm-btn-danger" onclick="deleteSelectedNru()" style="font-size:11px;padding:3px 10px">선택 삭제</button>
+        <span id="nru-mgr-status" style="font-size:11px;color:var(--text-muted)"></span>
+      </div>
+      ${rows}
+    </div>
+  `;
+}
+
+async function deleteSelectedNru() {
+  const checked = [...document.querySelectorAll('.nru-check:checked')].map(cb => cb.value);
+  if (!checked.length) { alert('삭제할 NRU 런을 선택해주세요.'); return; }
+  if (!confirm(`${checked.length}건의 NRU 런을 삭제하시겠습니까? (복구 불가)`)) return;
+
+  const statusEl = document.getElementById('nru-mgr-status');
+  statusEl.textContent = '삭제 중...';
+  let deleted = 0, failed = 0;
+  for (const runId of checked) {
+    try {
+      await sb.rpc('delete_nru_run', { target_id: runId });
+      deleted++;
+    } catch (e) {
+      console.error('NRU 삭제 실패:', runId, e);
+      failed++;
+    }
+  }
+  statusEl.textContent = `삭제 완료: ${deleted}건${failed ? `, 실패 ${failed}건` : ''}`;
+  // 데이터 갱신
+  _nruRuns = await fetchNruRuns();
+  renderNruSummary(_nruRuns);
+  renderNruManager();
 }
 
 /* ── 크론 이력 삭제 ── */
