@@ -888,77 +888,77 @@ function renderNruSummary(nruRuns) {
     return;
   }
 
-  // 최근 10건
-  const recent = nruRuns.slice(0, 10);
-  const latest = recent[0];
-  const passCount = recent.filter(r => r.ready).length;
-  const passRate = Math.round(passCount / recent.length * 100);
-  const avgLevels = (recent.reduce((a, r) => a + (r.levels_cleared || 0), 0) / recent.length).toFixed(1);
-  const avgTime = (recent.reduce((a, r) => a + (r.total_time_sec || 0), 0) / recent.length);
-  const avgTimeStr = avgTime >= 60 ? `${(avgTime / 60).toFixed(1)}분` : `${Math.round(avgTime)}초`;
-  const avgRetries = (recent.reduce((a, r) => a + (r.total_retries || 0), 0) / recent.length).toFixed(1);
+  // 게임별 그룹핑
+  const byGame = {};
+  for (const r of nruRuns) {
+    const gid = r.game_id || 'SCJ';
+    if (!byGame[gid]) byGame[gid] = [];
+    byGame[gid].push(r);
+  }
 
-  // 최신 결과 상태
-  const latestStatus = latest.ready;
-  const statusColor = latestStatus ? 'var(--status-ok)' : 'var(--status-err)';
-  const statusLabel = latestStatus ? 'PASS' : 'FAIL';
-  const statusBg = latestStatus ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)';
+  const gameBlocks = Object.entries(byGame).sort(([a],[b]) => a.localeCompare(b)).map(([gid, gameRuns]) => {
+    const gameColor = GAME_COLORS[gid] || '#3b82f6';
+    const recent = gameRuns.slice(0, 10);
+    const latest = recent[0];
+    const passCount = recent.filter(r => r.ready).length;
+    const passRate = Math.round(passCount / recent.length * 100);
+    const avgLevels = (recent.reduce((a, r) => a + (r.levels_cleared || 0), 0) / recent.length).toFixed(1);
+    const avgTime = (recent.reduce((a, r) => a + (r.total_time_sec || 0), 0) / recent.length);
+    const avgTimeStr = avgTime >= 60 ? `${(avgTime / 60).toFixed(1)}분` : `${Math.round(avgTime)}초`;
+    const avgRetries = (recent.reduce((a, r) => a + (r.total_retries || 0), 0) / recent.length).toFixed(1);
 
-  // 최근 10건 추이 도트
-  const trendDots = recent.slice().reverse().map(r => {
-    const col = r.ready ? 'var(--status-ok)' : 'var(--status-err)';
-    const d = (r.run_date || '').slice(5);
-    return `<div style="display:flex;flex-direction:column;align-items:center;gap:1px" title="${r.run_date} ${r.run_time || ''}&#10;Lv${r.levels_cleared}/${r.total_levels || 24}">
-      <div style="width:14px;height:14px;border-radius:3px;background:${col}"></div>
-      <span style="font-size:8px;color:var(--text-muted)">${d}</span>
-    </div>`;
-  }).join('');
+    const latestStatus = latest.ready;
+    const statusColor = latestStatus ? 'var(--status-ok)' : 'var(--status-err)';
+    const statusLabel = latestStatus ? 'PASS' : 'FAIL';
+    const statusBg = latestStatus ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)';
 
-  // 레벨별 진행 차트 (최신 런)
-  const levelResults = latest.level_results || [];
-  const levelBars = levelResults.map(lv => {
-    const ok = lv.success;
-    const col = ok ? (lv.retries > 0 ? '#f59e0b' : '#10b981') : '#ef4444';
-    const h = Math.min(100, Math.max(15, (lv.duration_s || 0) * 2.5));
-    const title = `Lv${lv.level}: ${ok ? '성공' : '실패'} ${lv.duration_s}s, ${lv.turns}턴, 재시도${lv.retries || 0}`;
-    return `<div style="display:flex;flex-direction:column;align-items:center;gap:1px;flex:1;min-width:12px" title="${title}">
-      <div style="width:100%;height:${h}px;background:${col};border-radius:2px;min-height:4px"></div>
-      <span style="font-size:8px;color:var(--text-muted)">${lv.level}</span>
-    </div>`;
-  }).join('');
+    const trendDots = recent.slice().reverse().map(r => {
+      const col = r.ready ? 'var(--status-ok)' : 'var(--status-err)';
+      const d = (r.run_date || '').slice(5);
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:1px" title="${r.run_date} ${r.run_time || ''}&#10;Lv${r.levels_cleared}/${r.total_levels || 24}">
+        <div style="width:14px;height:14px;border-radius:3px;background:${col}"></div>
+        <span style="font-size:8px;color:var(--text-muted)">${d}</span>
+      </div>`;
+    }).join('');
 
-  // 최근 실행 테이블
-  const rows = recent.map(r => {
-    const passStyle = r.ready
-      ? 'color:var(--status-ok);font-weight:600'
-      : 'color:var(--status-err);font-weight:600';
-    const failInfo = r.ready ? '' : ` (Lv${r.failed_level || '?'})`;
-    const timeStr = (r.total_time_sec || 0) >= 60
-      ? `${((r.total_time_sec || 0) / 60).toFixed(1)}분`
-      : `${Math.round(r.total_time_sec || 0)}초`;
-    return `<tr>
-      <td><input type="checkbox" class="nru-ov-check" value="${r.id}"></td>
-      <td>${(r.run_date || '').slice(5)}</td>
-      <td>${r.run_time || '-'}</td>
-      <td style="${passStyle}">${r.ready ? 'PASS' : 'FAIL'}${failInfo}</td>
-      <td>${r.levels_cleared}/${r.total_levels || 24}</td>
-      <td>${timeStr}</td>
-      <td>${r.total_retries || 0}</td>
-      <td>${(r.gold || 0).toLocaleString()}</td>
-    </tr>`;
-  }).join('');
+    const levelResults = latest.level_results || [];
+    const levelBars = levelResults.map(lv => {
+      const ok = lv.success;
+      const col = ok ? (lv.retries > 0 ? '#f59e0b' : '#10b981') : '#ef4444';
+      const h = Math.min(100, Math.max(15, (lv.duration_s || 0) * 2.5));
+      const title = `Lv${lv.level}: ${ok ? '성공' : '실패'} ${lv.duration_s}s, ${lv.turns}턴, 재시도${lv.retries || 0}`;
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:1px;flex:1;min-width:12px" title="${title}">
+        <div style="width:100%;height:${h}px;background:${col};border-radius:2px;min-height:4px"></div>
+        <span style="font-size:8px;color:var(--text-muted)">${lv.level}</span>
+      </div>`;
+    }).join('');
 
-  section.innerHTML = `
-    <div style="margin-bottom:16px;">
+    const checkClass = `nru-ov-check-${gid}`;
+    const rows = recent.map(r => {
+      const passStyle = r.ready ? 'color:var(--status-ok);font-weight:600' : 'color:var(--status-err);font-weight:600';
+      const failInfo = r.ready ? '' : ` (Lv${r.failed_level || '?'})`;
+      const timeStr = (r.total_time_sec || 0) >= 60 ? `${((r.total_time_sec || 0) / 60).toFixed(1)}분` : `${Math.round(r.total_time_sec || 0)}초`;
+      return `<tr>
+        <td><input type="checkbox" class="nru-ov-check ${checkClass}" value="${r.id}"></td>
+        <td>${(r.run_date || '').slice(5)}</td>
+        <td>${r.run_time || '-'}</td>
+        <td style="${passStyle}">${r.ready ? 'PASS' : 'FAIL'}${failInfo}</td>
+        <td>${r.levels_cleared}/${r.total_levels || 24}</td>
+        <td>${timeStr}</td>
+        <td>${r.total_retries || 0}</td>
+        <td>${(r.gold || 0).toLocaleString()}</td>
+      </tr>`;
+    }).join('');
+
+    return `
+    <div style="margin-bottom:16px;border-left:3px solid ${gameColor};padding-left:12px">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
         <span style="font-weight:700;font-size:14px;">NRU 튜토리얼 테스트</span>
-        <span style="font-size:11px;padding:2px 10px;border-radius:10px;background:rgba(59,130,246,.12);color:#3b82f6;font-weight:600">${latest.game_id || 'SCJ'}</span>
+        <span style="font-size:11px;padding:2px 10px;border-radius:10px;background:${gameColor}1a;color:${gameColor};font-weight:600">${gid}</span>
         <span style="font-size:11px;padding:2px 10px;border-radius:10px;background:${statusBg};color:${statusColor};font-weight:600">최신 ${statusLabel}</span>
         <span style="font-size:11px;color:var(--text-muted)">최근 ${recent.length}회 통과율 ${passRate}%</span>
         <span style="font-size:10px;color:var(--text-muted);margin-left:auto">${latest.run_date || ''} ${latest.run_time || ''}</span>
       </div>
-
-      <!-- 메트릭 카드 -->
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
         <div style="flex:1;min-width:130px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px">
           <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">통과율 (최근 ${recent.length}회)</div>
@@ -966,7 +966,7 @@ function renderNruSummary(nruRuns) {
         </div>
         <div style="flex:1;min-width:130px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px">
           <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">평균 클리어 레벨</div>
-          <div style="font-size:22px;font-weight:700">${avgLevels}<span style="font-size:12px;color:var(--text-muted)">/24</span></div>
+          <div style="font-size:22px;font-weight:700">${avgLevels}<span style="font-size:12px;color:var(--text-muted)">/${latest.total_levels || 24}</span></div>
         </div>
         <div style="flex:1;min-width:130px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px">
           <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">평균 소요 시간</div>
@@ -977,8 +977,6 @@ function renderNruSummary(nruRuns) {
           <div style="font-size:22px;font-weight:700">${avgRetries}<span style="font-size:12px;color:var(--text-muted)">회</span></div>
         </div>
       </div>
-
-      <!-- 추이 + 레벨 진행 -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
         <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px">
           <h4 style="font-size:12px;color:var(--text-secondary);margin-bottom:10px">최근 실행 추이</h4>
@@ -994,22 +992,22 @@ function renderNruSummary(nruRuns) {
           </div>
         </div>
       </div>
-
-      <!-- 실행 이력 테이블 -->
       <div class="tbl-wrap" style="margin-bottom:0">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
           <h4 style="margin:0">최근 NRU 실행 이력</h4>
-          <label style="font-size:11px;color:var(--text-muted);margin-left:auto"><input type="checkbox" onclick="document.querySelectorAll('.nru-ov-check').forEach(c=>c.checked=this.checked)"> 전체 선택</label>
+          <label style="font-size:11px;color:var(--text-muted);margin-left:auto"><input type="checkbox" onclick="document.querySelectorAll('.${checkClass}').forEach(c=>c.checked=this.checked)"> 전체 선택</label>
           <button class="rm-btn rm-btn-danger" onclick="deleteSelectedNruOv()" style="font-size:11px;padding:3px 10px">선택 삭제</button>
-          <span id="nru-ov-status" style="font-size:11px;color:var(--text-muted)"></span>
+          <span id="nru-ov-status-${gid}" style="font-size:11px;color:var(--text-muted)"></span>
         </div>
         <table>
           <thead><tr><th style="width:30px"></th><th>날짜</th><th>시간</th><th>결과</th><th>레벨</th><th>소요</th><th>재시도</th><th>골드</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
-    </div>
-  `;
+    </div>`;
+  }).join('');
+
+  section.innerHTML = gameBlocks;
 }
 
 /* ── Health Check ── */
