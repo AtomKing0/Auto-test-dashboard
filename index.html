@@ -226,6 +226,42 @@ tr:hover td { background: rgba(59,130,246,.05); }
 .leak-gauge { height: 24px; border-radius: 6px; background: var(--border); overflow: hidden; position: relative; margin: 8px 0; }
 .leak-gauge-fill { height: 100%; border-radius: 6px; transition: width .3s; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; }
 
+/* ── Toast ── */
+.toast-container {
+  position: fixed; bottom: 20px; right: 20px; z-index: 200;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.toast {
+  padding: 10px 16px; border-radius: 8px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  color: var(--text-secondary); font-size: 13px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.3);
+  animation: toastIn .3s ease;
+}
+.toast.fade-out { animation: toastOut .3s ease forwards; }
+@keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateY(-10px); } }
+
+/* ── Realtime Indicator ── */
+.rt-indicator {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; color: var(--text-muted); margin-left: 8px;
+}
+.rt-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--status-err);
+  transition: background .3s;
+}
+.rt-dot.connected { background: var(--status-ok); }
+
+/* ── DB Usage Bar ── */
+.db-usage-bar {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 18px; margin-bottom: 16px;
+}
+.db-usage-track { height: 8px; border-radius: 4px; background: var(--border); overflow: hidden; margin-top: 6px; }
+.db-usage-fill { height: 100%; border-radius: 4px; transition: width .3s; }
+
 @media (max-width: 768px) {
   .cards { grid-template-columns: 1fr; }
   .chart-grid { grid-template-columns: 1fr; }
@@ -243,9 +279,11 @@ tr:hover td { background: rgba(59,130,246,.05); }
       <button class="ctrl-btn" id="themeBtn" onclick="toggleTheme()" title="테마 전환">☀</button>
       <button class="ctrl-btn" onclick="downloadCSV()" title="CSV 다운로드">CSV</button>
       <button class="ctrl-btn" id="editBtn" onclick="toggleEditMode()" title="레이아웃 편집">Edit</button>
+      <span class="rt-indicator" id="rt-indicator"><span class="rt-dot" id="rt-dot"></span><span id="rt-label">오프라인</span></span>
       <span class="ts" id="update-time"></span>
     </div>
   </div>
+  <div class="toast-container" id="toast-container"></div>
 
   <div class="edit-bar" id="editBar">
     <span>📐 레이아웃 편집 모드 — 섹션을 드래그하여 순서 변경, 👁 버튼으로 표시/숨기기</span>
@@ -285,6 +323,8 @@ const DIFF_COLORS = { 1: '#10b981', 2: '#10b981', 3: '#f59e0b', 4: '#ef4444' };
 let _allRuns = [];
 let _charts = {};
 let _gameConfigs = [];
+let _overviewGames = {};
+let _lastFetchTime = '';
 
 /* ── 데이터 Fetch ── */
 
@@ -295,6 +335,63 @@ async function fetchRuns() {
     .order('run_date', { ascending: false });
   if (error) throw error;
   return data || [];
+}
+
+/* ── View 기반 서버 집계 Fetch ── */
+
+async function fetchOverviewStats() {
+  const { data, error } = await sb.from('v_overview_stats').select('*');
+  if (error) throw error;
+  return data || [];
+}
+
+async function fetchPersonaStats() {
+  const { data, error } = await sb.from('v_persona_stats').select('*');
+  if (error) throw error;
+  return data || [];
+}
+
+async function fetchDailyTrend() {
+  const { data, error } = await sb.from('v_daily_trend').select('*').order('run_date', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+async function fetchDbUsage() {
+  const { data, error } = await sb.rpc('get_db_usage');
+  if (error) { console.warn('get_db_usage 실패:', error.message); return []; }
+  return data || [];
+}
+
+function buildOverviewFromViews(overviewStats, personaStats, dailyTrend) {
+  const games = {};
+  for (const o of overviewStats) {
+    games[o.game_id] = {
+      runs: Number(o.total_runs) || 0,
+      levels: Number(o.total_levels) || 0,
+      time: Number(o.total_time_sec) || 0,
+      personas: {},
+      dailyMap: {},
+      issueCount: 0,
+      events: [],
+    };
+  }
+  for (const p of personaStats) {
+    if (!games[p.game_id]) continue;
+    games[p.game_id].personas[p.persona] = {
+      played: Number(p.levels_played) || 0,
+      runs: Number(p.runs) || 0,
+      lastDate: p.last_run_date || '',
+    };
+  }
+  for (const d of dailyTrend) {
+    if (!games[d.game_id]) continue;
+    games[d.game_id].dailyMap[d.run_date] = {
+      levels: Number(d.levels_played) || 0,
+      runs: Number(d.runs) || 0,
+    };
+  }
+  return games;
 }
 
 async function fetchCronHistory() {
@@ -414,9 +511,11 @@ function renderOverview(games) {
     <div id="health-check-section"></div>
     <div id="cron-section"></div>
     <div id="run-manager"></div>
+    <div id="db-usage-section"></div>
   `;
   panel.style.display = 'block';
-  renderRunManager(_allRuns);
+  if (_allRuns.length) renderRunManager(_allRuns);
+  renderDbUsage();
 
   renderAvgTimeChart(games);
   renderDailyRunsChart(games);
@@ -3017,6 +3116,209 @@ function downloadCSV() {
   a.click();
 }
 
+/* ── DB 용량 모니터링 ── */
+
+async function renderDbUsage() {
+  const section = document.getElementById('db-usage-section');
+  if (!section) return;
+  try {
+    const usage = await fetchDbUsage();
+    if (!usage.length) { section.innerHTML = ''; return; }
+    const totalBytes = usage.reduce((a, t) => a + (Number(t.size_bytes) || 0), 0);
+    const totalRows = usage.reduce((a, t) => a + (Number(t.row_count) || 0), 0);
+    const limitBytes = 500 * 1024 * 1024; // 500MB Free Tier
+    const pct = Math.min(100, (totalBytes / limitBytes * 100)).toFixed(1);
+    const barColor = pct >= 80 ? 'var(--status-err)' : pct >= 50 ? 'var(--status-warn)' : 'var(--status-ok)';
+    const warnBadge = pct >= 80 ? ' <span class="badge badge-err">경고: 80% 초과</span>' : '';
+
+    const tableRows = usage.map(t => {
+      const sizeMB = (Number(t.size_bytes) / 1024 / 1024).toFixed(2);
+      return `<tr>
+        <td>${t.table_name}</td>
+        <td style="text-align:right">${Number(t.row_count).toLocaleString()}</td>
+        <td style="text-align:right">${sizeMB} MB</td>
+      </tr>`;
+    }).join('');
+
+    section.innerHTML = `
+      <div class="db-usage-bar">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font-weight:700;font-size:14px">DB 용량</span>
+          <span style="font-size:12px;color:var(--text-muted)">${(totalBytes / 1024 / 1024).toFixed(1)} MB / 500 MB (${pct}%)${warnBadge}</span>
+        </div>
+        <div class="db-usage-track">
+          <div class="db-usage-fill" style="width:${pct}%;background:${barColor}"></div>
+        </div>
+        <table style="margin-top:10px">
+          <thead><tr><th>테이블</th><th style="text-align:right">행 수</th><th style="text-align:right">용량</th></tr></thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+      </div>
+    `;
+  } catch (e) {
+    console.warn('DB 용량 조회 실패:', e.message);
+    section.innerHTML = '';
+  }
+}
+
+/* ── 이슈 요약 업데이트 (백그라운드 runs fetch 후 호출) ── */
+
+function updateIssueSummary(games) {
+  const section = document.querySelector('#overview-panel .tbl-wrap h4');
+  if (!section) return;
+  // "이슈 요약" 헤더를 포함한 tbl-wrap 찾기
+  const wraps = document.querySelectorAll('#overview-panel .tbl-wrap');
+  for (const wrap of wraps) {
+    const h4 = wrap.querySelector('h4');
+    if (h4 && h4.textContent.includes('이슈 요약')) {
+      const totalIssues = Object.values(games).reduce((a, g) => a + g.issueCount, 0);
+      h4.textContent = `이슈 요약 (총 ${totalIssues}건)`;
+      const rows = wrap.querySelectorAll('div[style*="border-bottom"]');
+      const gameIds = Object.keys(games).sort();
+      rows.forEach((row, i) => {
+        if (!gameIds[i]) return;
+        const g = games[gameIds[i]];
+        const spans = row.querySelectorAll('span');
+        if (spans.length >= 2) {
+          const color = g.issueCount > 0 ? 'var(--status-warn)' : 'var(--status-ok)';
+          const text = g.issueCount > 0 ? `${g.issueCount}건` : '이슈 없음';
+          spans[1].style.color = color;
+          spans[1].textContent = text;
+        }
+      });
+      break;
+    }
+  }
+}
+
+/* ── Toast 알림 ── */
+
+function showToast(msg, duration = 3000) {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('fade-out');
+    setTimeout(() => el.remove(), 300);
+  }, duration);
+}
+
+/* ── Realtime 구독 ── */
+
+let _realtimeChannel = null;
+let _rtRetryCount = 0;
+const RT_MAX_RETRIES = 5;
+
+function updateRealtimeIndicator(connected) {
+  const dot = document.getElementById('rt-dot');
+  const label = document.getElementById('rt-label');
+  if (!dot || !label) return;
+  if (connected) {
+    dot.classList.add('connected');
+    label.textContent = '실시간';
+  } else {
+    dot.classList.remove('connected');
+    label.textContent = '오프라인';
+  }
+}
+
+function subscribeRealtime() {
+  if (_realtimeChannel) {
+    sb.removeChannel(_realtimeChannel);
+  }
+  _realtimeChannel = sb.channel('dashboard-live')
+    .on('postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'freeplay_runs' },
+      async (payload) => {
+        await refreshOverviewFromViews();
+        showToast(`새 런 도착: ${payload.new.game_id} / ${payload.new.persona}`);
+        if (_currentGameId === payload.new.game_id) {
+          await refreshCurrentGameDetail();
+        }
+      }
+    )
+    .on('postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'health_checks' },
+      async () => {
+        try {
+          const checks = await fetchHealthChecks();
+          renderHealthCheck(checks);
+        } catch (e) { console.warn('health_checks 갱신 실패:', e.message); }
+      }
+    )
+    .on('postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'cron_history' },
+      async () => {
+        try {
+          const cron = await fetchCronHistory();
+          renderCronHistory(cron);
+        } catch (e) { console.warn('cron_history 갱신 실패:', e.message); }
+      }
+    )
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        updateRealtimeIndicator(true);
+        _rtRetryCount = 0;
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        updateRealtimeIndicator(false);
+        if (_rtRetryCount < RT_MAX_RETRIES) {
+          _rtRetryCount++;
+          const delay = Math.min(3000 * Math.pow(2, _rtRetryCount - 1), 30000);
+          console.warn(`Realtime 재연결 시도 ${_rtRetryCount}/${RT_MAX_RETRIES} (${delay}ms 후)`);
+          setTimeout(() => subscribeRealtime(), delay);
+        } else {
+          showToast('실시간 연결 실패. 수동 새로고침을 사용해주세요.', 5000);
+        }
+      } else if (status === 'CLOSED') {
+        updateRealtimeIndicator(false);
+      }
+    });
+}
+
+/* ── Realtime용 Overview 갱신 ── */
+
+async function refreshOverviewFromViews() {
+  try {
+    const [overviewStats, personaStats, dailyTrend] = await Promise.all([
+      fetchOverviewStats(), fetchPersonaStats(), fetchDailyTrend()
+    ]);
+    const games = buildOverviewFromViews(overviewStats, personaStats, dailyTrend);
+    _overviewGames = games;
+    // overview 탭이 활성화 상태일 때만 리렌더
+    const overviewEl = document.getElementById('overview-panel');
+    if (overviewEl && overviewEl.style.display !== 'none') {
+      renderOverview(games);
+      document.getElementById('update-time').textContent = '갱신: ' + new Date().toLocaleString('ko');
+    }
+    _lastFetchTime = new Date().toISOString();
+  } catch (e) {
+    console.warn('refreshOverviewFromViews 실패:', e.message);
+  }
+}
+
+async function refreshCurrentGameDetail() {
+  if (!_currentGameId) return;
+  try {
+    const stages = await fetchStages(_currentGameId);
+    const gameRuns = _allRuns.filter(r => r.game_id === _currentGameId);
+    _currentGameStages = stages;
+    _currentGameRuns = gameRuns;
+    _renderedCats = {};
+    const panels = document.getElementById('game-panels');
+    panels.innerHTML = renderGameDetail(_currentGameId, stages, gameRuns);
+    setTimeout(() => {
+      renderSummaryCharts(_currentGameId, stages, gameRuns);
+      renderRadarChart(_currentGameId, stages, gameRuns);
+      _renderedCats['summary'] = true;
+    }, 50);
+  } catch (e) {
+    console.warn('refreshCurrentGameDetail 실패:', e.message);
+  }
+}
+
 /* ── 초기화 ── */
 
 async function init() {
@@ -3032,13 +3334,16 @@ async function init() {
     errorEl.style.display = 'none';
     overviewEl.style.display = 'none';
 
-    const [runs, cron, gameConfigs, healthChecks] = await Promise.all([
-      fetchRuns(), fetchCronHistory(), fetchGameConfigs(), fetchHealthChecks()
+    // Fast path: View 기반 서버 집계 (소량 데이터만 전송)
+    const [overviewStats, personaStats, dailyTrend, cron, gameConfigs, healthChecks] = await Promise.all([
+      fetchOverviewStats(), fetchPersonaStats(), fetchDailyTrend(),
+      fetchCronHistory(), fetchGameConfigs(), fetchHealthChecks()
     ]);
-    _allRuns = runs;
     _gameConfigs = gameConfigs;
+    _lastFetchTime = new Date().toISOString();
 
-    const games = aggregateOverview(runs);
+    const games = buildOverviewFromViews(overviewStats, personaStats, dailyTrend);
+    _overviewGames = games;
     renderOverview(games);
     renderHealthCheck(healthChecks);
     renderCronHistory(cron);
@@ -3047,6 +3352,24 @@ async function init() {
     document.getElementById('update-time').textContent = '갱신: ' + new Date().toLocaleString('ko');
     loadingEl.style.display = 'none';
     overviewEl.style.display = 'block';
+
+    // Realtime 구독 시작
+    subscribeRealtime();
+
+    // Background: runs fetch (런 관리자 + 이슈 카운트 + 게임 상세 탭용)
+    fetchRuns().then(runs => {
+      _allRuns = runs;
+      renderRunManager(runs);
+      // 이슈 카운트 업데이트
+      for (const r of runs) {
+        const issues = ((r.metrics || {}).issues || []);
+        if (issues.length && _overviewGames[r.game_id]) {
+          _overviewGames[r.game_id].issueCount += issues.length;
+        }
+      }
+      updateIssueSummary(_overviewGames);
+    }).catch(e => console.warn('runs 백그라운드 fetch 실패:', e.message));
+
   } catch (e) {
     loadingEl.style.display = 'none';
     errorEl.style.display = 'flex';
