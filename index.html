@@ -2302,8 +2302,8 @@ function renderCatLogApi(gameId, runs) {
 
   const avgApi = runs.length ? Math.round(totalApi / runs.length) : 0;
   const avgConsole = runs.length ? Math.round(totalConsole / runs.length) : 0;
-  const totalErrors = allErrors.filter(e => e.level === 'error').length;
-  const totalWarns = allErrors.filter(e => e.level === 'warn').length;
+  const totalErrors = byLevel['error'] || 0;
+  const totalWarns = byLevel['warn'] || 0;
 
   const methodRows = Object.entries(byMethod).sort(([,a],[,b]) => b - a)
     .map(([m, c]) => `<tr><td>${m}</td><td>${c.toLocaleString()}</td><td>${totalApi ? (c / totalApi * 100).toFixed(1) : 0}%</td></tr>`).join('');
@@ -2323,7 +2323,9 @@ function renderCatLogApi(gameId, runs) {
   // 에러 요약 배너 (error가 있을 때만)
   const errorBanner = totalErrors > 0 ? (() => {
     const errOnly = allErrors.filter(e => e.level === 'error');
-    const uniqueMsgs = [...new Set(errOnly.map(e => (e.message || '').slice(0, 100)))];
+    // 메시지가 저장 안 된 경우 by_level 카운트만으로 표시
+    const uniqueMsgs = errOnly.length ? [...new Set(errOnly.map(e => (e.message || '').slice(0, 100)))]
+      : [`(에러 상세 미수집 — 다음 프리플레이부터 자동 수집됩니다)`];
     const rows = uniqueMsgs.map(msg =>
       `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px">
         <span style="color:var(--status-err);font-weight:700">ERROR</span>
