@@ -810,9 +810,13 @@ function renderHealthCheck(checks) {
     return;
   }
 
-  // 게임별 + 날짜별 그룹핑
+  // 폐기된 체크 항목 필터 (과거 Supabase 데이터 호환)
+  const DEPRECATED_CHECKS = new Set(['CLEAR_RATE', 'CONSECUTIVE_FAIL', 'STAGE_TIMEOUT']);
+
+  // 게임별 + 날짜별 그룹핑 (폐기 항목 제외)
   const byGame = {};
   for (const c of checks) {
+    if (DEPRECATED_CHECKS.has(c.check_id)) continue;
     if (!byGame[c.game_id]) byGame[c.game_id] = {};
     if (!byGame[c.game_id][c.run_date]) byGame[c.game_id][c.run_date] = [];
     byGame[c.game_id][c.run_date].push(c);
@@ -976,25 +980,13 @@ function renderHealthCheck(checks) {
         </div>`;
       }).join('');
 
-      // 통과/미실행 접기
+      // 통과/미실행 — 개수만 표시
       const passCount = g.pass;
       const skipCount = g.skip;
-      const foldId = `hc-fold-${g.gid}`;
-      const passPills = g.latestChecks.filter(c => c.status === 'PASS').map(c => {
-        const meta = CHECK_META[c.check_id] || { name: c.check_id };
-        return `<span style="padding:1px 6px;border-radius:8px;background:rgba(16,185,129,0.08);font-size:10px;color:var(--status-ok)">${meta.name}</span>`;
-      }).join('');
-      const skipPills = g.latestChecks.filter(c => c.status === 'SKIP').map(c => {
-        const meta = CHECK_META[c.check_id] || { name: c.check_id };
-        return `<span style="padding:1px 6px;border-radius:8px;background:rgba(139,155,176,0.08);font-size:10px;color:var(--text-muted)">${meta.name}</span>`;
-      }).join('');
-      const foldLabel = [passCount ? `통과 ${passCount}` : '', skipCount ? `미실행 ${skipCount}` : ''].filter(Boolean).join(' · ');
-      const foldBlock = (passCount || skipCount) ? `<div style="margin-top:6px">
-        <div style="font-size:10px;color:var(--text-muted);cursor:pointer;user-select:none" onclick="var el=document.getElementById('${foldId}');el.style.display=el.style.display==='none'?'flex':'none';this.querySelector('span').textContent=el.style.display==='none'?'\u25B6':'\u25BC'">
-          <span>\u25B6</span> ${foldLabel}
-        </div>
-        <div id="${foldId}" style="display:none;flex-wrap:wrap;gap:4px;margin-top:4px">${passPills}${skipPills}</div>
-      </div>` : '';
+      const parts = [];
+      if (passCount) parts.push(`<span style="color:var(--status-ok)">통과 ${passCount}</span>`);
+      if (skipCount) parts.push(`<span style="color:var(--text-muted)">미실행 ${skipCount}</span>`);
+      const foldBlock = parts.length ? `<div style="margin-top:6px;font-size:10px;display:flex;gap:8px">${parts.join('')}</div>` : '';
 
       issueCards.push(`<div style="background:var(--bg-card);border:1px solid ${sc.border};border-radius:10px;padding:12px 14px;border-left:3px solid ${sc.text};">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
