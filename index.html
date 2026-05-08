@@ -3840,7 +3840,9 @@ function sidebarSystemNav(target) {
     setTimeout(() => {
       const el = document.getElementById(sectionId);
       if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const topbarHeight = document.querySelector('.top-bar')?.offsetHeight || 48;
+        const y = el.getBoundingClientRect().top + window.scrollY - topbarHeight - 12;
+        window.scrollTo({ top: y, behavior: 'smooth' });
       } else {
         // 섹션이 아직 렌더링 안 된 경우 (런 관리는 백그라운드 fetch 후 생성)
         window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
