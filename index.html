@@ -2303,6 +2303,8 @@ function renderCatLogApi(gameId, runs) {
 
   const avgApi = runs.length ? Math.round(totalApi / runs.length) : 0;
   const avgConsole = runs.length ? Math.round(totalConsole / runs.length) : 0;
+  const totalErrors = allErrors.filter(e => e.level === 'error').length;
+  const totalWarns = allErrors.filter(e => e.level === 'warn').length;
 
   const methodRows = Object.entries(byMethod).sort(([,a],[,b]) => b - a)
     .map(([m, c]) => `<tr><td>${m}</td><td>${c.toLocaleString()}</td><td>${totalApi ? (c / totalApi * 100).toFixed(1) : 0}%</td></tr>`).join('');
@@ -2324,6 +2326,8 @@ function renderCatLogApi(gameId, runs) {
     <div class="metric-row">
       <div class="metric-box"><div class="label">총 API 호출</div><div class="value">${totalApi.toLocaleString()}</div><div class="sub">런당 평균 ${avgApi}</div></div>
       <div class="metric-box"><div class="label">총 콘솔 로그</div><div class="value">${totalConsole.toLocaleString()}</div><div class="sub">런당 평균 ${avgConsole}</div></div>
+      <div class="metric-box"><div class="label">Error</div><div class="value" style="color:${totalErrors > 0 ? 'var(--status-err)' : 'var(--status-ok)'}">${totalErrors}</div></div>
+      <div class="metric-box"><div class="label">Warn</div><div class="value" style="color:${totalWarns > 0 ? 'var(--status-warn)' : 'var(--status-ok)'}">${totalWarns}</div></div>
       <div class="metric-box"><div class="label">총 런</div><div class="value">${runs.length}</div></div>
     </div>
     <div class="chart-grid">
