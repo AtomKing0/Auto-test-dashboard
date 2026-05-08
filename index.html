@@ -802,11 +802,15 @@ function renderHealthCheck(checks) {
   const section = document.getElementById('health-check-section');
   if (!section) return;
   if (!checks || !checks.length) {
-    section.innerHTML = '';
+    section.innerHTML = `
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:24px 18px;margin-bottom:16px;text-align:center;">
+        <div style="font-size:13px;color:var(--text-muted);">Health Check 데이터가 없습니다</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">프리플레이 실행 후 자동 생성됩니다</div>
+      </div>`;
     return;
   }
 
-  // 게임별 + 날짜별 최신 그룹핑
+  // 게임별 + 날짜별 그룹핑
   const byGame = {};
   for (const c of checks) {
     if (!byGame[c.game_id]) byGame[c.game_id] = {};
@@ -814,25 +818,62 @@ function renderHealthCheck(checks) {
     byGame[c.game_id][c.run_date].push(c);
   }
 
-  const STATUS_ICON = { PASS: '\u2705', FAIL: '\u274C', WARN: '\u26A0\uFE0F', SKIP: '\u23ED\uFE0F' };
-  const STATUS_COLOR = { PASS: 'var(--status-ok)', FAIL: 'var(--status-err)', WARN: 'var(--status-warn)', SKIP: 'var(--text-muted)' };
-  const CHECK_DESC = {
-    GAME_LOOP: '게임 루프 정상 동작 (레벨 플레이/클리어 여부)',
-    API_ERROR: 'API/콘솔 에러 발생 여부',
-    PERF_HEAP: '메모리(힙) 사용량 (임계: 500MB)',
-    PERF_DOM: 'DOM 노드 수 (임계: 10,000개)',
-    STAGE_TIMEOUT: '스테이지 타임아웃 (임계: 300초)',
-    SECURITY: '보안 스캔 등급 (F=치명적)',
-    GOLD_INTEGRITY: '[SCJ] 골드 수지 정합성 (시작+스테이지합=종료)',
-    CONSECUTIVE_FAIL: '[SCJ] 연속 실패 횟수 (임계: 15회)',
-    BETTING_UNLOCK: '[SCJ] 베팅 배수 해금 레벨 검증 (x2=Lv10, x3=Lv25, x5=Lv50)',
-    MATCH3_VALID: '[CTZ] 3매치 유효성 (매치 0% 스테이지 감지)',
-    SLOTFULL: '[CTZ] 슬롯풀 카운트 유효성',
+  const STATUS_DOT = {
+    PASS: { bg: 'var(--status-ok)', label: '통과' },
+    FAIL: { bg: 'var(--status-err)', label: '실패' },
+    WARN: { bg: 'var(--status-warn)', label: '주의' },
+    SKIP: { bg: 'var(--text-muted)', label: '미실행' },
   };
 
-  // 게임별 최신 날짜의 요약
+  // 체크 항목 정의: 카테고리 + 사람이 읽을 수 있는 이름 + 설명 + 중요도 라벨
+  const CHECK_META = {
+    GAME_LOOP:      { cat: 'game', name: '게임 루프',    desc: '레벨이 정상 플레이되는지 확인',                   imp: '필수', impColor: '#dc2626' },
+    API_ERROR:      { cat: 'stability', name: 'API 에러', desc: '콘솔 에러/경고 발생 여부',                      imp: '중요', impColor: '#d97706' },
+    PERF_HEAP:      { cat: 'perf', name: '메모리(힙)',    desc: '힙 사용량 500MB 초과 여부',                     imp: '참고', impColor: '#6366f1' },
+    PERF_DOM:       { cat: 'perf', name: 'DOM 노드',     desc: 'DOM 노드 10,000개 초과 여부',                   imp: '참고', impColor: '#6366f1' },
+    TIMEOUT:        { cat: 'stability', name: '타임아웃', desc: '스테이지 300초 초과 여부',                      imp: '중요', impColor: '#d97706' },
+    SECURITY:       { cat: 'stability', name: '보안 등급', desc: '보안 스캔 결과 (F=치명적)',                     imp: '중요', impColor: '#d97706' },
+    GOLD_INTEGRITY: { cat: 'game', name: '골드 정합성',   desc: '시작 골드 + 스테이지 합 = 종료 골드',            imp: '필수', impColor: '#dc2626' },
+    BETTING_UNLOCK: { cat: 'game', name: '베팅 해금',     desc: '해금 레벨 이전 사용 여부 (x2=Lv10, x3=Lv25, x5=Lv50)', imp: '중요', impColor: '#d97706' },
+    MATCH3_VALID:   { cat: 'game', name: '3매치 유효',    desc: '매치 0% 스테이지 감지',                         imp: '필수', impColor: '#dc2626' },
+    SLOTFULL:       { cat: 'perf', name: '슬롯풀',       desc: '슬롯풀 카운트 정상 여부',                       imp: '참고', impColor: '#6366f1' },
+  };
+
+  const CATEGORIES = {
+    game:      { icon: '\uD83C\uDFAE', label: '게임 동작' },
+    stability: { icon: '\uD83D\uDEE1\uFE0F', label: '안정성' },
+    perf:      { icon: '\u26A1', label: '성능' },
+  };
+
+  // 측정값 포맷터
+  function formatValue(checkId, val) {
+    if (!val || typeof val !== 'object') return '';
+    switch (checkId) {
+      case 'GAME_LOOP': return val.played != null ? `${val.played}판 플레이` : '';
+      case 'API_ERROR': {
+        const parts = [];
+        if (val.error_count) parts.push(`에러 ${val.error_count}`);
+        if (val.warn_count) parts.push(`경고 ${val.warn_count}`);
+        return parts.join(', ') || '이상 없음';
+      }
+      case 'PERF_HEAP': return val.heap_max_mb != null ? `${val.heap_max_mb}MB / 500MB` : '';
+      case 'PERF_DOM': return val.dom_max != null ? `${val.dom_max.toLocaleString()} / 10,000` : '';
+      case 'TIMEOUT': return val.count ? `${val.count}건 초과` : val.stage_count ? `${val.stage_count}스테이지 정상` : '';
+      case 'SECURITY': return val.grade ? `등급 ${val.grade}` : '';
+      case 'GOLD_INTEGRITY': {
+        if (val.diff === 0) return `정합 일치`;
+        return val.diff != null ? `차이 ${val.diff.toLocaleString()}G` : '';
+      }
+      case 'BETTING_UNLOCK': return val.violations ? `위반 ${val.violations.length}건` : '정상';
+      case 'MATCH3_VALID': return val.stages ? `0% 매치: ${val.stages.length}건` : val.stage_count ? `${val.stage_count}스테이지 정상` : '';
+      case 'SLOTFULL': return val.slotfull_count != null ? `${val.slotfull_count}회` : '';
+      default: return '';
+    }
+  }
+
   const gameIds = Object.keys(byGame).sort();
-  const summaryRows = gameIds.map(gid => {
+
+  const gameCards = gameIds.map(gid => {
     const dates = Object.keys(byGame[gid]).sort().reverse();
     const latestDate = dates[0];
     const latestChecks = byGame[gid][latestDate];
@@ -840,54 +881,95 @@ function renderHealthCheck(checks) {
     const pass = latestChecks.filter(c => c.status === 'PASS').length;
     const fail = latestChecks.filter(c => c.status === 'FAIL').length;
     const warn = latestChecks.filter(c => c.status === 'WARN').length;
-    const skip = latestChecks.filter(c => c.status === 'SKIP').length;
-    const pct = total ? Math.round(pass / total * 100) : 0;
-    const barColor = fail > 0 ? 'var(--status-err)' : warn > 0 ? 'var(--status-warn)' : 'var(--status-ok)';
-    const overallIcon = fail > 0 ? '\u274C FAIL' : warn > 0 ? '\u26A0\uFE0F WARN' : '\u2705 ALL PASS';
 
-    // 7일 추이
-    const trend = dates.slice(0, 7).reverse().map(d => {
+    // 전체 상태 판정
+    const overallStatus = fail > 0 ? 'FAIL' : warn > 0 ? 'WARN' : 'PASS';
+    const statusConf = {
+      PASS: { bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.3)', text: '#10b981', label: '정상' },
+      WARN: { bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.3)', text: '#f59e0b', label: '주의' },
+      FAIL: { bg: 'rgba(239,68,68,0.1)',  border: 'rgba(239,68,68,0.3)',  text: '#ef4444', label: '이상' },
+    }[overallStatus];
+
+    // 7일 히트맵 도트
+    const trendDots = dates.slice(0, 7).reverse().map(d => {
       const dayChecks = byGame[gid][d];
       const dayFail = dayChecks.some(c => c.status === 'FAIL');
       const dayWarn = dayChecks.some(c => c.status === 'WARN');
-      return dayFail ? '\u274C' : dayWarn ? '\u26A0\uFE0F' : '\u2705';
-    }).join(' ');
-
-    // 상세 항목
-    const detailRows = latestChecks.map(c => {
-      const desc = CHECK_DESC[c.check_id] || '';
-      return `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12px;" title="${desc}">
-        <span style="width:20px;text-align:center">${STATUS_ICON[c.status]}</span>
-        <span style="min-width:140px;font-weight:500;color:${STATUS_COLOR[c.status]}">${c.check_id}</span>
-        <span style="color:var(--text-muted);min-width:200px;font-size:11px">${desc}</span>
-        <span style="color:var(--text-secondary);flex:1">${c.message || ''}</span>
-        <span style="font-size:11px;padding:1px 6px;border-radius:4px;background:${c.severity==='CRITICAL'?'#7f1d1d':c.severity==='HIGH'?'#78350f':'#1e3a5f'};color:#fff">${c.severity}</span>
+      const dotColor = dayFail ? 'var(--status-err)' : dayWarn ? 'var(--status-warn)' : 'var(--status-ok)';
+      const shortDate = d.slice(5); // MM-DD
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;" title="${d}">
+        <div style="width:10px;height:10px;border-radius:50%;background:${dotColor};"></div>
+        <span style="font-size:9px;color:var(--text-muted)">${shortDate}</span>
       </div>`;
     }).join('');
 
-    return `<div style="margin-bottom:8px;">
-      <div style="display:flex;align-items:center;gap:12px;padding:8px 0;cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
-        <span style="font-weight:700;min-width:36px">${gid}</span>
-        <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden">
-          <div style="height:100%;width:${pct}%;background:${barColor};border-radius:4px;transition:width .3s"></div>
+    // 카테고리별 그룹핑
+    const grouped = {};
+    for (const c of latestChecks) {
+      const meta = CHECK_META[c.check_id] || { cat: 'game', name: c.check_id, desc: '', imp: '참고', impColor: '#6366f1' };
+      const cat = meta.cat;
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(c);
+    }
+
+    const categoryBlocks = Object.entries(CATEGORIES).map(([catKey, catInfo]) => {
+      const items = grouped[catKey];
+      if (!items || !items.length) return '';
+      const rows = items.map(c => {
+        const meta = CHECK_META[c.check_id] || { name: c.check_id, desc: '', imp: '참고', impColor: '#6366f1' };
+        const dot = STATUS_DOT[c.status] || STATUS_DOT.SKIP;
+        const valueStr = formatValue(c.check_id, c.value);
+        const failHighlight = c.status === 'FAIL' ? 'background:rgba(239,68,68,0.08);border-radius:6px;padding:4px 6px;margin:-4px -6px;' : '';
+        return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px;${failHighlight}" title="${meta.desc}">
+          <div style="width:8px;height:8px;border-radius:50%;background:${dot.bg};flex-shrink:0;${c.status==='FAIL'?'box-shadow:0 0 6px rgba(239,68,68,0.5);':''}"></div>
+          <span style="min-width:90px;font-weight:500;color:var(--text-primary)">${meta.name}</span>
+          <span style="flex:1;color:var(--text-muted);font-size:11px">${valueStr}</span>
+          <span style="font-size:10px;padding:1px 8px;border-radius:10px;border:1px solid ${meta.impColor}33;color:${meta.impColor};white-space:nowrap">${meta.imp}</span>
+        </div>`;
+      }).join('');
+      return `<div style="margin-bottom:8px;">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;font-weight:600;letter-spacing:0.5px;">
+          ${catInfo.icon} ${catInfo.label}
         </div>
-        <span style="font-size:12px;color:var(--text-secondary);min-width:60px">${pass}/${total}</span>
-        <span style="font-size:12px;min-width:80px;text-align:right">${overallIcon}</span>
+        ${rows}
+      </div>`;
+    }).join('');
+
+    return `<div style="background:var(--bg-card);border:1px solid ${statusConf.border};border-radius:10px;padding:16px;border-left:3px solid ${statusConf.text};">
+      <!-- 헤더: 게임명 + 전체 상태 -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-weight:700;font-size:15px;">${gid}</span>
+          <span style="font-size:11px;padding:2px 10px;border-radius:10px;background:${statusConf.bg};color:${statusConf.text};font-weight:600;">${statusConf.label}</span>
+          <span style="font-size:11px;color:var(--text-muted);">${pass}/${total} 통과</span>
+        </div>
+        <span style="font-size:11px;color:var(--text-muted)">${latestDate}</span>
       </div>
-      <div style="display:none;padding:4px 0 8px 48px;border-bottom:1px solid var(--border)">
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">${latestDate} | ${trend}</div>
-        ${detailRows}
+
+      <!-- 7일 히트맵 -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:8px 12px;background:var(--bg-body);border-radius:8px;">
+        <span style="font-size:10px;color:var(--text-muted);font-weight:600;min-width:40px;">7일 추이</span>
+        <div style="display:flex;gap:10px;flex:1;justify-content:flex-end;">${trendDots}</div>
       </div>
+
+      <!-- 카테고리별 체크 항목 -->
+      ${categoryBlocks}
     </div>`;
   }).join('');
 
   section.innerHTML = `
-    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:16px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <span style="font-weight:700;font-size:14px;">Health Check</span>
-        <span style="font-size:11px;color:var(--text-muted)">최근 7일</span>
+    <div style="margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <span style="font-weight:700;font-size:15px;">Health Check</span>
+        <div style="display:flex;align-items:center;gap:12px;font-size:11px;color:var(--text-muted);">
+          <span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--status-ok);display:inline-block"></span> 통과</span>
+          <span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--status-warn);display:inline-block"></span> 주의</span>
+          <span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--status-err);display:inline-block"></span> 실패</span>
+        </div>
       </div>
-      ${summaryRows}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(340px, 1fr));gap:12px;">
+        ${gameCards}
+      </div>
     </div>
   `;
 }
