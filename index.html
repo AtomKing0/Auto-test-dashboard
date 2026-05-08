@@ -839,12 +839,6 @@ function renderHealthCheck(checks) {
     SLOTFULL:       { cat: 'perf', name: '슬롯풀',       desc: '슬롯풀 카운트 정상 여부',                       imp: '참고', impColor: '#6366f1' },
   };
 
-  const CATEGORIES = {
-    game:      { icon: '\uD83C\uDFAE', label: '게임 동작' },
-    stability: { icon: '\uD83D\uDEE1\uFE0F', label: '안정성' },
-    perf:      { icon: '\u26A1', label: '성능' },
-  };
-
   // 측정값 포맷터
   function formatValue(checkId, val) {
     if (!val || typeof val !== 'object') return '';
@@ -882,7 +876,6 @@ function renderHealthCheck(checks) {
     const fail = latestChecks.filter(c => c.status === 'FAIL').length;
     const warn = latestChecks.filter(c => c.status === 'WARN').length;
 
-    // 전체 상태 판정
     const overallStatus = fail > 0 ? 'FAIL' : warn > 0 ? 'WARN' : 'PASS';
     const statusConf = {
       PASS: { bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.3)', text: '#10b981', label: '정상' },
@@ -890,84 +883,73 @@ function renderHealthCheck(checks) {
       FAIL: { bg: 'rgba(239,68,68,0.1)',  border: 'rgba(239,68,68,0.3)',  text: '#ef4444', label: '이상' },
     }[overallStatus];
 
-    // 7일 히트맵 도트
+    // 7일 히트맵 — 도트만 (날짜는 tooltip)
     const trendDots = dates.slice(0, 7).reverse().map(d => {
-      const dayChecks = byGame[gid][d];
-      const dayFail = dayChecks.some(c => c.status === 'FAIL');
-      const dayWarn = dayChecks.some(c => c.status === 'WARN');
-      const dotColor = dayFail ? 'var(--status-err)' : dayWarn ? 'var(--status-warn)' : 'var(--status-ok)';
-      const shortDate = d.slice(5); // MM-DD
-      return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;" title="${d}">
-        <div style="width:10px;height:10px;border-radius:50%;background:${dotColor};"></div>
-        <span style="font-size:9px;color:var(--text-muted)">${shortDate}</span>
+      const dc = byGame[gid][d];
+      const col = dc.some(c => c.status === 'FAIL') ? 'var(--status-err)' : dc.some(c => c.status === 'WARN') ? 'var(--status-warn)' : 'var(--status-ok)';
+      return `<div style="width:8px;height:8px;border-radius:50%;background:${col}" title="${d}"></div>`;
+    }).join('');
+
+    // 문제 항목 (FAIL/WARN) — 상세 표시
+    const issues = latestChecks.filter(c => c.status === 'FAIL' || c.status === 'WARN');
+    const issueRows = issues.map(c => {
+      const meta = CHECK_META[c.check_id] || { name: c.check_id, desc: '', imp: '참고', impColor: '#6366f1' };
+      const dot = STATUS_DOT[c.status];
+      const val = formatValue(c.check_id, c.value);
+      const isFail = c.status === 'FAIL';
+      return `<div style="display:flex;align-items:center;gap:6px;padding:3px 6px;font-size:11px;${isFail?'background:rgba(239,68,68,0.08);border-radius:4px;':''}" title="${meta.desc}">
+        <div style="width:6px;height:6px;border-radius:50%;background:${dot.bg};flex-shrink:0"></div>
+        <span style="font-weight:600;color:${dot.bg}">${meta.name}</span>
+        <span style="color:var(--text-muted);flex:1">${val}</span>
+        <span style="font-size:9px;color:${meta.impColor}">${meta.imp}</span>
       </div>`;
     }).join('');
 
-    // 카테고리별 그룹핑
-    const grouped = {};
-    for (const c of latestChecks) {
-      const meta = CHECK_META[c.check_id] || { cat: 'game', name: c.check_id, desc: '', imp: '참고', impColor: '#6366f1' };
-      const cat = meta.cat;
-      if (!grouped[cat]) grouped[cat] = [];
-      grouped[cat].push(c);
-    }
-
-    const categoryBlocks = Object.entries(CATEGORIES).map(([catKey, catInfo]) => {
-      const items = grouped[catKey];
-      if (!items || !items.length) return '';
-      const rows = items.map(c => {
-        const meta = CHECK_META[c.check_id] || { name: c.check_id, desc: '', imp: '참고', impColor: '#6366f1' };
-        const dot = STATUS_DOT[c.status] || STATUS_DOT.SKIP;
-        const valueStr = formatValue(c.check_id, c.value);
-        const failHighlight = c.status === 'FAIL' ? 'background:rgba(239,68,68,0.08);border-radius:6px;padding:4px 6px;margin:-4px -6px;' : '';
-        return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px;${failHighlight}" title="${meta.desc}">
-          <div style="width:8px;height:8px;border-radius:50%;background:${dot.bg};flex-shrink:0;${c.status==='FAIL'?'box-shadow:0 0 6px rgba(239,68,68,0.5);':''}"></div>
-          <span style="min-width:90px;font-weight:500;color:var(--text-primary)">${meta.name}</span>
-          <span style="flex:1;color:var(--text-muted);font-size:11px">${valueStr}</span>
-          <span style="font-size:10px;padding:1px 8px;border-radius:10px;border:1px solid ${meta.impColor}33;color:${meta.impColor};white-space:nowrap">${meta.imp}</span>
-        </div>`;
-      }).join('');
-      return `<div style="margin-bottom:8px;">
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;font-weight:600;letter-spacing:0.5px;">
-          ${catInfo.icon} ${catInfo.label}
-        </div>
-        ${rows}
-      </div>`;
+    // 통과 항목 — 작은 pill로 한 줄에 나열
+    const passed = latestChecks.filter(c => c.status === 'PASS');
+    const passPills = passed.map(c => {
+      const meta = CHECK_META[c.check_id] || { name: c.check_id, desc: '' };
+      return `<span style="display:inline-flex;align-items:center;gap:3px;padding:1px 8px;border-radius:10px;background:rgba(16,185,129,0.08);font-size:10px;color:var(--status-ok);white-space:nowrap" title="${meta.desc}">${meta.name}</span>`;
     }).join('');
 
-    return `<div style="background:var(--bg-card);border:1px solid ${statusConf.border};border-radius:10px;padding:16px;border-left:3px solid ${statusConf.text};">
-      <!-- 헤더: 게임명 + 전체 상태 -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span style="font-weight:700;font-size:15px;">${gid}</span>
-          <span style="font-size:11px;padding:2px 10px;border-radius:10px;background:${statusConf.bg};color:${statusConf.text};font-weight:600;">${statusConf.label}</span>
-          <span style="font-size:11px;color:var(--text-muted);">${pass}/${total} 통과</span>
+    // SKIP 항목
+    const skipped = latestChecks.filter(c => c.status === 'SKIP');
+    const skipPills = skipped.map(c => {
+      const meta = CHECK_META[c.check_id] || { name: c.check_id };
+      return `<span style="display:inline-flex;padding:1px 8px;border-radius:10px;background:rgba(139,155,176,0.1);font-size:10px;color:var(--text-muted);white-space:nowrap">${meta.name}</span>`;
+    }).join('');
+
+    const issueBlock = issues.length ? `<div style="margin-bottom:6px">${issueRows}</div>` : '';
+    const passBlock = passed.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;${issues.length?'':''}"><span style="font-size:10px;color:var(--text-muted);margin-right:2px">통과:</span>${passPills}</div>` : '';
+    const skipBlock = skipped.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px"><span style="font-size:10px;color:var(--text-muted);margin-right:2px">미실행:</span>${skipPills}</div>` : '';
+
+    return `<div style="background:var(--bg-card);border:1px solid ${statusConf.border};border-radius:10px;padding:12px 14px;border-left:3px solid ${statusConf.text};">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-weight:700;font-size:14px;">${gid}</span>
+          <span style="font-size:10px;padding:1px 8px;border-radius:10px;background:${statusConf.bg};color:${statusConf.text};font-weight:600;">${statusConf.label}</span>
+          <span style="font-size:10px;color:var(--text-muted)">${pass}/${total}</span>
         </div>
-        <span style="font-size:11px;color:var(--text-muted)">${latestDate}</span>
+        <div style="display:flex;align-items:center;gap:4px;">
+          ${trendDots}
+          <span style="font-size:9px;color:var(--text-muted);margin-left:4px">${latestDate.slice(5)}</span>
+        </div>
       </div>
-
-      <!-- 7일 히트맵 -->
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:8px 12px;background:var(--bg-body);border-radius:8px;">
-        <span style="font-size:10px;color:var(--text-muted);font-weight:600;min-width:40px;">7일 추이</span>
-        <div style="display:flex;gap:10px;flex:1;justify-content:flex-end;">${trendDots}</div>
-      </div>
-
-      <!-- 카테고리별 체크 항목 -->
-      ${categoryBlocks}
+      ${issueBlock}${passBlock}${skipBlock}
     </div>`;
   }).join('');
 
   section.innerHTML = `
     <div style="margin-bottom:16px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <span style="font-weight:700;font-size:15px;">Health Check</span>
-        <div style="display:flex;align-items:center;gap:12px;font-size:11px;color:var(--text-muted);">
-          <span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--status-ok);display:inline-block"></span> 통과</span>
-          <span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--status-warn);display:inline-block"></span> 주의</span>
-          <span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--status-err);display:inline-block"></span> 실패</span>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <span style="font-weight:700;font-size:14px;">Health Check</span>
+        <div style="display:flex;align-items:center;gap:10px;font-size:10px;color:var(--text-muted);">
+          <span style="display:flex;align-items:center;gap:3px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--status-ok);display:inline-block"></span>통과</span>
+          <span style="display:flex;align-items:center;gap:3px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--status-warn);display:inline-block"></span>주의</span>
+          <span style="display:flex;align-items:center;gap:3px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--status-err);display:inline-block"></span>실패</span>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(340px, 1fr));gap:12px;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:10px;">
         ${gameCards}
       </div>
     </div>
