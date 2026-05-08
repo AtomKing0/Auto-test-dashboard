@@ -524,6 +524,7 @@ const DIFF_TIERS = { 1: '튜토리얼', 2: '노말', 3: '하드', 4: '슈퍼하�
 const DIFF_COLORS = { 1: '#10b981', 2: '#10b981', 3: '#f59e0b', 4: '#ef4444' };
 
 let _allRuns = [];
+let _nruRuns = [];
 let _charts = {};
 let _gameConfigs = [];
 let _overviewGames = {};
@@ -632,6 +633,16 @@ async function fetchHealthChecks() {
     .gte('run_date', sevenDaysAgo)
     .order('run_date', { ascending: false });
   if (error) { console.warn('health_checks 조회 실패:', error.message); return []; }
+  return data || [];
+}
+
+async function fetchNruRuns() {
+  const { data, error } = await sb
+    .from('nru_runs')
+    .select('*')
+    .order('run_date', { ascending: false })
+    .limit(100);
+  if (error) { console.warn('nru_runs 조회 실패:', error.message); return []; }
   return data || [];
 }
 
@@ -776,6 +787,7 @@ function renderOverview(games) {
         </div>`;
       }).join('')}
     </div>
+    <div id="nru-section"></div>
     <div id="health-check-section"></div>
     <div id="cron-section"></div>
     <div id="run-manager"></div>
@@ -783,6 +795,7 @@ function renderOverview(games) {
   `;
   panel.style.display = 'block';
   if (_allRuns.length) renderRunManager(_allRuns);
+  if (_nruRuns.length) renderNruSummary(_nruRuns);
   renderDbUsage();
 
   renderAvgTimeChart(games);
@@ -856,6 +869,137 @@ function renderGameCard(gid, g) {
       <div class="stat"><span class="stat-label">총 런/판</span><span class="stat-value">${g.runs}런 / ${g.levels.toLocaleString()}판</span></div>
       <div class="stat"><span class="stat-label">소요시간</span><span class="stat-value">${timeStr}</span></div>
       ${personaRows}
+    </div>
+  `;
+}
+
+/* ── NRU 요약 ── */
+
+function renderNruSummary(nruRuns) {
+  const section = document.getElementById('nru-section');
+  if (!section) return;
+  if (!nruRuns || !nruRuns.length) {
+    section.innerHTML = `
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:24px 18px;margin-bottom:16px;text-align:center;">
+        <div style="font-size:13px;color:var(--text-muted);">NRU 테스트 데이터가 없습니다</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">run_nru.py 실행 후 자동 적재됩니다</div>
+      </div>`;
+    return;
+  }
+
+  // 최근 10건
+  const recent = nruRuns.slice(0, 10);
+  const latest = recent[0];
+  const passCount = recent.filter(r => r.ready).length;
+  const passRate = Math.round(passCount / recent.length * 100);
+  const avgLevels = (recent.reduce((a, r) => a + (r.levels_cleared || 0), 0) / recent.length).toFixed(1);
+  const avgTime = (recent.reduce((a, r) => a + (r.total_time_sec || 0), 0) / recent.length);
+  const avgTimeStr = avgTime >= 60 ? `${(avgTime / 60).toFixed(1)}분` : `${Math.round(avgTime)}초`;
+  const avgRetries = (recent.reduce((a, r) => a + (r.total_retries || 0), 0) / recent.length).toFixed(1);
+
+  // 최신 결과 상태
+  const latestStatus = latest.ready;
+  const statusColor = latestStatus ? 'var(--status-ok)' : 'var(--status-err)';
+  const statusLabel = latestStatus ? 'PASS' : 'FAIL';
+  const statusBg = latestStatus ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)';
+
+  // 최근 10건 추이 도트
+  const trendDots = recent.slice().reverse().map(r => {
+    const col = r.ready ? 'var(--status-ok)' : 'var(--status-err)';
+    const d = (r.run_date || '').slice(5);
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:1px" title="${r.run_date} ${r.run_time || ''}&#10;Lv${r.levels_cleared}/${r.total_levels || 24}">
+      <div style="width:14px;height:14px;border-radius:3px;background:${col}"></div>
+      <span style="font-size:8px;color:var(--text-muted)">${d}</span>
+    </div>`;
+  }).join('');
+
+  // 레벨별 진행 차트 (최신 런)
+  const levelResults = latest.level_results || [];
+  const levelBars = levelResults.map(lv => {
+    const ok = lv.success;
+    const col = ok ? (lv.retries > 0 ? '#f59e0b' : '#10b981') : '#ef4444';
+    const h = Math.min(100, Math.max(15, (lv.duration_s || 0) * 2.5));
+    const title = `Lv${lv.level}: ${ok ? '성공' : '실패'} ${lv.duration_s}s, ${lv.turns}턴, 재시도${lv.retries || 0}`;
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:1px;flex:1;min-width:12px" title="${title}">
+      <div style="width:100%;height:${h}px;background:${col};border-radius:2px;min-height:4px"></div>
+      <span style="font-size:8px;color:var(--text-muted)">${lv.level}</span>
+    </div>`;
+  }).join('');
+
+  // 최근 실행 테이블
+  const rows = recent.map(r => {
+    const passStyle = r.ready
+      ? 'color:var(--status-ok);font-weight:600'
+      : 'color:var(--status-err);font-weight:600';
+    const failInfo = r.ready ? '' : ` (Lv${r.failed_level || '?'})`;
+    const timeStr = (r.total_time_sec || 0) >= 60
+      ? `${((r.total_time_sec || 0) / 60).toFixed(1)}분`
+      : `${Math.round(r.total_time_sec || 0)}초`;
+    return `<tr>
+      <td>${(r.run_date || '').slice(5)}</td>
+      <td>${r.run_time || '-'}</td>
+      <td style="${passStyle}">${r.ready ? 'PASS' : 'FAIL'}${failInfo}</td>
+      <td>${r.levels_cleared}/${r.total_levels || 24}</td>
+      <td>${timeStr}</td>
+      <td>${r.total_retries || 0}</td>
+      <td>${(r.gold || 0).toLocaleString()}</td>
+    </tr>`;
+  }).join('');
+
+  section.innerHTML = `
+    <div style="margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
+        <span style="font-weight:700;font-size:14px;">NRU 튜토리얼 테스트</span>
+        <span style="font-size:11px;padding:2px 10px;border-radius:10px;background:${statusBg};color:${statusColor};font-weight:600">최신 ${statusLabel}</span>
+        <span style="font-size:11px;color:var(--text-muted)">최근 ${recent.length}회 통과율 ${passRate}%</span>
+        <span style="font-size:10px;color:var(--text-muted);margin-left:auto">${latest.run_date || ''} ${latest.run_time || ''}</span>
+      </div>
+
+      <!-- 메트릭 카드 -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        <div style="flex:1;min-width:130px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px">
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">통과율 (최근 ${recent.length}회)</div>
+          <div style="font-size:22px;font-weight:700;color:${passRate >= 80 ? 'var(--status-ok)' : passRate >= 50 ? 'var(--status-warn)' : 'var(--status-err)'}">${passRate}%</div>
+        </div>
+        <div style="flex:1;min-width:130px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px">
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">평균 클리어 레벨</div>
+          <div style="font-size:22px;font-weight:700">${avgLevels}<span style="font-size:12px;color:var(--text-muted)">/24</span></div>
+        </div>
+        <div style="flex:1;min-width:130px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px">
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">평균 소요 시간</div>
+          <div style="font-size:22px;font-weight:700">${avgTimeStr}</div>
+        </div>
+        <div style="flex:1;min-width:130px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px">
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">평균 재시도</div>
+          <div style="font-size:22px;font-weight:700">${avgRetries}<span style="font-size:12px;color:var(--text-muted)">회</span></div>
+        </div>
+      </div>
+
+      <!-- 추이 + 레벨 진행 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px">
+          <h4 style="font-size:12px;color:var(--text-secondary);margin-bottom:10px">최근 실행 추이</h4>
+          <div style="display:flex;gap:6px;align-items:flex-end;justify-content:center">${trendDots}</div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px">
+          <h4 style="font-size:12px;color:var(--text-secondary);margin-bottom:10px">최신 런 레벨별 소요시간</h4>
+          <div style="display:flex;gap:2px;align-items:flex-end;height:100px;padding:0 4px">${levelBars}</div>
+          <div style="display:flex;gap:10px;margin-top:6px;font-size:10px;color:var(--text-muted);justify-content:center">
+            <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#10b981;margin-right:3px"></span>성공</span>
+            <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#f59e0b;margin-right:3px"></span>재시도 후 성공</span>
+            <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#ef4444;margin-right:3px"></span>실패</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 실행 이력 테이블 -->
+      <div class="tbl-wrap" style="margin-bottom:0">
+        <h4>최근 NRU 실행 이력</h4>
+        <table>
+          <thead><tr><th>날짜</th><th>시간</th><th>결과</th><th>레벨</th><th>소요</th><th>재시도</th><th>골드</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
     </div>
   `;
 }
@@ -1311,6 +1455,120 @@ async function switchTab(id, _btn) {
 }
 
 /* ══════════════════════════════════════════════
+   카테고리: NRU 튜토리얼 (SCJ)
+   ══════════════════════════════════════════════ */
+function renderCatNru(gameId) {
+  const runs = _nruRuns.filter(r => r.game_id === gameId);
+  if (!runs.length) return '<div style="color:var(--text-muted);padding:20px">NRU 데이터 없음. run_nru.py 실행 후 자동 적재됩니다.</div>';
+
+  const latest = runs[0];
+  const levelResults = latest.level_results || [];
+
+  const passCount = runs.filter(r => r.ready).length;
+  const passRate = Math.round(passCount / runs.length * 100);
+
+  // 레벨별 통계 집계 (모든 런)
+  const levelStats = {};
+  for (const r of runs) {
+    for (const lv of (r.level_results || [])) {
+      if (!levelStats[lv.level]) levelStats[lv.level] = { total: 0, success: 0, totalTime: 0, totalRetries: 0, totalTurns: 0 };
+      const s = levelStats[lv.level];
+      s.total++;
+      if (lv.success) s.success++;
+      s.totalTime += lv.duration_s || 0;
+      s.totalRetries += lv.retries || 0;
+      s.totalTurns += lv.turns || 0;
+    }
+  }
+
+  const levelRows = Object.entries(levelStats).sort(([a],[b]) => Number(a) - Number(b)).map(([lv, s]) => {
+    const cr = Math.round(s.success / s.total * 100);
+    const crColor = cr >= 100 ? 'var(--status-ok)' : cr >= 50 ? 'var(--status-warn)' : 'var(--status-err)';
+    return `<tr>
+      <td style="font-weight:600">Lv ${lv}</td>
+      <td style="color:${crColor};font-weight:600">${cr}%</td>
+      <td>${(s.totalTime / s.total).toFixed(1)}초</td>
+      <td>${(s.totalTurns / s.total).toFixed(1)}</td>
+      <td>${(s.totalRetries / s.total).toFixed(1)}</td>
+      <td>${s.total}</td>
+    </tr>`;
+  }).join('');
+
+  const latestRows = levelResults.map(lv => {
+    const ok = lv.success;
+    const statusColor = ok ? 'var(--status-ok)' : 'var(--status-err)';
+    return `<tr>
+      <td style="font-weight:600">Lv ${lv.level}</td>
+      <td style="color:${statusColor};font-weight:600">${ok ? '성공' : '실패'}</td>
+      <td>${(lv.duration_s || 0).toFixed(1)}초</td>
+      <td>${lv.turns || 0}</td>
+      <td>${lv.matches || 0}</td>
+      <td>${lv.draws || 0}</td>
+      <td>${lv.retries || 0}</td>
+    </tr>`;
+  }).join('');
+
+  const historyRows = runs.slice(0, 20).map(r => {
+    const passStyle = r.ready ? 'color:var(--status-ok);font-weight:600' : 'color:var(--status-err);font-weight:600';
+    const timeStr = (r.total_time_sec || 0) >= 60 ? `${((r.total_time_sec || 0) / 60).toFixed(1)}분` : `${Math.round(r.total_time_sec || 0)}초`;
+    return `<tr>
+      <td>${(r.run_date || '').slice(5)}</td>
+      <td>${r.run_time || '-'}</td>
+      <td style="${passStyle}">${r.ready ? 'PASS' : 'FAIL'}</td>
+      <td>${r.levels_cleared}/${r.total_levels || 24}</td>
+      <td>${timeStr}</td>
+      <td>${r.total_retries || 0}</td>
+      <td>${(r.gold || 0).toLocaleString()}</td>
+      <td>${r.hammer || 0}</td>
+    </tr>`;
+  }).join('');
+
+  return `
+    <div class="metric-row">
+      <div class="metric-box">
+        <div class="label">전체 통과율</div>
+        <div class="value" style="color:${passRate >= 80 ? 'var(--status-ok)' : passRate >= 50 ? 'var(--status-warn)' : 'var(--status-err)'}">${passRate}%</div>
+        <div class="sub">${passCount}/${runs.length}회 통과</div>
+      </div>
+      <div class="metric-box">
+        <div class="label">평균 클리어</div>
+        <div class="value">${(runs.reduce((a,r) => a + (r.levels_cleared||0), 0) / runs.length).toFixed(1)}<span style="font-size:12px;color:var(--text-muted)">/24</span></div>
+      </div>
+      <div class="metric-box">
+        <div class="label">최신 결과</div>
+        <div class="value" style="color:${latest.ready ? 'var(--status-ok)' : 'var(--status-err)'}">${latest.ready ? 'PASS' : 'FAIL'}</div>
+        <div class="sub">${latest.run_date} ${latest.run_time || ''}</div>
+      </div>
+      <div class="metric-box">
+        <div class="label">총 실행</div>
+        <div class="value">${runs.length}<span style="font-size:12px;color:var(--text-muted)">회</span></div>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <h4>레벨별 통계 (전체 ${runs.length}회 집계)</h4>
+      <table>
+        <thead><tr><th>레벨</th><th>클리어율</th><th>평균 시간</th><th>평균 턴</th><th>평균 재시도</th><th>시도 수</th></tr></thead>
+        <tbody>${levelRows}</tbody>
+      </table>
+    </div>
+    <div class="tbl-wrap">
+      <h4>최신 런 레벨별 상세 (${latest.run_date} ${latest.run_time || ''})</h4>
+      <table>
+        <thead><tr><th>레벨</th><th>결과</th><th>시간</th><th>턴</th><th>매치</th><th>드로우</th><th>재시도</th></tr></thead>
+        <tbody>${latestRows}</tbody>
+      </table>
+    </div>
+    <div class="tbl-wrap">
+      <h4>NRU 실행 이력 (최근 ${Math.min(20, runs.length)}회)</h4>
+      <table>
+        <thead><tr><th>날짜</th><th>시간</th><th>결과</th><th>레벨</th><th>소요</th><th>재시도</th><th>골드</th><th>해머</th></tr></thead>
+        <tbody>${historyRows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+/* ══════════════════════════════════════════════
    카테고리: 라운드 분석 (PBM)
    ══════════════════════════════════════════════ */
 function renderCatRounds(gameId, stages, runs) {
@@ -1484,6 +1742,8 @@ const CATEGORY_RENDERERS = {
   time_analysis: (gid, stages, runs) => renderCatTimeAnalysis(gid, stages, runs),
   // PBM 전용
   rounds: (gid, stages, runs) => renderCatRounds(gid, stages, runs),
+  // NRU (SCJ)
+  nru: (gid, stages, runs) => renderCatNru(gid),
 };
 
 const CHART_RENDERERS = {
@@ -2494,9 +2754,10 @@ function renderCatStagesCTZ(gameId, stages) {
   const byStage = {};
   for (const s of stages) {
     const key = s.stage_number || s.game_level || '?';
-    if (!byStage[key]) byStage[key] = { played: 0, times: [], level: s.game_level, scores: [], slotsUsed: [], tileKinds: [], continues: 0, difficulty: s.difficulty || 0 };
+    if (!byStage[key]) byStage[key] = { played: 0, times: [], level: s.game_level, scores: [], slotsUsed: [], tileKinds: [], continues: 0, difficulty: s.difficulty || 0, personas: new Set() };
     const v = byStage[key];
     v.played++;
+    if (s.persona) v.personas.add(s.persona);
     if (s.time_sec) v.times.push(s.time_sec);
     const d = s.details || {};
     if (d.score != null) v.scores.push(d.score);
@@ -2515,7 +2776,8 @@ function renderCatStagesCTZ(gameId, stages) {
       const diffTier = v.difficulty || 0;
       const diffColor = diffTier === 4 ? '#ef4444' : diffTier === 3 ? '#f59e0b' : diffTier === 2 ? '#10b981' : '#64748b';
       const diffName = DIFF_TIERS[diffTier] || '-';
-      return `<tr>
+      const personaList = [...v.personas].join(',');
+      return `<tr data-personas="${personaList}">
         <td>${st}</td><td>${v.played}</td>
         <td>${avgT}초</td><td>${avgScore}</td><td>${avgSlots}</td>
         <td>${avgTK}</td><td>${v.continues}</td>
@@ -2523,9 +2785,23 @@ function renderCatStagesCTZ(gameId, stages) {
     }).join('');
   const diffOptions = [...new Set(Object.values(byStage).map(v => v.difficulty))].sort();
   const diffFilterOpts = diffOptions.map(d => `<option value="${d}">${DIFF_TIERS[d] || 'Tier '+d}</option>`).join('');
+
+  // 모드(페르소나) 필터 옵션
+  const stgPersonas = [...new Set(stages.map(s => s.persona).filter(Boolean))].sort((a, b) =>
+    (PERSONA_ORDER.indexOf(a)===-1?99:PERSONA_ORDER.indexOf(a)) - (PERSONA_ORDER.indexOf(b)===-1?99:PERSONA_ORDER.indexOf(b))
+  );
+  const personaFilterOpts = stgPersonas.map(p => `<option value="${p}">${PERSONA_KO[p] || p}</option>`).join('');
+
   return `
     <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;padding:4px 8px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px">
       색상 규칙 — 난이도: <span style="color:#10b981">노말</span> · <span style="color:#f59e0b">하드</span> · <span style="color:#ef4444">슈퍼하드</span>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center;font-size:12px">
+      <span style="color:var(--text-muted)">필터:</span>
+      <select id="stg-persona-${gameId}" onchange="filterStages('${gameId}')" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-secondary);font-size:12px">
+        <option value="">전체 모드</option>${personaFilterOpts}
+      </select>
+      <button onclick="resetStageFilters('${gameId}')" style="padding:4px 10px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-muted);font-size:11px;cursor:pointer">필터 초기화</button>
     </div>
     <div class="tbl-wrap"><h4>스테이지별 상세 (${Object.keys(byStage).length}개)</h4>
       <table id="stg-table-${gameId}"><thead><tr>
@@ -2550,8 +2826,9 @@ function renderCatStages(gameId, stages) {
   const byStage = {};
   for (const s of stages) {
     const key = s.stage_number || s.game_level || '?';
-    if (!byStage[key]) byStage[key] = { played: 0, times: [], level: s.game_level, mapScores: [], mapDetails: [], turns: [], goldPnl: 0, difficulty: s.difficulty || 0, bets: [] };
+    if (!byStage[key]) byStage[key] = { played: 0, times: [], level: s.game_level, mapScores: [], mapDetails: [], turns: [], goldPnl: 0, difficulty: s.difficulty || 0, bets: [], personas: new Set() };
     byStage[key].played++;
+    if (s.persona) byStage[key].personas.add(s.persona);
     if (s.time_sec) byStage[key].times.push(s.time_sec);
     const d = s.details || {};
     if (d.map_score != null) {
@@ -2625,7 +2902,8 @@ function renderCatStages(gameId, stages) {
       const gimmickStr = Object.keys(gimmickTypeSets).length
         ? Object.entries(gimmickTypeSets).map(([name, cnt]) => `${name} (${cnt}/${md.length}판)`).join(', ')
         : '없음';
-      return `<tr style="cursor:pointer" onclick="var d=document.getElementById('${rowId}');d.style.display=d.style.display==='none'?'table-row':'none'">
+      const personaList = [...v.personas].join(',');
+      return `<tr style="cursor:pointer" data-personas="${personaList}" onclick="var d=document.getElementById('${rowId}');d.style.display=d.style.display==='none'?'table-row':'none'">
         <td>${st}</td><td>Lv${v.level||'?'}</td><td>${v.played}</td>
         <td>${avgT}초</td>
         <td style="color:${goldColor}">${avgGold.toLocaleString()}</td>
@@ -2668,6 +2946,12 @@ function renderCatStages(gameId, stages) {
   const diffOptions = [...new Set(Object.values(byStage).map(v => v.difficulty))].sort();
   const diffFilterOpts = diffOptions.map(d => `<option value="${d}">${DIFF_TIERS[d] || 'Tier '+d}</option>`).join('');
 
+  // 모드(페르소나) 필터 옵션
+  const stgPersonas = [...new Set(stages.map(s => s.persona).filter(Boolean))].sort((a, b) =>
+    (PERSONA_ORDER.indexOf(a)===-1?99:PERSONA_ORDER.indexOf(a)) - (PERSONA_ORDER.indexOf(b)===-1?99:PERSONA_ORDER.indexOf(b))
+  );
+  const personaFilterOpts = stgPersonas.map(p => `<option value="${p}">${PERSONA_KO[p] || p}</option>`).join('');
+
   return `
     <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;padding:4px 8px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px">
       색상 규칙 — 난이도: <span style="color:#10b981">노말</span> · <span style="color:#f59e0b">하드</span> · <span style="color:#ef4444">슈퍼하드</span>
@@ -2702,6 +2986,9 @@ function renderCatStages(gameId, stages) {
         <option value="1">x1</option>
         <option value="2">x2</option>
         <option value="4">x4</option>
+      </select>
+      <select id="stg-persona-${gameId}" onchange="filterStages('${gameId}')" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-secondary);font-size:12px">
+        <option value="">전체 모드</option>${personaFilterOpts}
       </select>
       <button onclick="resetStageFilters('${gameId}')" style="padding:4px 10px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-muted);font-size:11px;cursor:pointer">필터 초기화</button>
       <button onclick="resetStageSort('${gameId}')" style="padding:4px 10px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-muted);font-size:11px;cursor:pointer">정렬 원복 ↺</button>
@@ -3464,13 +3751,19 @@ function filterStages(gameId) {
       const betText = cells[8]?.textContent || '';
       if (!betText.includes(`x${betVal}`)) show = false;
     }
+    // 모드(페르소나) 필터
+    const personaVal = document.getElementById(`stg-persona-${gameId}`)?.value || '';
+    if (personaVal) {
+      const rowPersonas = row.getAttribute('data-personas') || '';
+      if (!rowPersonas.split(',').includes(personaVal)) show = false;
+    }
 
     row.style.display = show ? '' : 'none';
   });
 }
 
 function resetStageFilters(gameId) {
-  ['diff', 'gold', 'ms', 'turns', 'bet'].forEach(f => {
+  ['diff', 'gold', 'ms', 'turns', 'bet', 'persona'].forEach(f => {
     const el = document.getElementById(`stg-${f}-${gameId}`);
     if (el) el.value = '';
   });
@@ -3487,9 +3780,13 @@ function renderRunManager(runs) {
   const minDate = dates.length ? dates.reduce((a, b) => a < b ? a : b) : '';
   const maxDate = dates.length ? dates.reduce((a, b) => a > b ? a : b) : '';
 
-  // 게임 목록 수집
+  // 게임 + 모드 목록 수집
   const rmGames = [...new Set(runs.map(r => r.game_id).filter(Boolean))].sort();
   const gameOpts = rmGames.map(g => `<option value="${g}">${g}</option>`).join('');
+  const rmPersonas = [...new Set(runs.map(r => r.persona).filter(Boolean))].sort((a, b) =>
+    (PERSONA_ORDER.indexOf(a)===-1?99:PERSONA_ORDER.indexOf(a)) - (PERSONA_ORDER.indexOf(b)===-1?99:PERSONA_ORDER.indexOf(b))
+  );
+  const personaOpts = rmPersonas.map(p => `<option value="${p}">${PERSONA_KO[p] || p}</option>`).join('');
 
   el.innerHTML = `
     <div class="tbl-wrap">
@@ -3498,6 +3795,10 @@ function renderRunManager(runs) {
         <span style="color:var(--text-muted)">게임:</span>
         <select id="rm-game" onchange="filterRunManager()" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-secondary);font-size:12px">
           <option value="">전체</option>${gameOpts}
+        </select>
+        <span style="color:var(--text-muted)">모드:</span>
+        <select id="rm-persona" onchange="filterRunManager()" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-secondary);font-size:12px">
+          <option value="">전체</option>${personaOpts}
         </select>
         <span style="color:var(--text-muted)">기간:</span>
         <input type="date" id="rm-from" value="${minDate}" onchange="filterRunManager()">
@@ -3520,6 +3821,7 @@ function filterRunManager() {
   const from = document.getElementById('rm-from')?.value || '';
   const to = document.getElementById('rm-to')?.value || '';
   const gameFilter = document.getElementById('rm-game')?.value || '';
+  const personaFilter = document.getElementById('rm-persona')?.value || '';
   const listEl = document.getElementById('rm-list');
   if (!listEl) return;
 
@@ -3527,6 +3829,7 @@ function filterRunManager() {
     if (from && r.run_date < from) return false;
     if (to && r.run_date > to) return false;
     if (gameFilter && r.game_id !== gameFilter) return false;
+    if (personaFilter && r.persona !== personaFilter) return false;
     return true;
   }).sort((a, b) => {
     if (a.game_id !== b.game_id) return a.game_id.localeCompare(b.game_id);
@@ -3753,6 +4056,17 @@ function subscribeRealtime() {
       }
     )
     .on('postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'nru_runs' },
+      async (payload) => {
+        try {
+          _nruRuns = await fetchNruRuns();
+          renderNruSummary(_nruRuns);
+          const status = payload.new.ready ? 'PASS' : 'FAIL';
+          showToast(`NRU 결과 도착: ${status} (Lv${payload.new.levels_cleared})`);
+        } catch (e) { console.warn('nru_runs 갱신 실패:', e.message); }
+      }
+    )
+    .on('postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'cron_history' },
       async () => {
         try {
@@ -3841,16 +4155,18 @@ async function init() {
     overviewEl.style.display = 'none';
 
     // Fast path: View 기반 서버 집계 (소량 데이터만 전송)
-    const [overviewStats, personaStats, dailyTrend, cron, gameConfigs, healthChecks] = await Promise.all([
+    const [overviewStats, personaStats, dailyTrend, cron, gameConfigs, healthChecks, nruRuns] = await Promise.all([
       fetchOverviewStats(), fetchPersonaStats(), fetchDailyTrend(),
-      fetchCronHistory(), fetchGameConfigs(), fetchHealthChecks()
+      fetchCronHistory(), fetchGameConfigs(), fetchHealthChecks(), fetchNruRuns()
     ]);
     _gameConfigs = gameConfigs;
+    _nruRuns = nruRuns;
     _lastFetchTime = new Date().toISOString();
 
     const games = buildOverviewFromViews(overviewStats, personaStats, dailyTrend);
     _overviewGames = games;
     renderOverview(games);
+    renderNruSummary(nruRuns);
     renderHealthCheck(healthChecks);
     renderCronHistory(cron);
     renderGameTabs(Object.keys(games));
