@@ -917,7 +917,9 @@ function renderHealthCheck(checks) {
     const fail = latestChecks.filter(c => c.status === 'FAIL').length;
     const warn = latestChecks.filter(c => c.status === 'WARN').length;
     const skip = latestChecks.filter(c => c.status === 'SKIP').length;
-    const overallStatus = fail > 0 ? 'FAIL' : warn > 0 ? 'WARN' : 'PASS';
+    // 관찰 등급 WARN은 전체 상태 판정에서 제외
+    const realWarn = latestChecks.filter(c => c.status === 'WARN' && (CHECK_META[c.check_id] || {}).imp !== '관찰').length;
+    const overallStatus = fail > 0 ? 'FAIL' : realWarn > 0 ? 'WARN' : 'PASS';
     return { gid, dates, latestDate, latestChecks, total, pass, fail, warn, skip, overallStatus };
   });
 
@@ -941,10 +943,12 @@ function renderHealthCheck(checks) {
   for (const g of gameData) {
     const sc = STATUS_CONF[g.overallStatus];
 
-    // 7일 추이 도트 (12px 사각 라운드 + 요일)
+    // 7일 추이 도트 (12px 사각 라운드 + 요일) — 관찰 등급 WARN은 주의 아닌 정상 취급
     const trendHtml = g.dates.slice(0, 7).reverse().map(d => {
       const dc = byGame[g.gid][d];
-      const col = dc.some(c => c.status === 'FAIL') ? 'var(--status-err)' : dc.some(c => c.status === 'WARN') ? 'var(--status-warn)' : 'var(--status-ok)';
+      const hasFail = dc.some(c => c.status === 'FAIL');
+      const hasRealWarn = dc.some(c => c.status === 'WARN' && (CHECK_META[c.check_id] || {}).imp !== '관찰');
+      const col = hasFail ? 'var(--status-err)' : hasRealWarn ? 'var(--status-warn)' : 'var(--status-ok)';
       const dayIdx = new Date(d + 'T00:00:00').getDay();
       const isToday = d === latestDateAll;
       return `<div style="display:flex;flex-direction:column;align-items:center;gap:1px" title="${d}">
@@ -953,52 +957,95 @@ function renderHealthCheck(checks) {
       </div>`;
     }).join('');
 
+    // 이슈 행 렌더 헬퍼 — 관찰 등급은 청록 스타일, 나머지는 빨강/주황
+    function renderIssueRow(c) {
+      const meta = CHECK_META[c.check_id] || { name: c.check_id, desc: '', imp: '참고', impColor: '#6366f1' };
+      const isObserve = meta.imp === '관찰';
+      const isFail = c.status === 'FAIL';
+      let borderCol, bgCol, icon;
+      if (isObserve) {
+        borderCol = '#0d9488'; bgCol = 'rgba(13,148,136,0.06)'; icon = '\uD83D\uDD0D';
+      } else if (isFail) {
+        borderCol = 'var(--status-err)'; bgCol = 'rgba(239,68,68,0.06)'; icon = '\u274C';
+      } else {
+        borderCol = 'var(--status-warn)'; bgCol = 'rgba(245,158,11,0.06)'; icon = '\u26A0\uFE0F';
+      }
+      const valHtml = formatIssueValue(c.check_id, c.value, c.status);
+      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:${bgCol};border-left:3px solid ${borderCol};border-radius:4px;font-size:11px;" title="${meta.desc}">
+        <span style="font-size:10px">${icon}</span>
+        <span style="font-weight:600;color:var(--text-primary);min-width:70px">${meta.name}</span>
+        <div style="display:flex;align-items:center;gap:6px;flex:1">${valHtml}</div>
+        <span style="font-size:9px;padding:0 6px;border-radius:8px;border:1px solid ${meta.impColor}33;color:${meta.impColor}">${meta.imp}</span>
+      </div>`;
+    }
+
+    // 상세 항목 리스트 (펼치기용)
+    function renderDetailList(checks, id) {
+      const rows = checks.map(c => {
+        const meta = CHECK_META[c.check_id] || { name: c.check_id, desc: '' };
+        const dot = STATUS_DOT[c.status] || STATUS_DOT.SKIP;
+        const val = formatValue(c.check_id, c.value);
+        return `<div style="display:flex;align-items:center;gap:6px;padding:2px 0;font-size:11px" title="${meta.desc}">
+          <div style="width:6px;height:6px;border-radius:50%;background:${dot.bg};flex-shrink:0"></div>
+          <span style="min-width:70px;color:var(--text-primary)">${meta.name}</span>
+          <span style="color:var(--text-muted);flex:1">${val}</span>
+        </div>`;
+      }).join('');
+      return `<div id="${id}" style="display:block;margin-top:6px;padding:6px 8px;background:var(--bg-body);border-radius:6px">${rows}</div>`;
+    }
+
     if (g.overallStatus === 'PASS') {
-      // ALL PASS → 한 줄 요약
+      // ALL PASS → 한 줄 + 펼치기
+      const foldId = `hc-pass-${g.gid}`;
       const skipNote = g.skip > 0 ? ` <span style="color:var(--text-muted);font-size:10px">· 미실행 ${g.skip}</span>` : '';
-      allPassGames.push(`<div style="display:flex;align-items:center;gap:10px;padding:6px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;border-left:3px solid ${sc.text};">
-        <span style="font-weight:700;font-size:13px;min-width:32px">${g.gid}</span>
-        <span style="font-size:11px;padding:1px 8px;border-radius:10px;background:${sc.bg};color:${sc.text};font-weight:600">${sc.label}</span>
-        <span style="font-size:11px;color:var(--text-secondary)">${g.total}개 항목 모두 통과${skipNote}</span>
-        <div style="margin-left:auto;display:flex;gap:3px">${trendHtml}</div>
+      const detailHtml = renderDetailList(g.latestChecks, foldId);
+      allPassGames.push(`<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;border-left:3px solid ${sc.text};">
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 12px;cursor:pointer;user-select:none" onclick="var el=document.getElementById('${foldId}');el.style.display=el.style.display==='none'?'block':'none';this.querySelector('.hc-arrow').textContent=el.style.display==='none'?'\u25B6':'\u25BC'">
+          <span class="hc-arrow" style="font-size:9px;color:var(--text-muted)">\u25BC</span>
+          <span style="font-weight:700;font-size:13px;min-width:32px">${g.gid}</span>
+          <span style="font-size:11px;padding:1px 8px;border-radius:10px;background:${sc.bg};color:${sc.text};font-weight:600">${sc.label}</span>
+          <span style="font-size:11px;color:var(--text-secondary)">${g.total}개 항목 모두 통과${skipNote}</span>
+          <div style="margin-left:auto;display:flex;gap:3px">${trendHtml}</div>
+        </div>
+        <div style="padding:0 12px">${detailHtml}</div>
       </div>`);
     } else {
       // FAIL/WARN → 상세 카드
+      // 관찰 등급과 일반 이슈 분리
       const issues = g.latestChecks.filter(c => c.status === 'FAIL' || c.status === 'WARN');
-      const issueRows = issues.map(c => {
-        const meta = CHECK_META[c.check_id] || { name: c.check_id, desc: '', imp: '참고', impColor: '#6366f1' };
-        const isFail = c.status === 'FAIL';
-        const borderCol = isFail ? 'var(--status-err)' : 'var(--status-warn)';
-        const bgCol = isFail ? 'rgba(239,68,68,0.06)' : 'rgba(245,158,11,0.06)';
-        const icon = isFail ? '\u274C' : '\u26A0\uFE0F';
-        const valHtml = formatIssueValue(c.check_id, c.value, c.status);
-        return `<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:${bgCol};border-left:3px solid ${borderCol};border-radius:4px;font-size:11px;" title="${meta.desc}">
-          <span style="font-size:10px">${icon}</span>
-          <span style="font-weight:600;color:var(--text-primary);min-width:70px">${meta.name}</span>
-          <div style="display:flex;align-items:center;gap:6px;flex:1">${valHtml}</div>
-          <span style="font-size:9px;padding:0 6px;border-radius:8px;border:1px solid ${meta.impColor}33;color:${meta.impColor}">${meta.imp}</span>
-        </div>`;
-      }).join('');
+      const mainIssues = issues.filter(c => (CHECK_META[c.check_id] || {}).imp !== '관찰');
+      const observeIssues = issues.filter(c => (CHECK_META[c.check_id] || {}).imp === '관찰');
+      const mainRows = mainIssues.map(renderIssueRow).join('');
+      const observeRows = observeIssues.map(renderIssueRow).join('');
+      const observeBlock = observeRows ? `<div style="margin-top:6px"><div style="font-size:9px;color:#0d9488;margin-bottom:3px;font-weight:600">관찰 항목</div>${observeRows}</div>` : '';
 
-      // 통과/미실행 — 개수만 표시
-      const passCount = g.pass;
-      const skipCount = g.skip;
-      const parts = [];
-      if (passCount) parts.push(`<span style="color:var(--status-ok)">통과 ${passCount}</span>`);
-      if (skipCount) parts.push(`<span style="color:var(--text-muted)">미실행 ${skipCount}</span>`);
-      const foldBlock = parts.length ? `<div style="margin-top:6px;font-size:10px;display:flex;gap:8px">${parts.join('')}</div>` : '';
+      // 통과/미실행
+      const countParts = [];
+      if (g.pass) countParts.push(`<span style="color:var(--status-ok)">통과 ${g.pass}</span>`);
+      if (g.skip) countParts.push(`<span style="color:var(--text-muted)">미실행 ${g.skip}</span>`);
+      const countBlock = countParts.length ? `<div style="margin-top:6px;font-size:10px;display:flex;gap:8px">${countParts.join('')}</div>` : '';
+
+      // 이슈 카드의 전체 상태 — 관찰만 있으면 주의가 아닌 관찰로 표시
+      const hasRealIssue = mainIssues.length > 0;
+      const summaryText = [];
+      const realFail = mainIssues.filter(c => c.status === 'FAIL').length;
+      const realWarn = mainIssues.filter(c => c.status === 'WARN').length;
+      if (realFail) summaryText.push(`실패 ${realFail}`);
+      if (realWarn) summaryText.push(`주의 ${realWarn}`);
+      if (observeIssues.length) summaryText.push(`관찰 ${observeIssues.length}`);
 
       issueCards.push(`<div style="background:var(--bg-card);border:1px solid ${sc.border};border-radius:10px;padding:12px 14px;border-left:3px solid ${sc.text};">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
           <div style="display:flex;align-items:center;gap:8px;">
             <span style="font-weight:700;font-size:14px;">${g.gid}</span>
             <span style="font-size:10px;padding:1px 8px;border-radius:10px;background:${sc.bg};color:${sc.text};font-weight:600">${sc.label}</span>
-            <span style="font-size:10px;color:var(--text-muted)">${g.fail ? `실패 ${g.fail}` : ''}${g.fail && g.warn ? ' · ' : ''}${g.warn ? `주의 ${g.warn}` : ''}</span>
+            <span style="font-size:10px;color:var(--text-muted)">${summaryText.join(' · ')}</span>
           </div>
           <div style="display:flex;gap:3px">${trendHtml}</div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:4px">${issueRows}</div>
-        ${foldBlock}
+        ${mainRows ? `<div style="display:flex;flex-direction:column;gap:4px">${mainRows}</div>` : ''}
+        ${observeBlock}
+        ${countBlock}
       </div>`);
     }
   }
