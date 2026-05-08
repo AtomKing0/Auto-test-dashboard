@@ -936,6 +936,7 @@ function renderNruSummary(nruRuns) {
       ? `${((r.total_time_sec || 0) / 60).toFixed(1)}분`
       : `${Math.round(r.total_time_sec || 0)}초`;
     return `<tr>
+      <td><input type="checkbox" class="nru-ov-check" value="${r.id}"></td>
       <td>${(r.run_date || '').slice(5)}</td>
       <td>${r.run_time || '-'}</td>
       <td style="${passStyle}">${r.ready ? 'PASS' : 'FAIL'}${failInfo}</td>
@@ -994,9 +995,14 @@ function renderNruSummary(nruRuns) {
 
       <!-- 실행 이력 테이블 -->
       <div class="tbl-wrap" style="margin-bottom:0">
-        <h4>최근 NRU 실행 이력</h4>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <h4 style="margin:0">최근 NRU 실행 이력</h4>
+          <label style="font-size:11px;color:var(--text-muted);margin-left:auto"><input type="checkbox" onclick="document.querySelectorAll('.nru-ov-check').forEach(c=>c.checked=this.checked)"> 전체 선택</label>
+          <button class="rm-btn rm-btn-danger" onclick="deleteSelectedNruOv()" style="font-size:11px;padding:3px 10px">선택 삭제</button>
+          <span id="nru-ov-status" style="font-size:11px;color:var(--text-muted)"></span>
+        </div>
         <table>
-          <thead><tr><th>날짜</th><th>시간</th><th>결과</th><th>레벨</th><th>소요</th><th>재시도</th><th>골드</th></tr></thead>
+          <thead><tr><th style="width:30px"></th><th>날짜</th><th>시간</th><th>결과</th><th>레벨</th><th>소요</th><th>재시도</th><th>골드</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
@@ -3940,6 +3946,29 @@ function renderNruManager() {
       ${rows}
     </div>
   `;
+}
+
+async function deleteSelectedNruOv() {
+  const checked = [...document.querySelectorAll('.nru-ov-check:checked')].map(cb => cb.value);
+  if (!checked.length) { alert('삭제할 NRU 런을 선택해주세요.'); return; }
+  if (!confirm(`${checked.length}건의 NRU 런을 삭제하시겠습니까? (복구 불가)`)) return;
+
+  const statusEl = document.getElementById('nru-ov-status');
+  statusEl.textContent = '삭제 중...';
+  let deleted = 0, failed = 0;
+  for (const runId of checked) {
+    try {
+      await sb.rpc('delete_nru_run', { target_id: runId });
+      deleted++;
+    } catch (e) {
+      console.error('NRU 삭제 실패:', runId, e);
+      failed++;
+    }
+  }
+  statusEl.textContent = `삭제 완료: ${deleted}건${failed ? `, 실패 ${failed}건` : ''}`;
+  _nruRuns = await fetchNruRuns();
+  renderNruSummary(_nruRuns);
+  renderNruManager();
 }
 
 async function deleteSelectedNruCat(gameId) {
