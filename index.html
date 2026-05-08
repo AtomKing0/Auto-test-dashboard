@@ -641,7 +641,7 @@ function aggregateOverview(runs) {
   const games = {};
   for (const r of runs) {
     if (!games[r.game_id]) {
-      games[r.game_id] = { runs: 0, levels: 0, time: 0, personas: {}, dailyMap: {}, issueCount: 0, events: [] };
+      games[r.game_id] = { runs: 0, levels: 0, time: 0, personas: {}, dailyMap: {}, issueCount: 0, issueDetails: [], events: [] };
     }
     const g = games[r.game_id];
     g.runs++;
@@ -660,9 +660,80 @@ function aggregateOverview(runs) {
     g.dailyMap[d].runs++;
 
     const m = r.metrics || {};
-    g.issueCount += (m.issues || []).length;
+    const runIssues = m.issues || [];
+    g.issueCount += runIssues.length;
+    for (const iss of runIssues) g.issueDetails.push({ ...iss, run_date: r.run_date, persona: r.persona });
   }
   return games;
+}
+
+
+/* ── 이슈 요약 렌더 공통 함수 ── */
+const _ISSUE_TYPE_KR = {
+  zero_reward: '보상 0',
+  zero_turns_clear: '턴 0 클리어',
+  missing_stage_id: '스테이지ID 없음',
+  missing_difficulty: '난이도 없음',
+  missing_card_data: '카드 데이터 없음',
+  zero_entry_fee: '입장료 0',
+  gold_flow_anomaly: '골드 흐름 불일치',
+  suspiciously_fast: '비정상 빠른 클리어',
+  gimmick_residue: '기믹 잔상',
+};
+const _SEV_KR = { high: '심각', medium: '주의', low: '관찰' };
+const _SEV_COLOR = { high: 'var(--status-err)', medium: 'var(--status-warn)', low: 'var(--text-muted)' };
+const _SEV_BG = { high: 'rgba(239,68,68,.12)', medium: 'rgba(245,158,11,.12)', low: 'rgba(148,163,184,.10)' };
+
+function _renderIssueSummaryContent(games) {
+  return Object.entries(games).map(([gid, g]) => {
+    const color = g.issueCount > 0 ? 'var(--status-warn)' : 'var(--status-ok)';
+    const text = g.issueCount > 0 ? `${g.issueCount}건` : '이슈 없음';
+    const allIssues = g.issueDetails || [];
+    // severity 요약 카운트
+    const sevCounts = { high: 0, medium: 0, low: 0 };
+    allIssues.forEach(iss => { sevCounts[iss.severity] = (sevCounts[iss.severity] || 0) + 1; });
+    const sevBadges = ['high', 'medium', 'low']
+      .filter(s => sevCounts[s] > 0)
+      .map(s => `<span style="display:inline-block;padding:1px 6px;border-radius:8px;font-size:10px;background:${_SEV_BG[s]};color:${_SEV_COLOR[s]};font-weight:500">${_SEV_KR[s]} ${sevCounts[s]}</span>`)
+      .join(' ');
+    // 최근 20건까지 표시 (기존 10건에서 확대)
+    const shown = allIssues.slice(-20);
+    const details = shown.map(iss => {
+      const typeKr = _ISSUE_TYPE_KR[iss.type] || iss.type;
+      const sevCol = _SEV_COLOR[iss.severity] || 'var(--text-muted)';
+      const sevLabel = _SEV_KR[iss.severity] || iss.severity;
+      const persona = iss.persona ? (({'hardcore':'고수','average':'중수','casual':'하수','struggling':'초보'})[iss.persona] || iss.persona) : '';
+      return `<div style="display:flex;align-items:center;gap:6px;padding:3px 0 3px 16px;font-size:11px;color:var(--text-secondary)">
+        <span style="display:inline-block;padding:0 5px;border-radius:6px;font-size:9px;background:${_SEV_BG[iss.severity]||'transparent'};color:${sevCol};font-weight:600;min-width:28px;text-align:center">${sevLabel}</span>
+        <span style="font-weight:600;min-width:90px;color:var(--text-primary)">${typeKr}</span>
+        <span style="color:var(--text-secondary);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(iss.description||'').replace(/"/g,'&quot;')}">${iss.description || ''}</span>
+        <span style="font-size:10px;color:var(--text-muted);white-space:nowrap;min-width:80px;text-align:right">${(iss.run_date||'').slice(5)} ${persona}</span>
+      </div>`;
+    }).join('');
+    const hiddenCount = allIssues.length - shown.length;
+    const moreHint = hiddenCount > 0 ? `<div style="padding:2px 0 2px 16px;font-size:10px;color:var(--text-muted)">... 외 ${hiddenCount}건 (최근 20건만 표시)</div>` : '';
+    // 토글: 이슈 있으면 접기/펼치기
+    const toggleId = `iss-toggle-${gid}`;
+    if (g.issueCount === 0) {
+      return `<div style="border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px;">
+          <span style="font-weight:600;min-width:40px;">${gid}</span>
+          <span style="color:${color}">${text}</span>
+        </div>
+      </div>`;
+    }
+    return `<div style="border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px;cursor:pointer;user-select:none" onclick="(function(){var d=document.getElementById('${toggleId}');if(d)d.style.display=d.style.display==='none'?'block':'none'})()">
+        <span style="font-weight:600;min-width:40px;">${gid}</span>
+        <span style="color:${color};font-weight:500">${text}</span>
+        ${sevBadges}
+        <span style="margin-left:auto;font-size:10px;color:var(--text-muted)">&#9660;</span>
+      </div>
+      <div id="${toggleId}" style="display:block;padding-bottom:4px">
+        ${details}${moreHint}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 /* ── 렌더링: 종합 탭 ── */
@@ -691,14 +762,7 @@ function renderOverview(games) {
       <div class="chart-box"><h4>일별 런 수 추이</h4><canvas id="chart-daily-runs"></canvas></div>
     </div>
     <div class="tbl-wrap"><h4>이슈 요약 (총 ${Object.values(games).reduce((a,g) => a + g.issueCount, 0)}건)</h4>
-      ${Object.entries(games).map(([gid, g]) => {
-        const color = g.issueCount > 0 ? 'var(--status-warn)' : 'var(--status-ok)';
-        const text = g.issueCount > 0 ? `${g.issueCount}건` : '이슈 없음';
-        return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;">
-          <span style="font-weight:600;min-width:40px;">${gid}</span>
-          <span style="color:${color}">${text}</span>
-        </div>`;
-      }).join('')}
+      ${_renderIssueSummaryContent(games)}
     </div>
     <div class="tbl-wrap"><h4>테스트 커버리지</h4>
       ${Object.entries(games).map(([gid, g]) => {
@@ -3592,28 +3656,15 @@ async function renderDbUsage() {
 /* ── 이슈 요약 업데이트 (백그라운드 runs fetch 후 호출) ── */
 
 function updateIssueSummary(games) {
-  const section = document.querySelector('#overview-panel .tbl-wrap h4');
-  if (!section) return;
-  // "이슈 요약" 헤더를 포함한 tbl-wrap 찾기
   const wraps = document.querySelectorAll('#overview-panel .tbl-wrap');
   for (const wrap of wraps) {
     const h4 = wrap.querySelector('h4');
     if (h4 && h4.textContent.includes('이슈 요약')) {
       const totalIssues = Object.values(games).reduce((a, g) => a + g.issueCount, 0);
       h4.textContent = `이슈 요약 (총 ${totalIssues}건)`;
-      const rows = wrap.querySelectorAll('div[style*="border-bottom"]');
-      const gameIds = Object.keys(games).sort();
-      rows.forEach((row, i) => {
-        if (!gameIds[i]) return;
-        const g = games[gameIds[i]];
-        const spans = row.querySelectorAll('span');
-        if (spans.length >= 2) {
-          const color = g.issueCount > 0 ? 'var(--status-warn)' : 'var(--status-ok)';
-          const text = g.issueCount > 0 ? `${g.issueCount}건` : '이슈 없음';
-          spans[1].style.color = color;
-          spans[1].textContent = text;
-        }
-      });
+      const children = [...wrap.children];
+      children.forEach(c => { if (c !== h4) c.remove(); });
+      h4.insertAdjacentHTML('afterend', _renderIssueSummaryContent(games));
       break;
     }
   }
@@ -3798,6 +3849,8 @@ async function init() {
         const issues = ((r.metrics || {}).issues || []);
         if (issues.length && _overviewGames[r.game_id]) {
           _overviewGames[r.game_id].issueCount += issues.length;
+          if (!_overviewGames[r.game_id].issueDetails) _overviewGames[r.game_id].issueDetails = [];
+          for (const iss of issues) _overviewGames[r.game_id].issueDetails.push({ ...iss, run_date: r.run_date, persona: r.persona });
         }
       }
       updateIssueSummary(_overviewGames);
