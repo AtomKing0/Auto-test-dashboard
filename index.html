@@ -513,6 +513,20 @@ function renderHealthCheck(checks) {
 
   const STATUS_ICON = { PASS: '\u2705', FAIL: '\u274C', WARN: '\u26A0\uFE0F', SKIP: '\u23ED\uFE0F' };
   const STATUS_COLOR = { PASS: 'var(--status-ok)', FAIL: 'var(--status-err)', WARN: 'var(--status-warn)', SKIP: 'var(--text-muted)' };
+  const CHECK_DESC = {
+    GAME_LOOP: '게임 루프 정상 동작 (레벨 플레이/클리어 여부)',
+    API_ERROR: 'API/콘솔 에러 발생 여부',
+    PERF_HEAP: '메모리(힙) 사용량 (임계: 500MB)',
+    PERF_DOM: 'DOM 노드 수 (임계: 10,000개)',
+    STAGE_TIMEOUT: '스테이지 타임아웃 (임계: 300초)',
+    SECURITY: '보안 스캔 등급 (F=치명적)',
+    CLEAR_RATE: '클리어율 정상 범위 (5~95%)',
+    GOLD_INTEGRITY: '[SCJ] 골드 수지 정합성 (시작+스테이지합=종료)',
+    CONSECUTIVE_FAIL: '[SCJ] 연속 실패 횟수 (임계: 15회)',
+    BETTING_UNLOCK: '[SCJ] 베팅 배수 해금 레벨 검증 (x2=Lv10, x3=Lv25, x5=Lv50)',
+    MATCH3_VALID: '[CTZ] 3매치 유효성 (매치 0% 스테이지 감지)',
+    SLOTFULL: '[CTZ] 슬롯풀 카운트 유효성',
+  };
 
   // 게임별 최신 날짜의 요약
   const gameIds = Object.keys(byGame).sort();
@@ -539,9 +553,11 @@ function renderHealthCheck(checks) {
 
     // 상세 항목
     const detailRows = latestChecks.map(c => {
-      return `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12px;">
+      const desc = CHECK_DESC[c.check_id] || '';
+      return `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12px;" title="${desc}">
         <span style="width:20px;text-align:center">${STATUS_ICON[c.status]}</span>
         <span style="min-width:140px;font-weight:500;color:${STATUS_COLOR[c.status]}">${c.check_id}</span>
+        <span style="color:var(--text-muted);min-width:200px;font-size:11px">${desc}</span>
         <span style="color:var(--text-secondary);flex:1">${c.message || ''}</span>
         <span style="font-size:11px;padding:1px 6px;border-radius:4px;background:${c.severity==='CRITICAL'?'#7f1d1d':c.severity==='HIGH'?'#78350f':'#1e3a5f'};color:#fff">${c.severity}</span>
       </div>`;
@@ -2993,16 +3009,13 @@ async function init() {
     errorEl.style.display = 'none';
     overviewEl.style.display = 'none';
 
-    console.log('[DASH] fetching...');
     const [runs, cron, gameConfigs, healthChecks] = await Promise.all([
       fetchRuns(), fetchCronHistory(), fetchGameConfigs(), fetchHealthChecks()
     ]);
-    console.log('[DASH] runs:', runs.length, 'cron:', cron.length, 'configs:', gameConfigs.length, 'hc:', healthChecks.length);
     _allRuns = runs;
     _gameConfigs = gameConfigs;
 
     const games = aggregateOverview(runs);
-    console.log('[DASH] games:', Object.keys(games));
     renderOverview(games);
     renderHealthCheck(healthChecks);
     renderCronHistory(cron);
@@ -3011,9 +3024,7 @@ async function init() {
     document.getElementById('update-time').textContent = '갱신: ' + new Date().toLocaleString('ko');
     loadingEl.style.display = 'none';
     overviewEl.style.display = 'block';
-    console.log('[DASH] init complete');
   } catch (e) {
-    console.error('[DASH] init error:', e);
     loadingEl.style.display = 'none';
     errorEl.style.display = 'flex';
     errorEl.innerHTML = `
