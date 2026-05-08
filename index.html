@@ -2993,13 +2993,16 @@ async function init() {
     errorEl.style.display = 'none';
     overviewEl.style.display = 'none';
 
+    console.log('[DASH] fetching...');
     const [runs, cron, gameConfigs, healthChecks] = await Promise.all([
       fetchRuns(), fetchCronHistory(), fetchGameConfigs(), fetchHealthChecks()
     ]);
+    console.log('[DASH] runs:', runs.length, 'cron:', cron.length, 'configs:', gameConfigs.length, 'hc:', healthChecks.length);
     _allRuns = runs;
     _gameConfigs = gameConfigs;
 
     const games = aggregateOverview(runs);
+    console.log('[DASH] games:', Object.keys(games));
     renderOverview(games);
     renderHealthCheck(healthChecks);
     renderCronHistory(cron);
@@ -3008,7 +3011,9 @@ async function init() {
     document.getElementById('update-time').textContent = '갱신: ' + new Date().toLocaleString('ko');
     loadingEl.style.display = 'none';
     overviewEl.style.display = 'block';
+    console.log('[DASH] init complete');
   } catch (e) {
+    console.error('[DASH] init error:', e);
     loadingEl.style.display = 'none';
     errorEl.style.display = 'flex';
     errorEl.innerHTML = `
