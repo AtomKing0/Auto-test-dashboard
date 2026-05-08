@@ -324,6 +324,17 @@ async function fetchGameConfigs() {
   return data || [];
 }
 
+async function fetchHealthChecks() {
+  const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+  const { data, error } = await sb
+    .from('health_checks')
+    .select('*')
+    .gte('run_date', sevenDaysAgo)
+    .order('run_date', { ascending: false });
+  if (error) { console.warn('health_checks 조회 실패:', error.message); return []; }
+  return data || [];
+}
+
 /* ── 집계 ── */
 
 function aggregateOverview(runs) {
@@ -400,6 +411,7 @@ function renderOverview(games) {
         </div>`;
       }).join('')}
     </div>
+    <div id="health-check-section"></div>
     <div id="cron-section"></div>
     <div id="run-manager"></div>
   `;
@@ -477,6 +489,87 @@ function renderGameCard(gid, g) {
       <div class="stat"><span class="stat-label">총 런/판</span><span class="stat-value">${g.runs}런 / ${g.levels.toLocaleString()}판</span></div>
       <div class="stat"><span class="stat-label">소요시간</span><span class="stat-value">${timeStr}</span></div>
       ${personaRows}
+    </div>
+  `;
+}
+
+/* ── Health Check ── */
+
+function renderHealthCheck(checks) {
+  const section = document.getElementById('health-check-section');
+  if (!section) return;
+  if (!checks || !checks.length) {
+    section.innerHTML = '';
+    return;
+  }
+
+  // 게임별 + 날짜별 최신 그룹핑
+  const byGame = {};
+  for (const c of checks) {
+    if (!byGame[c.game_id]) byGame[c.game_id] = {};
+    if (!byGame[c.game_id][c.run_date]) byGame[c.game_id][c.run_date] = [];
+    byGame[c.game_id][c.run_date].push(c);
+  }
+
+  const STATUS_ICON = { PASS: '\u2705', FAIL: '\u274C', WARN: '\u26A0\uFE0F', SKIP: '\u23ED\uFE0F' };
+  const STATUS_COLOR = { PASS: 'var(--status-ok)', FAIL: 'var(--status-err)', WARN: 'var(--status-warn)', SKIP: 'var(--text-muted)' };
+
+  // 게임별 최신 날짜의 요약
+  const gameIds = Object.keys(byGame).sort();
+  const summaryRows = gameIds.map(gid => {
+    const dates = Object.keys(byGame[gid]).sort().reverse();
+    const latestDate = dates[0];
+    const latestChecks = byGame[gid][latestDate];
+    const total = latestChecks.length;
+    const pass = latestChecks.filter(c => c.status === 'PASS').length;
+    const fail = latestChecks.filter(c => c.status === 'FAIL').length;
+    const warn = latestChecks.filter(c => c.status === 'WARN').length;
+    const skip = latestChecks.filter(c => c.status === 'SKIP').length;
+    const pct = total ? Math.round(pass / total * 100) : 0;
+    const barColor = fail > 0 ? 'var(--status-err)' : warn > 0 ? 'var(--status-warn)' : 'var(--status-ok)';
+    const overallIcon = fail > 0 ? '\u274C FAIL' : warn > 0 ? '\u26A0\uFE0F WARN' : '\u2705 ALL PASS';
+
+    // 7일 추이
+    const trend = dates.slice(0, 7).reverse().map(d => {
+      const dayChecks = byGame[gid][d];
+      const dayFail = dayChecks.some(c => c.status === 'FAIL');
+      const dayWarn = dayChecks.some(c => c.status === 'WARN');
+      return dayFail ? '\u274C' : dayWarn ? '\u26A0\uFE0F' : '\u2705';
+    }).join(' ');
+
+    // 상세 항목
+    const detailRows = latestChecks.map(c => {
+      return `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12px;">
+        <span style="width:20px;text-align:center">${STATUS_ICON[c.status]}</span>
+        <span style="min-width:140px;font-weight:500;color:${STATUS_COLOR[c.status]}">${c.check_id}</span>
+        <span style="color:var(--text-secondary);flex:1">${c.message || ''}</span>
+        <span style="font-size:11px;padding:1px 6px;border-radius:4px;background:${c.severity==='CRITICAL'?'#7f1d1d':c.severity==='HIGH'?'#78350f':'#1e3a5f'};color:#fff">${c.severity}</span>
+      </div>`;
+    }).join('');
+
+    return `<div style="margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:12px;padding:8px 0;cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+        <span style="font-weight:700;min-width:36px">${gid}</span>
+        <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${barColor};border-radius:4px;transition:width .3s"></div>
+        </div>
+        <span style="font-size:12px;color:var(--text-secondary);min-width:60px">${pass}/${total}</span>
+        <span style="font-size:12px;min-width:80px;text-align:right">${overallIcon}</span>
+      </div>
+      <div style="display:none;padding:4px 0 8px 48px;border-bottom:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">${latestDate} | ${trend}</div>
+        ${detailRows}
+      </div>
+    </div>`;
+  }).join('');
+
+  section.innerHTML = `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <span style="font-weight:700;font-size:14px;">Health Check</span>
+        <span style="font-size:11px;color:var(--text-muted)">최근 7일</span>
+      </div>
+      ${summaryRows}
     </div>
   `;
 }
@@ -2302,8 +2395,8 @@ function renderCatPerf(gameId, runs) {
   const isPBM = gameId === 'PBM';
   const unitName = isPBM ? '판' : '레벨';
   const unitPerName = isPBM ? '판당' : '레벨당';
-  const startTag = isPBM ? 'freeplay_start' : 'level_start';
-  const endTag = isPBM ? 'freeplay_end' : 'level_end';
+  const startTag = 'level_start';
+  const endTag = 'level_end';
 
   // snapshots 수집
   const allSnaps = [];
@@ -2432,10 +2525,10 @@ function renderPerfCharts(gameId, runs) {
   }
   if (!allSnaps.length) return;
 
-  // PBM: freeplay_start/end 태그 + "판" 단위 라벨
+  // PBM: "판" 단위 라벨
   const isPBM = gameId === 'PBM';
-  const startTag = isPBM ? 'freeplay_start' : 'level_start';
-  const endTag = isPBM ? 'freeplay_end' : 'level_end';
+  const startTag = 'level_start';
+  const endTag = 'level_end';
   const lblFn = isPBM ? (l => `#${l}`) : (l => `Lv${l}`);
 
   const starts = allSnaps.filter(s => s.tag === startTag).sort((a,b) => a.level - b.level);
@@ -2900,12 +2993,15 @@ async function init() {
     errorEl.style.display = 'none';
     overviewEl.style.display = 'none';
 
-    const [runs, cron, gameConfigs] = await Promise.all([fetchRuns(), fetchCronHistory(), fetchGameConfigs()]);
+    const [runs, cron, gameConfigs, healthChecks] = await Promise.all([
+      fetchRuns(), fetchCronHistory(), fetchGameConfigs(), fetchHealthChecks()
+    ]);
     _allRuns = runs;
     _gameConfigs = gameConfigs;
 
     const games = aggregateOverview(runs);
     renderOverview(games);
+    renderHealthCheck(healthChecks);
     renderCronHistory(cron);
     renderGameTabs(Object.keys(games));
 
