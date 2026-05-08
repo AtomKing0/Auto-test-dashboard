@@ -3809,38 +3809,43 @@ function restoreSidebar() {
 }
 
 function sidebarSystemNav(target) {
-  // System 메뉴 active 해제
+  const SYSTEM_TITLES = { health: 'Health Check', cron: '크론 이력', runs: '런 관리' };
+  const sectionMap = { health: 'health-check-section', cron: 'cron-section', runs: 'run-manager' };
+
+  // 모든 사이드바 active 초기화 (게임 + 시스템)
+  document.querySelectorAll('#sidebar-games .sidebar-item').forEach(b => b.classList.remove('active'));
   ['sidebar-health','sidebar-cron','sidebar-runs'].forEach(id => {
     document.getElementById(id)?.classList.remove('active');
   });
   document.getElementById(`sidebar-${target}`)?.classList.add('active');
 
-  // overview 탭으로 전환 후 해당 섹션으로 스크롤
+  // 페이지 제목
+  const titleEl = document.getElementById('page-title');
+  if (titleEl) titleEl.textContent = SYSTEM_TITLES[target] || '종합 현황';
+
+  // overview 탭이 아닌 상태면 먼저 전환
   const overview = document.getElementById('overview-panel');
   const panels = document.getElementById('game-panels');
-  if (overview) overview.style.display = 'block';
-  if (panels) panels.innerHTML = '';
-  _currentGameId = '';
-  _renderedCats = {};
+  const wasGameTab = overview && overview.style.display === 'none';
+  if (wasGameTab) {
+    overview.style.display = 'block';
+    if (panels) panels.innerHTML = '';
+    _currentGameId = '';
+    _renderedCats = {};
+  }
 
-  // 사이드바 게임 탭 active 초기화
-  document.querySelectorAll('#sidebar-games .sidebar-item').forEach(b => b.classList.remove('active'));
-  document.getElementById('sidebar-tab-overview')?.classList.add('active');
-  const titleEl = document.getElementById('page-title');
-  if (titleEl) titleEl.textContent = '종합 현황';
-
-  // 해당 섹션으로 스크롤
-  const sectionMap = {
-    health: 'health-check-section',
-    cron: 'cron-section',
-    runs: 'run-manager',
-  };
+  // 해당 섹션으로 스크롤 (게임 탭에서 전환 시 더 긴 딜레이)
   const sectionId = sectionMap[target];
   if (sectionId) {
     setTimeout(() => {
       const el = document.getElementById(sectionId);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        // 섹션이 아직 렌더링 안 된 경우 (런 관리는 백그라운드 fetch 후 생성)
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      }
+    }, wasGameTab ? 300 : 100);
   }
 }
 
