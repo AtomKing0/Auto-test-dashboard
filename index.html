@@ -3007,6 +3007,7 @@ async function init() {
 
     document.getElementById('update-time').textContent = '갱신: ' + new Date().toLocaleString('ko');
     loadingEl.style.display = 'none';
+    overviewEl.style.display = '';
   } catch (e) {
     loadingEl.style.display = 'none';
     errorEl.style.display = 'flex';
