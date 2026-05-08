@@ -641,6 +641,7 @@ async function fetchNruRuns() {
     .from('nru_runs')
     .select('*')
     .order('run_date', { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(100);
   if (error) { console.warn('nru_runs 조회 실패:', error.message); return []; }
   return data || [];
