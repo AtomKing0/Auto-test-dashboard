@@ -268,38 +268,240 @@ tr:hover td { background: rgba(59,130,246,.05); }
   .chart-grid { grid-template-columns: 1fr; }
   .persona-grid { grid-template-columns: 1fr 1fr; }
 }
+
+/* ── Sidebar ── */
+.sidebar {
+  position: fixed; left: 0; top: 0; bottom: 0; z-index: 200;
+  width: 220px;
+  background: var(--bg-topbar);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  transition: width 0.25s ease;
+  overflow: hidden;
+}
+.sidebar.collapsed { width: 52px; }
+
+.sidebar-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0; min-height: 48px;
+}
+.sidebar-logo {
+  font-weight: 700; font-size: 14px; white-space: nowrap;
+  overflow: hidden; transition: opacity 0.2s;
+}
+.sidebar.collapsed .sidebar-logo { opacity: 0; pointer-events: none; }
+.sidebar-toggle {
+  margin-left: auto; flex-shrink: 0;
+  background: none; border: 1px solid var(--border); border-radius: 4px;
+  color: var(--text-muted); cursor: pointer; font-size: 12px;
+  padding: 2px 6px; line-height: 1.4;
+}
+.sidebar-toggle:hover { color: var(--text-primary); }
+
+.sidebar-nav { flex: 1; overflow-y: auto; padding: 8px 0; }
+.sidebar-section-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+  color: var(--text-muted); padding: 8px 14px 4px;
+  text-transform: uppercase; white-space: nowrap;
+  transition: opacity 0.2s;
+}
+.sidebar.collapsed .sidebar-section-label { opacity: 0; height: 0; padding: 0; overflow: hidden; }
+
+.sidebar-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px; cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap; position: relative;
+}
+.sidebar-item:hover { background: rgba(59,130,246,.08); }
+.sidebar-item.active {
+  border-left-color: #3b82f6;
+  background: rgba(59,130,246,.12);
+  color: var(--text-primary);
+}
+.sidebar-item-icon { font-size: 16px; flex-shrink: 0; width: 20px; text-align: center; }
+.sidebar-item-text { font-size: 13px; font-weight: 500; overflow: hidden; transition: opacity 0.2s; }
+.sidebar.collapsed .sidebar-item-text { opacity: 0; pointer-events: none; }
+.sidebar-badge {
+  margin-left: auto; background: rgba(59,130,246,.2); color: #60a5fa;
+  font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px;
+  flex-shrink: 0; transition: opacity 0.2s;
+}
+.sidebar.collapsed .sidebar-badge { opacity: 0; }
+
+.sidebar-footer {
+  border-top: 1px solid var(--border);
+  padding: 8px 10px; flex-shrink: 0;
+}
+.sidebar-rt {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--text-muted);
+  padding: 4px 0; white-space: nowrap;
+}
+.sidebar.collapsed .sidebar-rt-label { opacity: 0; }
+.sidebar-db-mini {
+  margin-top: 6px; transition: opacity 0.2s;
+}
+.sidebar.collapsed .sidebar-db-mini { opacity: 0; pointer-events: none; height: 0; overflow: hidden; margin: 0; }
+.sidebar-db-mini-label {
+  display: flex; justify-content: space-between;
+  font-size: 10px; color: var(--text-muted); margin-bottom: 3px;
+}
+.sidebar-db-mini-track { height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; }
+.sidebar-db-mini-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+
+/* Main layout shift */
+.page-wrapper {
+  display: flex; min-height: 100vh;
+}
+.main-area {
+  flex: 1;
+  margin-left: 220px;
+  transition: margin-left 0.25s ease;
+  min-width: 0;
+}
+.main-area.sidebar-collapsed { margin-left: 52px; }
+
+/* Top bar without game tabs */
+.top-bar { position: sticky; top: 0; z-index: 100; }
+.page-title {
+  font-size: 14px; font-weight: 600; color: var(--text-secondary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 300px;
+}
+
+/* ── Grid Column Selector ── */
+.grid-cols-1 { grid-template-columns: 1fr !important; }
+.grid-cols-2 { grid-template-columns: 1fr 1fr !important; }
+.grid-cols-3 { grid-template-columns: 1fr 1fr 1fr !important; }
+.grid-cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr !important; }
+.metric-cols-3 { flex-wrap: wrap; }
+.metric-cols-3 .metric-box { flex: 0 0 calc(33.333% - 8px) !important; min-width: unset; }
+.metric-cols-4 .metric-box { flex: 0 0 calc(25% - 9px) !important; min-width: unset; }
+.metric-cols-5 .metric-box { flex: 0 0 calc(20% - 10px) !important; min-width: unset; }
+.metric-cols-6 .metric-box { flex: 0 0 calc(16.666% - 10px) !important; min-width: unset; }
+
+.grid-col-selector {
+  display: none;
+  gap: 4px; margin-bottom: 8px; align-items: center;
+}
+body.edit-mode .grid-col-selector { display: flex; }
+.grid-col-btn {
+  padding: 2px 8px; border: 1px solid var(--border); border-radius: 4px;
+  background: var(--bg-card); color: var(--text-muted);
+  font-size: 10px; font-weight: 600; cursor: pointer;
+}
+.grid-col-btn.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+.grid-col-btn:hover:not(.active) { color: var(--text-primary); }
+.grid-col-label { font-size: 10px; color: var(--text-muted); margin-right: 2px; }
+
+/* ── Section Merge ── */
+.merge-btn {
+  display: none;
+  padding: 2px 7px; border: 1px solid var(--border); border-radius: 4px;
+  background: var(--bg-card); color: var(--text-muted);
+  font-size: 10px; cursor: pointer; margin-left: 4px;
+}
+body.edit-mode .merge-btn { display: inline-block; }
+.merge-btn:hover { color: var(--text-primary); border-color: var(--text-secondary); }
+.merge-btn.split-btn { border-color: #f59e0b; color: #f59e0b; }
+.merge-btn.split-btn:hover { background: rgba(245,158,11,.1); }
+
+.merged-section {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px; margin-bottom: 16px;
+}
+.merged-divider {
+  text-align: center; color: var(--text-muted); font-size: 12px;
+  padding: 6px 0; margin: 6px 0;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 768px) {
+  .sidebar { width: 52px; }
+  .sidebar-logo, .sidebar-item-text, .sidebar-badge, .sidebar-section-label { opacity: 0 !important; pointer-events: none; }
+  .sidebar-db-mini { opacity: 0; height: 0; overflow: hidden; margin: 0; }
+  .main-area { margin-left: 52px; }
+}
 </style>
 </head>
 <body>
-  <div class="top-bar">
-    <span class="logo">🎮 통합 대시보드</span>
-    <div id="game-tabs"></div>
-    <div class="ctrl-group">
-      <button class="ctrl-btn" onclick="changeFontSize(-1)" title="글자 축소">A-</button>
-      <button class="ctrl-btn" onclick="changeFontSize(1)" title="글자 확대">A+</button>
-      <button class="ctrl-btn" id="themeBtn" onclick="toggleTheme()" title="테마 전환">☀</button>
-      <button class="ctrl-btn" onclick="downloadCSV()" title="CSV 다운로드">CSV</button>
-      <button class="ctrl-btn" id="editBtn" onclick="toggleEditMode()" title="레이아웃 편집">Edit</button>
-      <span class="rt-indicator" id="rt-indicator"><span class="rt-dot" id="rt-dot"></span><span id="rt-label">오프라인</span></span>
-      <span class="ts" id="update-time"></span>
+<div class="page-wrapper">
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-logo">🎮 통합 대시보드</span>
+      <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" title="사이드바 접기">«</button>
     </div>
-  </div>
-  <div class="toast-container" id="toast-container"></div>
+    <nav class="sidebar-nav" id="sidebar-nav">
+      <div class="sidebar-section-label">Games</div>
+      <div id="sidebar-games">
+        <!-- renderGameTabs()에서 동적 생성 -->
+      </div>
+      <div class="sidebar-section-label" style="margin-top:8px">System</div>
+      <div class="sidebar-item" onclick="sidebarSystemNav('health')" id="sidebar-health" title="Health Check">
+        <span class="sidebar-item-icon">🏥</span>
+        <span class="sidebar-item-text">Health Check</span>
+      </div>
+      <div class="sidebar-item" onclick="sidebarSystemNav('cron')" id="sidebar-cron" title="크론 이력">
+        <span class="sidebar-item-icon">⏰</span>
+        <span class="sidebar-item-text">크론 이력</span>
+      </div>
+      <div class="sidebar-item" onclick="sidebarSystemNav('runs')" id="sidebar-runs" title="런 관리">
+        <span class="sidebar-item-icon">🗂</span>
+        <span class="sidebar-item-text">런 관리</span>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-rt">
+        <span class="rt-dot" id="rt-dot"></span>
+        <span class="sidebar-rt-label" id="rt-label">오프라인</span>
+      </div>
+      <div class="sidebar-db-mini" id="sidebar-db-mini" style="display:none">
+        <div class="sidebar-db-mini-label">
+          <span>DB</span><span id="sidebar-db-pct">-</span>
+        </div>
+        <div class="sidebar-db-mini-track">
+          <div class="sidebar-db-mini-fill" id="sidebar-db-fill" style="width:0%;background:var(--status-ok)"></div>
+        </div>
+      </div>
+    </div>
+  </aside>
 
-  <div class="edit-bar" id="editBar">
-    <span>📐 레이아웃 편집 모드 — 섹션을 드래그하여 순서 변경, 👁 버튼으로 표시/숨기기</span>
-    <button class="ctrl-btn" onclick="resetLayout()" style="margin-left:auto">초기화</button>
-    <button class="ctrl-btn" onclick="toggleEditMode()" style="background:#3b82f6;color:#fff">완료</button>
-  </div>
-  <div class="content">
-    <div id="loading" class="state-msg">
-      <div class="icon">⏳</div>
-      <div>데이터 로딩 중...</div>
+  <!-- ── Main Area ── -->
+  <div class="main-area" id="main-area">
+    <div class="top-bar">
+      <span class="page-title" id="page-title">종합 현황</span>
+      <div class="ctrl-group">
+        <button class="ctrl-btn" onclick="changeFontSize(-1)" title="글자 축소">A-</button>
+        <button class="ctrl-btn" onclick="changeFontSize(1)" title="글자 확대">A+</button>
+        <button class="ctrl-btn" id="themeBtn" onclick="toggleTheme()" title="테마 전환">☀</button>
+        <button class="ctrl-btn" onclick="downloadCSV()" title="CSV 다운로드">CSV</button>
+        <button class="ctrl-btn" id="editBtn" onclick="toggleEditMode()" title="레이아웃 편집">Edit</button>
+        <span class="ts" id="update-time"></span>
+      </div>
     </div>
-    <div id="error" class="state-msg" style="display:none"></div>
-    <div id="overview-panel" style="display:none"></div>
-    <div id="game-panels"></div>
+    <div class="toast-container" id="toast-container"></div>
+
+    <div class="edit-bar" id="editBar">
+      <span>📐 레이아웃 편집 모드 — 섹션을 드래그하여 순서 변경, 👁 버튼으로 표시/숨기기, 열 수 조절 및 섹션 합치기 지원</span>
+      <button class="ctrl-btn" onclick="resetLayout()" style="margin-left:auto">초기화</button>
+      <button class="ctrl-btn" onclick="toggleEditMode()" style="background:#3b82f6;color:#fff">완료</button>
+    </div>
+    <div class="content">
+      <div id="loading" class="state-msg">
+        <div class="icon">⏳</div>
+        <div>데이터 로딩 중...</div>
+      </div>
+      <div id="error" class="state-msg" style="display:none"></div>
+      <div id="overview-panel" style="display:none"></div>
+      <div id="game-panels"></div>
+    </div>
   </div>
+</div>
 
 <script>
 /* ═══════════════════════════════════════════════════════
@@ -483,7 +685,8 @@ function renderOverview(games) {
       총 <b>${timeStr}</b>
     </div>
     <div class="cards">${Object.entries(games).map(([gid, g]) => renderGameCard(gid, g)).join('')}</div>
-    <div class="chart-grid">
+    ${_makeGridSelector('ov-chart-grid-main', 2, 'chart')}
+    <div class="chart-grid" id="ov-chart-grid-main">
       <div class="chart-box"><h4>게임별 판당 평균 시간</h4><canvas id="chart-avg-time"></canvas></div>
       <div class="chart-box"><h4>일별 런 수 추이</h4><canvas id="chart-daily-runs"></canvas></div>
     </div>
@@ -742,15 +945,52 @@ function renderCronHistory(cron) {
   `;
 }
 
-/* ── 게임 탭 ── */
+/* ── 게임 탭 (사이드바 메뉴) ── */
+
+const GAME_ICONS = { SCJ: '🃏', CTZ: '🧩', PBM: '🧱' };
+const GAME_NAMES = { SCJ: 'Solitaire City', CTZ: 'Cozy Tiles', PBM: 'Block Blast' };
+const GAME_COLORS = { SCJ: '#3b82f6', CTZ: '#10b981', PBM: '#f59e0b' };
 
 function renderGameTabs(gameIds) {
-  const tabsEl = document.getElementById('game-tabs');
-  tabsEl.innerHTML =
-    `<button class="gtab active" style="--gc:#f59e0b" onclick="switchTab('overview',this)">종합</button>` +
-    gameIds.map(gid =>
-      `<button class="gtab" style="--gc:${PERSONA_COLORS.hardcore}" onclick="switchTab('${gid}',this)">${gid}</button>`
-    ).join('');
+  const container = document.getElementById('sidebar-games');
+  if (!container) return;
+
+  // 종합 메뉴
+  let html = `<div class="sidebar-item active" id="sidebar-tab-overview" onclick="switchTab('overview', this)" title="종합 현황">
+    <span class="sidebar-item-icon">📊</span>
+    <span class="sidebar-item-text">종합</span>
+  </div>`;
+
+  // 각 게임 메뉴
+  for (const gid of gameIds) {
+    const icon = GAME_ICONS[gid] || '🎮';
+    const name = GAME_NAMES[gid] || gid;
+    const color = GAME_COLORS[gid] || PERSONA_COLORS.hardcore;
+    const runs = _overviewGames[gid] ? _overviewGames[gid].runs : 0;
+    html += `<div class="sidebar-item" id="sidebar-tab-${gid}" onclick="switchTab('${gid}', this)" title="${name}" style="--tab-color:${color}">
+      <span class="sidebar-item-icon">${icon}</span>
+      <span class="sidebar-item-text" style="color:${color}">${gid}</span>
+      ${runs ? `<span class="sidebar-badge">${runs}</span>` : ''}
+    </div>`;
+  }
+  container.innerHTML = html;
+}
+
+function updateSidebarBadges() {
+  for (const gid of Object.keys(_overviewGames)) {
+    const item = document.getElementById(`sidebar-tab-${gid}`);
+    if (!item) continue;
+    const badge = item.querySelector('.sidebar-badge');
+    const runs = _overviewGames[gid].runs;
+    if (badge) {
+      badge.textContent = runs;
+    } else if (runs) {
+      const span = document.createElement('span');
+      span.className = 'sidebar-badge';
+      span.textContent = runs;
+      item.appendChild(span);
+    }
+  }
 }
 
 /* ── 카테고리 전환 시 lazy 차트 렌더링에 사용할 캐시 ── */
@@ -759,9 +999,22 @@ let _currentGameRuns = [];
 let _currentGameId = '';
 let _renderedCats = {};
 
-async function switchTab(id, btn) {
-  document.querySelectorAll('.gtab').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+async function switchTab(id, _btn) {
+  // 사이드바 active 동기화
+  document.querySelectorAll('#sidebar-games .sidebar-item').forEach(b => b.classList.remove('active'));
+  const activeItem = document.getElementById(`sidebar-tab-${id}`);
+  if (activeItem) activeItem.classList.add('active');
+
+  // 페이지 제목 업데이트
+  const titleEl = document.getElementById('page-title');
+  if (titleEl) {
+    if (id === 'overview') {
+      titleEl.textContent = '종합 현황';
+    } else {
+      const name = GAME_NAMES[id] || id;
+      titleEl.textContent = `${id} — ${name}`;
+    }
+  }
 
   const overview = document.getElementById('overview-panel');
   const panels = document.getElementById('game-panels');
@@ -3131,6 +3384,7 @@ async function renderDbUsage() {
     const pct = Math.min(100, (totalBytes / limitBytes * 100)).toFixed(1);
     const barColor = pct >= 80 ? 'var(--status-err)' : pct >= 50 ? 'var(--status-warn)' : 'var(--status-ok)';
     const warnBadge = pct >= 80 ? ' <span class="badge badge-err">경고: 80% 초과</span>' : '';
+    updateSidebarDbMini(parseFloat(pct), barColor);
 
     const tableRows = usage.map(t => {
       const sizeMB = (Number(t.size_bytes) / 1024 / 1024).toFixed(2);
@@ -3292,8 +3546,10 @@ async function refreshOverviewFromViews() {
     const overviewEl = document.getElementById('overview-panel');
     if (overviewEl && overviewEl.style.display !== 'none') {
       renderOverview(games);
+      restoreGridCols();
       document.getElementById('update-time').textContent = '갱신: ' + new Date().toLocaleString('ko');
     }
+    updateSidebarBadges();
     _lastFetchTime = new Date().toISOString();
   } catch (e) {
     console.warn('refreshOverviewFromViews 실패:', e.message);
@@ -3329,6 +3585,7 @@ async function init() {
 
   applyTheme(getTheme());
   document.documentElement.style.setProperty('--fs-scale', FS_STEPS[fsIdx]);
+  restoreSidebar();
 
   try {
     loadingEl.style.display = 'flex';
@@ -3349,6 +3606,8 @@ async function init() {
     renderHealthCheck(healthChecks);
     renderCronHistory(cron);
     renderGameTabs(Object.keys(games));
+    updateSidebarBadges();
+    restoreGridCols();
 
     document.getElementById('update-time').textContent = '갱신: ' + new Date().toLocaleString('ko');
     loadingEl.style.display = 'none';
@@ -3401,6 +3660,9 @@ function toggleEditMode() {
 
   if (_editMode) {
     _initSortables();
+    // 합치기 버튼 주입
+    _injectMergeButtons(document.getElementById('overview-panel'));
+    document.querySelectorAll('.cat-panel.active').forEach(p => _injectMergeButtons(p));
   } else {
     _destroySortables();
     _saveLayout();
@@ -3469,8 +3731,8 @@ function toggleSection(sectionEl) {
 }
 
 function _getLayoutKey() {
-  const activeTab = document.querySelector('.gtab.active');
-  const tabId = activeTab ? activeTab.textContent.trim() : 'overview';
+  const activeTab = document.querySelector('#sidebar-games .sidebar-item.active');
+  const tabId = activeTab ? (activeTab.id.replace('sidebar-tab-', '') || 'overview') : 'overview';
   const activeCat = document.querySelector('.cat-tab.active');
   const catId = activeCat ? activeCat.textContent.trim() : '';
   return `layout_${tabId}_${catId}`;
@@ -3506,6 +3768,8 @@ function _destroySortables() {
 
 function resetLayout() {
   localStorage.removeItem(_getLayoutKey());
+  localStorage.removeItem('dash_grid_cols');
+  localStorage.removeItem('dash_merged_sections');
   document.querySelectorAll('.layout-section').forEach(s => {
     s.classList.remove('hidden-section');
     const toggle = s.querySelector('.section-toggle');
@@ -3513,6 +3777,289 @@ function resetLayout() {
   });
   _destroySortables();
   _initSortables();
+}
+
+/* ═══════════════════════════════════════════════════════
+   사이드바
+   ═══════════════════════════════════════════════════════ */
+
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const main = document.getElementById('main-area');
+  const btn = document.getElementById('sidebarToggle');
+  const collapsed = sidebar.classList.toggle('collapsed');
+  main.classList.toggle('sidebar-collapsed', collapsed);
+  btn.textContent = collapsed ? '»' : '«';
+  localStorage.setItem('dash_sidebar_collapsed', collapsed ? '1' : '0');
+}
+
+function restoreSidebar() {
+  const collapsed = localStorage.getItem('dash_sidebar_collapsed') === '1';
+  if (collapsed) {
+    document.getElementById('sidebar')?.classList.add('collapsed');
+    document.getElementById('main-area')?.classList.add('sidebar-collapsed');
+    const btn = document.getElementById('sidebarToggle');
+    if (btn) btn.textContent = '»';
+  }
+  // 모바일: 768px 이하 자동 접힘
+  if (window.innerWidth <= 768) {
+    document.getElementById('sidebar')?.classList.add('collapsed');
+    document.getElementById('main-area')?.classList.add('sidebar-collapsed');
+  }
+}
+
+function sidebarSystemNav(target) {
+  // System 메뉴 active 해제
+  ['sidebar-health','sidebar-cron','sidebar-runs'].forEach(id => {
+    document.getElementById(id)?.classList.remove('active');
+  });
+  document.getElementById(`sidebar-${target}`)?.classList.add('active');
+
+  // overview 탭으로 전환 후 해당 섹션으로 스크롤
+  const overview = document.getElementById('overview-panel');
+  const panels = document.getElementById('game-panels');
+  if (overview) overview.style.display = 'block';
+  if (panels) panels.innerHTML = '';
+  _currentGameId = '';
+  _renderedCats = {};
+
+  // 사이드바 게임 탭 active 초기화
+  document.querySelectorAll('#sidebar-games .sidebar-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('sidebar-tab-overview')?.classList.add('active');
+  const titleEl = document.getElementById('page-title');
+  if (titleEl) titleEl.textContent = '종합 현황';
+
+  // 해당 섹션으로 스크롤
+  const sectionMap = {
+    health: 'health-check-section',
+    cron: 'cron-section',
+    runs: 'run-manager',
+  };
+  const sectionId = sectionMap[target];
+  if (sectionId) {
+    setTimeout(() => {
+      const el = document.getElementById(sectionId);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  }
+}
+
+/* ── 사이드바 DB 미니바 업데이트 ── */
+function updateSidebarDbMini(pct, barColor) {
+  const mini = document.getElementById('sidebar-db-mini');
+  const fill = document.getElementById('sidebar-db-fill');
+  const pctEl = document.getElementById('sidebar-db-pct');
+  if (!mini || !fill || !pctEl) return;
+  mini.style.display = 'block';
+  fill.style.width = pct + '%';
+  fill.style.background = barColor;
+  pctEl.textContent = pct.toFixed(1) + '%';
+}
+
+/* ═══════════════════════════════════════════════════════
+   그리드 열 수 조절
+   ═══════════════════════════════════════════════════════ */
+
+function setGridCols(btn, gridId, cols) {
+  const grid = document.getElementById(gridId);
+  if (!grid) return;
+  // 기존 grid-cols-N 클래스 제거
+  grid.classList.remove('grid-cols-1','grid-cols-2','grid-cols-3','grid-cols-4');
+  grid.classList.add(`grid-cols-${cols}`);
+  // 버튼 active 상태
+  btn.closest('.grid-col-selector').querySelectorAll('.grid-col-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  // localStorage 저장
+  const saved = _getGridColsSaved();
+  saved[gridId] = cols;
+  localStorage.setItem('dash_grid_cols', JSON.stringify(saved));
+}
+
+function setMetricCols(btn, rowId, cols) {
+  const row = document.getElementById(rowId);
+  if (!row) return;
+  row.classList.remove('metric-cols-3','metric-cols-4','metric-cols-5','metric-cols-6');
+  row.classList.add(`metric-cols-${cols}`);
+  btn.closest('.grid-col-selector').querySelectorAll('.grid-col-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const saved = _getGridColsSaved();
+  saved[rowId] = 'metric-' + cols;
+  localStorage.setItem('dash_grid_cols', JSON.stringify(saved));
+}
+
+function _getGridColsSaved() {
+  try { return JSON.parse(localStorage.getItem('dash_grid_cols')) || {}; }
+  catch { return {}; }
+}
+
+function restoreGridCols() {
+  const saved = _getGridColsSaved();
+  for (const [id, val] of Object.entries(saved)) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    if (typeof val === 'number' || (typeof val === 'string' && !val.startsWith('metric-'))) {
+      el.classList.remove('grid-cols-1','grid-cols-2','grid-cols-3','grid-cols-4');
+      el.classList.add(`grid-cols-${val}`);
+      // 해당 셀렉터 버튼 active 복원
+      const selector = el.previousElementSibling;
+      if (selector && selector.classList.contains('grid-col-selector')) {
+        selector.querySelectorAll('.grid-col-btn').forEach(b => {
+          b.classList.toggle('active', parseInt(b.dataset.cols) === parseInt(val));
+        });
+      }
+    } else if (typeof val === 'string' && val.startsWith('metric-')) {
+      const cols = val.replace('metric-', '');
+      el.classList.remove('metric-cols-3','metric-cols-4','metric-cols-5','metric-cols-6');
+      el.classList.add(`metric-cols-${cols}`);
+      const selector = el.previousElementSibling;
+      if (selector && selector.classList.contains('grid-col-selector')) {
+        selector.querySelectorAll('.grid-col-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.cols === cols);
+        });
+      }
+    }
+  }
+}
+
+/* 차트 그리드에 셀렉터 삽입 헬퍼 */
+function _makeGridSelector(gridId, defaultCols, type) {
+  const saved = _getGridColsSaved()[gridId];
+  const activeCols = saved && !String(saved).startsWith('metric-') ? parseInt(saved) : defaultCols;
+  if (type === 'chart') {
+    return `<div class="grid-col-selector">
+      <span class="grid-col-label">열:</span>
+      ${[1,2,3,4].map(c => `<button class="grid-col-btn${c===activeCols?' active':''}" data-cols="${c}" onclick="setGridCols(this,'${gridId}',${c})">${c}열</button>`).join('')}
+    </div>`;
+  } else {
+    const activeM = saved && String(saved).startsWith('metric-') ? saved.replace('metric-','') : String(defaultCols);
+    return `<div class="grid-col-selector">
+      <span class="grid-col-label">열:</span>
+      ${[3,4,5,6].map(c => `<button class="grid-col-btn${String(c)===activeM?' active':''}" data-cols="${c}" onclick="setMetricCols(this,'${gridId}',${c})">${c}열</button>`).join('')}
+    </div>`;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   섹션 합치기/분리
+   ═══════════════════════════════════════════════════════ */
+
+function _getMergedSaved() {
+  try { return JSON.parse(localStorage.getItem('dash_merged_sections')) || []; }
+  catch { return []; }
+}
+
+function _saveMergedState() {
+  const merged = [];
+  document.querySelectorAll('.merged-section[data-merge-ids]').forEach(m => {
+    merged.push(m.dataset.mergeIds);
+  });
+  localStorage.setItem('dash_merged_sections', JSON.stringify(merged));
+}
+
+function mergeSections(btn) {
+  // btn이 속한 layout-section 찾기
+  const secA = btn.closest('.layout-section');
+  if (!secA) return;
+  const container = secA.parentElement;
+  if (!container) return;
+
+  // 다음 visible layout-section 찾기
+  let secB = secA.nextElementSibling;
+  while (secB && (secB.classList.contains('hidden-section') || !secB.classList.contains('layout-section'))) {
+    secB = secB.nextElementSibling;
+  }
+  if (!secB) return;
+
+  const idA = secA.dataset.sectionId;
+  const idB = secB.dataset.sectionId;
+
+  // 두 섹션의 실제 콘텐츠(section-handle 제외)
+  const contentA = secA.querySelector(':scope > *:not(.section-handle)');
+  const contentB = secB.querySelector(':scope > *:not(.section-handle)');
+  if (!contentA || !contentB) return;
+
+  // 합쳐진 섹션 생성
+  const merged = document.createElement('div');
+  merged.className = 'layout-section merged-section';
+  merged.dataset.sectionId = idA;
+  merged.dataset.mergeIds = `${idA}|${idB}`;
+  merged.dataset.originalA = idA;
+  merged.dataset.originalB = idB;
+
+  const handle = document.createElement('div');
+  handle.className = 'section-handle';
+  handle.innerHTML = `☰ ${_getSectionLabel(contentA)} + ${_getSectionLabel(contentB)}
+    <span class="section-toggle" onclick="event.stopPropagation();toggleSection(this.closest('.layout-section'))">${'👁 숨기기'}</span>
+    <button class="merge-btn split-btn" onclick="event.stopPropagation();splitSection(this)" title="분리">✂ 분리</button>
+  `;
+  merged.appendChild(handle);
+
+  // 같은 타입(chart-grid)이면 자식 병합
+  const isChartA = contentA.classList.contains('chart-grid');
+  const isChartB = contentB.classList.contains('chart-grid');
+  if (isChartA && isChartB) {
+    const mergedGrid = document.createElement('div');
+    mergedGrid.className = 'chart-grid';
+    [...contentA.children].forEach(c => mergedGrid.appendChild(c.cloneNode(true)));
+    [...contentB.children].forEach(c => mergedGrid.appendChild(c.cloneNode(true)));
+    merged.appendChild(mergedGrid);
+  } else {
+    // 다른 타입: 세로 쌓임 + 구분선
+    const cloneA = contentA.cloneNode(true);
+    const cloneB = contentB.cloneNode(true);
+    const divider = document.createElement('div');
+    divider.className = 'merged-divider';
+    divider.textContent = '•';
+    merged.appendChild(cloneA);
+    merged.appendChild(divider);
+    merged.appendChild(cloneB);
+  }
+
+  // 원본 두 섹션을 merged로 교체
+  secA.dataset.mergedInto = 'true';
+  secB.dataset.mergedInto = 'true';
+  container.insertBefore(merged, secA);
+  secA.remove();
+  secB.remove();
+
+  _saveMergedState();
+}
+
+function splitSection(btn) {
+  const merged = btn.closest('.layout-section.merged-section');
+  if (!merged) return;
+  const container = merged.parentElement;
+  if (!container) return;
+
+  const idA = merged.dataset.originalA;
+  const idB = merged.dataset.originalB;
+
+  // 원본 섹션 복원: overview-panel을 재렌더하는 것이 가장 안전
+  // 합치기는 overview만 지원하므로 overview 재렌더
+  merged.remove();
+  _saveMergedState();
+  // overview 재렌더
+  if (Object.keys(_overviewGames).length) {
+    renderOverview(_overviewGames);
+    if (_allRuns.length) renderRunManager(_allRuns);
+    renderDbUsage();
+  }
+}
+
+/* 편집 모드 진입 시 합치기 버튼 주입 */
+function _injectMergeButtons(container) {
+  if (!container) return;
+  container.querySelectorAll('.layout-section').forEach(sec => {
+    const handle = sec.querySelector('.section-handle');
+    if (!handle) return;
+    if (handle.querySelector('.merge-btn:not(.split-btn)')) return; // 이미 있음
+    const mergeBtn = document.createElement('button');
+    mergeBtn.className = 'merge-btn';
+    mergeBtn.title = '아래 섹션과 합치기';
+    mergeBtn.textContent = '🔗↓ 합치기';
+    mergeBtn.onclick = (e) => { e.stopPropagation(); mergeSections(mergeBtn); };
+    handle.appendChild(mergeBtn);
+  });
 }
 </script>
 </body>
