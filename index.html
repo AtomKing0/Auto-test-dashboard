@@ -1512,6 +1512,7 @@ function renderCatNru(gameId) {
     const passStyle = r.ready ? 'color:var(--status-ok);font-weight:600' : 'color:var(--status-err);font-weight:600';
     const timeStr = (r.total_time_sec || 0) >= 60 ? `${((r.total_time_sec || 0) / 60).toFixed(1)}분` : `${Math.round(r.total_time_sec || 0)}초`;
     return `<tr>
+      <td><input type="checkbox" class="nru-cat-check" value="${r.id}"></td>
       <td>${(r.run_date || '').slice(5)}</td>
       <td>${r.run_time || '-'}</td>
       <td style="${passStyle}">${r.ready ? 'PASS' : 'FAIL'}</td>
@@ -1559,9 +1560,14 @@ function renderCatNru(gameId) {
       </table>
     </div>
     <div class="tbl-wrap">
-      <h4>NRU 실행 이력 (최근 ${Math.min(20, runs.length)}회)</h4>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <h4 style="margin:0">NRU 실행 이력 (최근 ${Math.min(20, runs.length)}회)</h4>
+        <label style="font-size:11px;color:var(--text-muted);margin-left:auto"><input type="checkbox" onclick="document.querySelectorAll('.nru-cat-check').forEach(c=>c.checked=this.checked)"> 전체 선택</label>
+        <button class="rm-btn rm-btn-danger" onclick="deleteSelectedNruCat('${gameId}')" style="font-size:11px;padding:3px 10px">선택 삭제</button>
+        <span id="nru-cat-status" style="font-size:11px;color:var(--text-muted)"></span>
+      </div>
       <table>
-        <thead><tr><th>날짜</th><th>시간</th><th>결과</th><th>레벨</th><th>소요</th><th>재시도</th><th>골드</th><th>해머</th></tr></thead>
+        <thead><tr><th style="width:30px"></th><th>날짜</th><th>시간</th><th>결과</th><th>레벨</th><th>소요</th><th>재시도</th><th>골드</th><th>해머</th></tr></thead>
         <tbody>${historyRows}</tbody>
       </table>
     </div>
@@ -3934,6 +3940,30 @@ function renderNruManager() {
       ${rows}
     </div>
   `;
+}
+
+async function deleteSelectedNruCat(gameId) {
+  const checked = [...document.querySelectorAll('.nru-cat-check:checked')].map(cb => cb.value);
+  if (!checked.length) { alert('삭제할 NRU 런을 선택해주세요.'); return; }
+  if (!confirm(`${checked.length}건의 NRU 런을 삭제하시겠습니까? (복구 불가)`)) return;
+
+  const statusEl = document.getElementById('nru-cat-status');
+  statusEl.textContent = '삭제 중...';
+  let deleted = 0, failed = 0;
+  for (const runId of checked) {
+    try {
+      await sb.rpc('delete_nru_run', { target_id: runId });
+      deleted++;
+    } catch (e) {
+      console.error('NRU 삭제 실패:', runId, e);
+      failed++;
+    }
+  }
+  statusEl.textContent = `삭제 완료: ${deleted}건${failed ? `, 실패 ${failed}건` : ''}`;
+  _nruRuns = await fetchNruRuns();
+  // 카테고리 탭 다시 렌더
+  const panel = document.getElementById(`cat-nru-${gameId}`);
+  if (panel) panel.innerHTML = renderCatNru(gameId);
 }
 
 async function deleteSelectedNru() {
