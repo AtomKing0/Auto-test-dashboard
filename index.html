@@ -1460,6 +1460,102 @@ async function switchTab(id, _btn) {
   }
 }
 
+/* ── NRU 튜토리얼 처리 현황 ── */
+
+const NRU_GUIDE_KR = {
+  LOBBYPLAYBUTTON: '로비 플레이 버튼',
+  PLAYBUTTON: '플레이 버튼',
+  SHOPBUTTON: '상점 버튼',
+  IDLEGOLDBUTTON: '방치 골드 버튼',
+  LEADERBOARDBUTTON: '리더보드 버튼',
+  DECOBUTTON: '꾸미기 버튼',
+  DAILYTASK: '일일 과제',
+  EVENTBUTTON: '이벤트 버튼',
+};
+
+function _renderNruTutorialSection(latestRun) {
+  const levels = latestRun.level_results || [];
+  const hasTutorial = levels.some(lv => lv.tutorial);
+  if (!hasTutorial) {
+    return `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px;color:var(--text-muted);font-size:12px">
+      튜토리얼 데이터 없음 — 다음 NRU 실행 시 자동 수집됩니다.
+    </div>`;
+  }
+
+  // 전체 튜토리얼 가이드 수집
+  const allGuides = new Set();
+  const allPopups = new Set();
+  let tutorialClosedCount = 0;
+  let totalPopupCount = 0;
+  const levelTutorials = [];
+
+  for (const lv of levels) {
+    const t = lv.tutorial || {};
+    const guides = t.guides || [];
+    const popups = t.popups || [];
+    guides.forEach(g => allGuides.add(g));
+    popups.forEach(p => allPopups.add(p.name));
+    if (t.tutorial_closed) tutorialClosedCount++;
+    totalPopupCount += popups.length;
+
+    if (guides.length || popups.length) {
+      levelTutorials.push({ level: lv.level, guides, popups, tutorialClosed: t.tutorial_closed });
+    }
+  }
+
+  // 가이드 요약 카드
+  const guideBadges = [...allGuides].map(g => {
+    const label = NRU_GUIDE_KR[g] || g;
+    return `<span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;background:rgba(59,130,246,.1);color:#60a5fa;font-weight:500;margin:2px">${label}</span>`;
+  }).join('');
+
+  // 레벨별 튜토리얼 테이블
+  const tutRows = levelTutorials.map(lt => {
+    const guideList = lt.guides.map(g => NRU_GUIDE_KR[g] || g).join(', ') || '-';
+    const popupList = lt.popups
+      .filter(p => p.name !== 'BlockInput' && p.name !== 'blockInputLayer')
+      .map(p => {
+        const actionColor = p.action === 'closed' ? 'var(--status-ok)' : p.action === 'dismissed' ? 'var(--status-warn)' : 'var(--text-secondary)';
+        return `<span style="color:${actionColor}">${p.name.replace('Popup','')}(${p.action})</span>`;
+      }).join(', ') || '-';
+    const tutIcon = lt.tutorialClosed ? '<span style="color:var(--status-ok)">&#10003;</span>' : '<span style="color:var(--text-muted)">-</span>';
+    return `<tr>
+      <td style="font-weight:600">Lv ${lt.level}</td>
+      <td>${tutIcon}</td>
+      <td style="font-size:11px">${guideList}</td>
+      <td style="font-size:11px">${popupList}</td>
+    </tr>`;
+  }).join('');
+
+  return `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px">
+      <h4 style="font-size:13px;color:var(--text-secondary);margin-bottom:10px">튜토리얼 처리 현황 (${latestRun.run_date} ${latestRun.run_time || ''})</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        <div style="flex:1;min-width:120px;padding:10px;background:var(--bg-body);border-radius:6px">
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">튜토리얼 팝업 처리</div>
+          <div style="font-size:20px;font-weight:700;color:var(--status-ok)">${tutorialClosedCount}<span style="font-size:11px;color:var(--text-muted)">회</span></div>
+        </div>
+        <div style="flex:1;min-width:120px;padding:10px;background:var(--bg-body);border-radius:6px">
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">UI 가이드 종류</div>
+          <div style="font-size:20px;font-weight:700">${allGuides.size}<span style="font-size:11px;color:var(--text-muted)">종</span></div>
+        </div>
+        <div style="flex:1;min-width:120px;padding:10px;background:var(--bg-body);border-radius:6px">
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">팝업 처리 총합</div>
+          <div style="font-size:20px;font-weight:700">${totalPopupCount}<span style="font-size:11px;color:var(--text-muted)">건</span></div>
+        </div>
+      </div>
+      <div style="margin-bottom:12px">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">감지된 UI 가이드</div>
+        ${guideBadges || '<span style="font-size:11px;color:var(--text-muted)">없음</span>'}
+      </div>
+      <table style="font-size:12px">
+        <thead><tr><th>레벨</th><th>튜토리얼</th><th>UI 가이드</th><th>팝업 처리</th></tr></thead>
+        <tbody>${tutRows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
 /* ══════════════════════════════════════════════
    카테고리: NRU 튜토리얼 (SCJ)
    ══════════════════════════════════════════════ */
@@ -1551,6 +1647,7 @@ function renderCatNru(gameId) {
         <div class="value">${runs.length}<span style="font-size:12px;color:var(--text-muted)">회</span></div>
       </div>
     </div>
+    ${_renderNruTutorialSection(latest)}
     <div class="tbl-wrap">
       <h4>레벨별 통계 (전체 ${runs.length}회 집계)</h4>
       <table>
