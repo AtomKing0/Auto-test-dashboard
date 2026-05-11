@@ -1465,13 +1465,22 @@ async function switchTab(id, _btn) {
 const NRU_GUIDE_KR = {
   LOBBYPLAYBUTTON: '로비 플레이 버튼',
   PLAYBUTTON: '플레이 버튼',
-  SHOPBUTTON: '상점 버튼',
-  IDLEGOLDBUTTON: '방치 골드 버튼',
-  LEADERBOARDBUTTON: '리더보드 버튼',
-  DECOBUTTON: '꾸미기 버튼',
+  SHOPBUTTON: '상점',
+  IDLEGOLDBUTTON: '방치 골드',
+  LEADERBOARDBUTTON: '리더보드',
+  DECOBUTTON: '꾸미기',
   DAILYTASK: '일일 과제',
-  EVENTBUTTON: '이벤트 버튼',
+  EVENTBUTTON: '이벤트',
 };
+const NRU_POPUP_KR = {
+  PopupShop: '상점 팝업',
+  PopupLeaderBoard: '리더보드 팝업',
+  PopupDailyTask: '일일 과제 팝업',
+  PopupDailyGift: '일일 선물 팝업',
+  PopupGameEntry: '게임 진입',
+  PopupCompleteLevel: '레벨 완료',
+};
+const NRU_POPUP_SKIP = new Set(['BlockInput', 'blockInputLayer', 'PopupTutorial', 'PopupGameEntry', 'PopupCompleteLevel']);
 
 function _renderNruTutorialSection(latestRun) {
   const levels = latestRun.level_results || [];
@@ -1482,48 +1491,68 @@ function _renderNruTutorialSection(latestRun) {
     </div>`;
   }
 
-  // 전체 튜토리얼 가이드 수집
-  const allGuides = new Set();
-  const allPopups = new Set();
-  let tutorialClosedCount = 0;
-  let totalPopupCount = 0;
-  const levelTutorials = [];
+  // 레벨별 파싱: 가이드+튜토리얼 → 의미 있는 "튜토리얼 스텝"
+  const stepRows = [];
+  const allSteps = [];
+  const sidePopups = [];
 
   for (const lv of levels) {
     const t = lv.tutorial || {};
     const guides = t.guides || [];
     const popups = t.popups || [];
-    guides.forEach(g => allGuides.add(g));
-    popups.forEach(p => allPopups.add(p.name));
-    if (t.tutorial_closed) tutorialClosedCount++;
-    totalPopupCount += popups.length;
+    if (!guides.length && !popups.length) continue;
 
-    if (guides.length || popups.length) {
-      levelTutorials.push({ level: lv.level, guides, popups, tutorialClosed: t.tutorial_closed });
+    // 튜토리얼 스텝: 가이드 타겟 = 튜토리얼 내용
+    let stepName = null;
+    if (guides.length && t.tutorial_closed) {
+      const mainGuide = guides[0];
+      stepName = (NRU_GUIDE_KR[mainGuide] || mainGuide) + ' 안내';
+      allSteps.push({ level: lv.level, name: stepName, target: mainGuide });
+    } else if (t.tutorial_closed) {
+      stepName = '일반 튜토리얼';
+      allSteps.push({ level: lv.level, name: stepName, target: null });
     }
+
+    // 사이드 팝업 (튜토리얼/시스템 팝업 제외)
+    const sides = popups
+      .filter(p => !NRU_POPUP_SKIP.has(p.name))
+      .map(p => {
+        const name = NRU_POPUP_KR[p.name] || p.name.replace('Popup', '');
+        sidePopups.push({ level: lv.level, name, action: p.action });
+        return { name, action: p.action };
+      });
+
+    stepRows.push({ level: lv.level, stepName, sides });
   }
 
-  // 가이드 요약 카드
-  const guideBadges = [...allGuides].map(g => {
-    const label = NRU_GUIDE_KR[g] || g;
-    return `<span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;background:rgba(59,130,246,.1);color:#60a5fa;font-weight:500;margin:2px">${label}</span>`;
+  // 요약 카드
+  const totalSteps = allSteps.length;
+  const uniqueGuides = new Set(allSteps.map(s => s.target).filter(Boolean));
+  const totalSidePopups = sidePopups.length;
+
+  // 커버리지 배지
+  const coverageBadges = allSteps.map(s => {
+    return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;background:rgba(16,185,129,.1);color:#10b981;font-weight:500;margin:2px">
+      <span style="font-size:9px">&#10003;</span> Lv${s.level} ${s.name}
+    </span>`;
   }).join('');
 
-  // 레벨별 튜토리얼 테이블
-  const tutRows = levelTutorials.map(lt => {
-    const guideList = lt.guides.map(g => NRU_GUIDE_KR[g] || g).join(', ') || '-';
-    const popupList = lt.popups
-      .filter(p => p.name !== 'BlockInput' && p.name !== 'blockInputLayer')
-      .map(p => {
-        const actionColor = p.action === 'closed' ? 'var(--status-ok)' : p.action === 'dismissed' ? 'var(--status-warn)' : 'var(--text-secondary)';
-        return `<span style="color:${actionColor}">${p.name.replace('Popup','')}(${p.action})</span>`;
-      }).join(', ') || '-';
-    const tutIcon = lt.tutorialClosed ? '<span style="color:var(--status-ok)">&#10003;</span>' : '<span style="color:var(--text-muted)">-</span>';
+  // 레벨별 테이블
+  const tutRows = stepRows.map(sr => {
+    const stepHtml = sr.stepName
+      ? `<span style="color:var(--status-ok);font-weight:500">&#10003; ${sr.stepName}</span>`
+      : '<span style="color:var(--text-muted)">-</span>';
+    const sideHtml = sr.sides.length
+      ? sr.sides.map(s => {
+          const col = s.action === 'dismissed' ? 'var(--status-warn)' : s.action === 'claimed' ? 'var(--status-ok)' : 'var(--text-secondary)';
+          const actionKr = s.action === 'dismissed' ? '닫기' : s.action === 'claimed' ? '수령' : s.action;
+          return `<span style="color:${col}">${s.name} → ${actionKr}</span>`;
+        }).join(', ')
+      : '<span style="color:var(--text-muted)">-</span>';
     return `<tr>
-      <td style="font-weight:600">Lv ${lt.level}</td>
-      <td>${tutIcon}</td>
-      <td style="font-size:11px">${guideList}</td>
-      <td style="font-size:11px">${popupList}</td>
+      <td style="font-weight:600">Lv ${sr.level}</td>
+      <td style="font-size:11px">${stepHtml}</td>
+      <td style="font-size:11px">${sideHtml}</td>
     </tr>`;
   }).join('');
 
@@ -1532,24 +1561,24 @@ function _renderNruTutorialSection(latestRun) {
       <h4 style="font-size:13px;color:var(--text-secondary);margin-bottom:10px">튜토리얼 처리 현황 (${latestRun.run_date} ${latestRun.run_time || ''})</h4>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
         <div style="flex:1;min-width:120px;padding:10px;background:var(--bg-body);border-radius:6px">
-          <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">튜토리얼 팝업 처리</div>
-          <div style="font-size:20px;font-weight:700;color:var(--status-ok)">${tutorialClosedCount}<span style="font-size:11px;color:var(--text-muted)">회</span></div>
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">튜토리얼 스텝 완료</div>
+          <div style="font-size:20px;font-weight:700;color:var(--status-ok)">${totalSteps}<span style="font-size:11px;color:var(--text-muted)">개</span></div>
         </div>
         <div style="flex:1;min-width:120px;padding:10px;background:var(--bg-body);border-radius:6px">
-          <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">UI 가이드 종류</div>
-          <div style="font-size:20px;font-weight:700">${allGuides.size}<span style="font-size:11px;color:var(--text-muted)">종</span></div>
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">안내된 기능</div>
+          <div style="font-size:20px;font-weight:700">${uniqueGuides.size}<span style="font-size:11px;color:var(--text-muted)">종</span></div>
         </div>
         <div style="flex:1;min-width:120px;padding:10px;background:var(--bg-body);border-radius:6px">
-          <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">팝업 처리 총합</div>
-          <div style="font-size:20px;font-weight:700">${totalPopupCount}<span style="font-size:11px;color:var(--text-muted)">건</span></div>
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">사이드 팝업 처리</div>
+          <div style="font-size:20px;font-weight:700">${totalSidePopups}<span style="font-size:11px;color:var(--text-muted)">건</span></div>
         </div>
       </div>
       <div style="margin-bottom:12px">
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">감지된 UI 가이드</div>
-        ${guideBadges || '<span style="font-size:11px;color:var(--text-muted)">없음</span>'}
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">완료된 튜토리얼</div>
+        ${coverageBadges || '<span style="font-size:11px;color:var(--text-muted)">없음</span>'}
       </div>
       <table style="font-size:12px">
-        <thead><tr><th>레벨</th><th>튜토리얼</th><th>UI 가이드</th><th>팝업 처리</th></tr></thead>
+        <thead><tr><th>레벨</th><th>튜토리얼 스텝</th><th>사이드 팝업</th></tr></thead>
         <tbody>${tutRows}</tbody>
       </table>
     </div>
