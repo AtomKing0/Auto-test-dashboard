@@ -2847,71 +2847,76 @@ function renderCatCtzItems(gameId, stages, runs) {
    카테고리: 소요시간 분석 (CTZ 전용)
    ══════════════════════════════════════════════ */
 function renderCatTimeAnalysis(gameId, stages, runs) {
-  const byDiff = {};
+  const byTileKinds = {};
   const byStageNum = {};
 
   for (const s of stages) {
     const d = s.details || {};
     const t = s.time_sec || 0;
-    const diff = s.difficulty || 0;
+    const tk = d.tile_kinds || 0;
 
-    if (!byDiff[diff]) byDiff[diff] = { times: [], count: 0 };
-    byDiff[diff].times.push(t);
-    byDiff[diff].count++;
+    if (tk > 0) {
+      if (!byTileKinds[tk]) byTileKinds[tk] = { times: [], count: 0 };
+      byTileKinds[tk].times.push(t);
+      byTileKinds[tk].count++;
+    }
 
     const st = s.stage_number || '?';
     if (!byStageNum[st]) byStageNum[st] = { times: [], level: s.game_level };
     byStageNum[st].times.push(t);
   }
 
-  const diffRows = Object.entries(byDiff).sort(([a],[b]) => +a - +b).map(([d, v]) => {
+  const tkRows = Object.entries(byTileKinds).sort(([a],[b]) => +a - +b).map(([tk, v]) => {
     const avg = v.times.length ? (v.times.reduce((a,b) => a+b, 0) / v.times.length).toFixed(1) : '-';
     const max = v.times.length ? Math.max(...v.times).toFixed(1) : '-';
-    return `<tr><td>${DIFF_TIERS[d] || 'Tier '+d}</td><td>${v.count}</td><td>${avg}초</td><td>${max}초</td></tr>`;
+    return `<tr><td>${tk}종</td><td>${v.count}</td><td>${avg}초</td><td>${max}초</td></tr>`;
   }).join('');
 
   return `
     <div class="chart-grid">
-      <div class="chart-box"><h4>난이도별 평균 소요시간</h4><canvas id="chart-timediff-${gameId}"></canvas></div>
+      <div class="chart-box"><h4>타일 종류 수별 평균 소요시간</h4><canvas id="chart-timediff-${gameId}"></canvas></div>
       <div class="chart-box"><h4>스테이지별 소요시간 추이</h4><canvas id="chart-timestage-${gameId}"></canvas></div>
     </div>
-    <div class="tbl-wrap"><h4>난이도별 소요시간 상세</h4>
-      <table><thead><tr><th>난이도</th><th>판수</th><th>평균</th><th>최대</th></tr></thead>
-      <tbody>${diffRows || '<tr><td colspan="4" style="color:var(--text-muted)">데이터 없음</td></tr>'}</tbody></table></div>
+    <div class="tbl-wrap"><h4>타일 종류 수별 소요시간 상세</h4>
+      <table><thead><tr><th>타일 종류</th><th>판수</th><th>평균</th><th>최대</th></tr></thead>
+      <tbody>${tkRows || '<tr><td colspan="4" style="color:var(--text-muted)">데이터 없음</td></tr>'}</tbody></table></div>
   `;
 }
 
 function renderTimeCharts(gameId, stages, runs) {
-  const byDiff = {};
+  const byTileKinds = {};
   const byStageNum = {};
 
   for (const s of stages) {
     const t = s.time_sec || 0;
-    const diff = s.difficulty || 0;
-    if (!byDiff[diff]) byDiff[diff] = { times: [] };
-    byDiff[diff].times.push(t);
+    const d = s.details || {};
+    const tk = d.tile_kinds || 0;
+    if (tk > 0) {
+      if (!byTileKinds[tk]) byTileKinds[tk] = { times: [] };
+      byTileKinds[tk].times.push(t);
+    }
 
     const st = s.stage_number || '?';
     if (!byStageNum[st]) byStageNum[st] = { times: [], level: s.game_level };
     byStageNum[st].times.push(t);
   }
 
-  // 난이도별 평균 소요시간
-  const diffKeys = Object.keys(byDiff).sort((a, b) => +a - +b);
-  const diffLabels = diffKeys.map(d => DIFF_TIERS[d] || 'Tier ' + d);
-  const diffAvgs = diffKeys.map(d => {
-    const ts = byDiff[d].times;
+  // 타일 종류 수별 평균 소요시간
+  const tkKeys = Object.keys(byTileKinds).sort((a, b) => +a - +b);
+  const tkLabels = tkKeys.map(k => k + '종');
+  const tkAvgs = tkKeys.map(k => {
+    const ts = byTileKinds[k].times;
     return ts.length ? +(ts.reduce((a,b) => a+b, 0) / ts.length).toFixed(1) : 0;
   });
-  const diffColors = diffKeys.map(d => DIFF_COLORS[d] || '#999');
+  const tkColors = tkKeys.map(k => +k <= 4 ? '#10b981' : +k <= 6 ? '#f59e0b' : '#ef4444');
 
   const tdKey = `timediff-${gameId}`;
   if (_charts[tdKey]) _charts[tdKey].destroy();
   const tdCanvas = document.getElementById(`chart-timediff-${gameId}`);
-  if (tdCanvas && diffKeys.length) {
+  if (tdCanvas && tkKeys.length) {
     _charts[tdKey] = new Chart(tdCanvas, {
       type: 'bar',
-      data: { labels: diffLabels, datasets: [{ label: '평균 소요시간 (초)', data: diffAvgs, backgroundColor: diffColors.map(c => c + '99'), borderColor: diffColors, borderWidth: 1.5, borderRadius: 4 }] },
+      data: { labels: tkLabels, datasets: [{ label: '평균 소요시간 (초)', data: tkAvgs, backgroundColor: tkColors.map(c => c + '99'), borderColor: tkColors, borderWidth: 1.5, borderRadius: 4 }] },
       options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
     });
   }
