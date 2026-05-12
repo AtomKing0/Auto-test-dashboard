@@ -668,13 +668,16 @@ async function fetchNruRuns() {
   return data || [];
 }
 
-let _serverLogs = {};  // { game_id: { run_id, run_date, persona, api_calls, console_logs, summary } }
+let _serverLogs = {};  // { game_id: [ {persona, run_date, api_calls, console_logs, summary, ...}, ... ] }
 
 async function fetchServerLogs() {
   const { data, error } = await sb.from('server_logs').select('*');
   if (error) { console.warn('server_logs 조회 실패:', error.message); return {}; }
   const map = {};
-  for (const row of (data || [])) map[row.game_id] = row;
+  for (const row of (data || [])) {
+    if (!map[row.game_id]) map[row.game_id] = [];
+    map[row.game_id].push(row);
+  }
   return map;
 }
 
@@ -3066,6 +3069,22 @@ function renderCatStagesCTZ(gameId, stages) {
 /* ══════════════════════════════════════════════
    카테고리: 스테이지 (SCJ / 공통)
    ══════════════════════════════════════════════ */
+function toggleScoreBelowMinScreenshot(runId, stageId, btnEl) {
+  const imgId = `sbm_img_${runId}_${stageId}`.replace(/[^a-zA-Z0-9_]/g, '_');
+  const existing = document.getElementById(imgId);
+  if (existing) { existing.remove(); return; }
+  const run = (_currentGameRuns || []).find(r => r.id === runId);
+  if (!run) return;
+  const screenshots = (run.metrics || {}).screenshots || [];
+  const match = screenshots.find(ss => ss.label && ss.label.includes('score_below_min') && ss.label.includes(stageId));
+  if (!match) { btnEl.title = '스크린샷 없음'; return; }
+  const div = document.createElement('div');
+  div.id = imgId;
+  div.style.cssText = 'margin:6px 0;padding:4px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card)';
+  div.innerHTML = `<div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">${match.label} (${match.timestamp || ''})</div><img src="data:image/png;base64,${match.base64}" style="max-width:480px;border-radius:4px;cursor:pointer" onclick="this.style.maxWidth=this.style.maxWidth==='480px'?'100%':'480px'">`;
+  btnEl.parentElement.appendChild(div);
+}
+
 function renderCatStages(gameId, stages) {
   if (gameId === 'CTZ') return renderCatStagesCTZ(gameId, stages);
   const byStage = {};
@@ -3093,6 +3112,7 @@ function renderCatStages(gameId, stages) {
         score: d.map_score, base: d.map_score_base || 0,
         gimmick: d.gimmick_score || 0, field: d.field_total || 0,
         gimmickTypes: [...detailGimmicks],
+        scoreBelowMin: d.score_below_min || false,
         persona: s.persona,
         rewards: {
           coin: cr.coin || '0',
@@ -3109,6 +3129,7 @@ function renderCatStages(gameId, stages) {
         betting: d.betting_multiplier || 1,
         createdAt: s.created_at,
         gameLevel: s.game_level,
+        runId: s.run_id || null,
       });
     }
     if (d.turns != null) byStage[key].turns.push(d.turns);
@@ -3192,7 +3213,8 @@ function renderCatStages(gameId, stages) {
           const pStr = pName ? `<span style="color:${pColor};font-weight:600">${pName}</span> ` : '';
           const dateStr = d.createdAt ? `<span style="color:#64748b">[${_fmtStageDate(d.createdAt)}]</span> ` : '';
           const lvlStr = d.gameLevel != null ? ` <span style="color:#3b82f6">Lv${d.gameLevel}</span>` : '';
-          return `${dateStr}${i+1}회${lvlStr}${betStr} ${pStr}: base ${d.base}${gsStr} = <b style="color:${scoreColor}">${d.score}</b> (카드 ${d.field}장${gPart})${rewardStr}${econStr}${evtStr}`;
+          const sbmStr = d.scoreBelowMin && d.runId ? ` <span style="color:#ef4444;font-weight:700;cursor:pointer;text-decoration:underline" title="클릭하여 스크린샷 보기 — PlusCard로 map_score가 tier score_min 미만 하락" onclick="event.stopPropagation();toggleScoreBelowMinScreenshot('${d.runId}','${st}',this)">⚠ score_below_min 📷</span>` : d.scoreBelowMin ? ' <span style="color:#ef4444;font-weight:700" title="PlusCard로 map_score가 tier score_min 미만으로 하락">⚠ score_below_min</span>' : '';
+          return `${dateStr}${i+1}회${lvlStr}${betStr} ${pStr}: base ${d.base}${gsStr} = <b style="color:${scoreColor}">${d.score}</b> (카드 ${d.field}장${gPart})${sbmStr}${rewardStr}${econStr}${evtStr}`;
         }).join('<br>')}
       </td></tr>`;
     }).join('');
@@ -3433,8 +3455,8 @@ function renderCatSecurity(gameId, runs) {
    카테고리: 서버 로그 (최신 런)
    ══════════════════════════════════════════════ */
 function renderCatLogApi(gameId, runs) {
-  const log = _serverLogs[gameId];
-  if (!log) {
+  const logs = _serverLogs[gameId];
+  if (!logs || !logs.length) {
     return `<div style="color:var(--text-muted);padding:20px;text-align:center">
       <div style="font-size:32px;opacity:.3;margin-bottom:8px">📡</div>
       <div>서버 로그 데이터 없음</div>
@@ -3442,135 +3464,124 @@ function renderCatLogApi(gameId, runs) {
     </div>`;
   }
 
-  const apiCalls = log.api_calls || [];
-  const consoleLogs = log.console_logs || [];
-  const summary = log.summary || {};
-  const totalApi = summary.api_total || apiCalls.length;
-  const totalConsole = summary.console_total || consoleLogs.length;
-  const byMethod = summary.by_method || {};
-  const byLevel = summary.by_level || {};
-  const topUrls = summary.top_urls || {};
-  const errors = summary.errors || [];
-  const totalErrors = byLevel['error'] || 0;
-  const totalWarns = byLevel['warn'] || 0;
+  // 페르소나 정렬
+  const sorted = [...logs].sort((a, b) =>
+    (PERSONA_ORDER.indexOf(a.persona)===-1?99:PERSONA_ORDER.indexOf(a.persona))
+    - (PERSONA_ORDER.indexOf(b.persona)===-1?99:PERSONA_ORDER.indexOf(b.persona))
+  );
 
-  // 런 정보 헤더
-  const updatedAt = log.updated_at ? new Date(log.updated_at).toLocaleString('ko') : '';
-  const runHeader = `<div class="ov-summary" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-    <span style="font-weight:700;color:#60a5fa">최신 런 서버 로그</span>
-    <span><b>날짜:</b> ${log.run_date || '-'}</span>
-    <span><b>페르소나:</b> ${PERSONA_KO[log.persona] || log.persona || '-'}</span>
-    <span style="color:var(--text-muted);font-size:11px;margin-left:auto">갱신: ${updatedAt}</span>
-  </div>`;
+  // 전체 요약 헤더
+  const latestDate = sorted[0].run_date || '-';
+  const updatedAt = sorted.reduce((latest, l) => l.updated_at > latest ? l.updated_at : latest, '');
+  const updatedStr = updatedAt ? new Date(updatedAt).toLocaleString('ko') : '';
 
-  // 요약 메트릭
-  const metricsHtml = `<div class="metric-row">
-    <div class="metric-box"><div class="label">API 호출</div><div class="value">${totalApi.toLocaleString()}</div></div>
-    <div class="metric-box"><div class="label">콘솔 로그</div><div class="value">${totalConsole.toLocaleString()}</div></div>
-    <div class="metric-box"><div class="label">Error</div><div class="value" style="color:${totalErrors > 0 ? 'var(--status-err)' : 'var(--status-ok)'}">${totalErrors}</div></div>
-    <div class="metric-box"><div class="label">Warn</div><div class="value" style="color:${totalWarns > 0 ? 'var(--status-warn)' : 'var(--status-ok)'}">${totalWarns}</div></div>
-  </div>`;
-
-  // 에러 배너
-  const errorBanner = totalErrors > 0 ? (() => {
-    const errEntries = errors.filter(e => e.level === 'error');
-    const uniqueMsgs = errEntries.length
-      ? [...new Set(errEntries.map(e => (e.message || '').slice(0, 100)))]
-      : [`에러 ${totalErrors}건 감지`];
-    const rows = uniqueMsgs.map(msg =>
-      `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px">
-        <span style="color:var(--status-err);font-weight:700">ERROR</span>
-        <span style="flex:1;word-break:break-all">${msg}</span>
-      </div>`
-    ).join('');
-    return `<div style="background:#7f1d1d22;border:1px solid #ef4444;border-radius:8px;padding:10px 14px;margin-bottom:12px">
-      <div style="font-weight:700;color:var(--status-err);margin-bottom:4px">Error ${totalErrors}건 감지</div>
-      ${rows}
+  // 페르소나별 요약 카드
+  const summaryCards = sorted.map(log => {
+    const s = log.summary || {};
+    const apiN = s.api_total || (log.api_calls || []).length;
+    const conN = s.console_total || (log.console_logs || []).length;
+    const errN = (s.by_level || {})['error'] || 0;
+    const warnN = (s.by_level || {})['warn'] || 0;
+    const pColor = PERSONA_COLORS[log.persona] || '#3b82f6';
+    return `<div class="persona-card" style="border-left:3px solid ${pColor}">
+      <h5>${PERSONA_KO[log.persona] || log.persona}</h5>
+      <div class="stat"><span class="stat-label">API</span><span class="stat-value">${apiN}</span></div>
+      <div class="stat"><span class="stat-label">콘솔</span><span class="stat-value">${conN}</span></div>
+      <div class="stat"><span class="stat-label">Error</span><span class="stat-value" style="color:${errN > 0 ? 'var(--status-err)' : 'var(--status-ok)'}">${errN}</span></div>
+      <div class="stat"><span class="stat-label">Warn</span><span class="stat-value" style="color:${warnN > 0 ? 'var(--status-warn)' : 'var(--status-ok)'}">${warnN}</span></div>
     </div>`;
-  })() : '';
+  }).join('');
 
-  // API 메서드별 + 콘솔 레벨별 요약
+  // 페르소나별 상세 (접이식)
   const levelColors = { log: 'var(--text-muted)', warn: 'var(--status-warn)', error: 'var(--status-err)', info: '#3b82f6', debug: '#8b5cf6' };
-  const methodRows = Object.entries(byMethod).sort(([,a],[,b]) => b - a)
-    .map(([m, c]) => `<tr><td>${m}</td><td>${c.toLocaleString()}</td><td>${totalApi ? (c / totalApi * 100).toFixed(1) : 0}%</td></tr>`).join('');
-  const levelRows = Object.entries(byLevel).sort(([,a],[,b]) => b - a)
-    .map(([lvl, c]) => `<tr><td style="color:${levelColors[lvl] || 'var(--text-secondary)'}">${lvl}</td><td>${c.toLocaleString()}</td><td>${totalConsole ? (c / totalConsole * 100).toFixed(1) : 0}%</td></tr>`).join('');
 
-  const summaryTables = `<div class="chart-grid">
-    <div class="tbl-wrap"><h4>API 메서드별</h4>
-      <table><thead><tr><th>메서드</th><th>건수</th><th>비율</th></tr></thead>
-      <tbody>${methodRows || '<tr><td colspan="3" style="color:var(--text-muted)">데이터 없음</td></tr>'}</tbody></table></div>
-    <div class="tbl-wrap"><h4>콘솔 레벨별</h4>
-      <table><thead><tr><th>레벨</th><th>건수</th><th>비율</th></tr></thead>
-      <tbody>${levelRows || '<tr><td colspan="3" style="color:var(--text-muted)">데이터 없음</td></tr>'}</tbody></table></div>
-  </div>`;
+  const personaDetails = sorted.map(log => {
+    const pName = PERSONA_KO[log.persona] || log.persona;
+    const pColor = PERSONA_COLORS[log.persona] || '#3b82f6';
+    const apiCalls = log.api_calls || [];
+    const consoleLogs = log.console_logs || [];
+    const s = log.summary || {};
+    const totalApi = s.api_total || apiCalls.length;
+    const totalConsole = s.console_total || consoleLogs.length;
+    const byMethod = s.by_method || {};
+    const byLevel = s.by_level || {};
+    const topUrls = s.top_urls || {};
+    const errors = s.errors || [];
+    const errN = byLevel['error'] || 0;
 
-  // 상위 API URL
-  const urlRows = Object.entries(topUrls).sort(([,a],[,b]) => b - a).slice(0, 10)
-    .map(([url, c]) => {
-      const short = url.length > 60 ? url.slice(0, 57) + '...' : url;
-      return `<tr><td style="font-size:11px;word-break:break-all">${short}</td><td>${c.toLocaleString()}</td></tr>`;
+    // 에러 배너
+    const errBanner = errN > 0 ? (() => {
+      const errEntries = errors.filter(e => e.level === 'error');
+      const msgs = errEntries.length
+        ? [...new Set(errEntries.map(e => (e.message || '').slice(0, 100)))]
+        : [`에러 ${errN}건`];
+      return `<div style="background:#7f1d1d22;border:1px solid #ef4444;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:12px">
+        <span style="color:var(--status-err);font-weight:700">Error ${errN}건</span>
+        ${msgs.map(m => `<div style="margin-top:4px;word-break:break-all">${m}</div>`).join('')}
+      </div>`;
+    })() : '';
+
+    // 메서드별 + 레벨별
+    const methodRows = Object.entries(byMethod).sort(([,a],[,b]) => b - a)
+      .map(([m, c]) => `<tr><td>${m}</td><td>${c}</td></tr>`).join('');
+    const levelRows = Object.entries(byLevel).sort(([,a],[,b]) => b - a)
+      .map(([lvl, c]) => `<tr><td style="color:${levelColors[lvl] || 'var(--text-secondary)'}">${lvl}</td><td>${c}</td></tr>`).join('');
+
+    // 상위 URL
+    const urlRows = Object.entries(topUrls).sort(([,a],[,b]) => b - a).slice(0, 5)
+      .map(([url, c]) => {
+        const short = url.length > 55 ? url.slice(0, 52) + '...' : url;
+        return `<tr><td style="font-size:11px;word-break:break-all">${short}</td><td>${c}</td></tr>`;
+      }).join('');
+
+    // API 상세
+    const apiRows = apiCalls.slice(0, 100).map(c => {
+      const sc = c.status < 300 ? '#4ade80' : c.status < 400 ? '#facc15' : '#f87171';
+      const short = (c.url || '').length > 70 ? c.url.slice(0, 67) + '...' : (c.url || '');
+      const ev = c.event ? `<span style="background:#1e3a5f;color:#93c5fd;padding:1px 6px;border-radius:4px;font-size:10px;margin-left:4px">${c.event}</span>` : '';
+      const ts = c.ts ? c.ts.split('T')[1]?.slice(0, 8) || c.ts : '';
+      return `<tr><td style="white-space:nowrap;font-size:11px;color:var(--text-muted)">${ts}</td><td style="font-weight:600">${c.method || ''}</td><td style="color:${sc};font-weight:600">${c.status || ''}</td><td style="font-size:11px;word-break:break-all">${short}${ev}</td></tr>`;
     }).join('');
-  const urlTable = `<div class="tbl-wrap"><h4>상위 API URL (Top 10)</h4>
-    <table><thead><tr><th>URL</th><th>건수</th></tr></thead>
-    <tbody>${urlRows || '<tr><td colspan="2" style="color:var(--text-muted)">데이터 없음</td></tr>'}</tbody></table></div>`;
 
-  // API 호출 상세 목록 (접이식)
-  const apiDetailRows = apiCalls.slice(0, 100).map(c => {
-    const statusColor = c.status < 300 ? '#4ade80' : c.status < 400 ? '#facc15' : '#f87171';
-    const short = (c.url || '').length > 80 ? c.url.slice(0, 77) + '...' : (c.url || '');
-    const evTag = c.event ? `<span style="background:#1e3a5f;color:#93c5fd;padding:1px 6px;border-radius:4px;font-size:10px;margin-left:4px">${c.event}</span>` : '';
-    const ts = c.ts ? c.ts.split('T')[1]?.slice(0, 8) || c.ts : '';
-    return `<tr>
-      <td style="white-space:nowrap;font-size:11px;color:var(--text-muted)">${ts}</td>
-      <td style="font-weight:600">${c.method || ''}</td>
-      <td style="color:${statusColor};font-weight:600">${c.status || ''}</td>
-      <td style="font-size:11px;word-break:break-all">${short}${evTag}</td>
-    </tr>`;
-  }).join('');
+    // 콘솔 상세
+    const conRows = consoleLogs.slice(0, 100).map(c => {
+      const lc = c.level === 'error' ? 'var(--status-err)' : c.level === 'warn' ? 'var(--status-warn)' : 'var(--text-muted)';
+      const short = (c.msg || '').length > 120 ? c.msg.slice(0, 117) + '...' : (c.msg || '');
+      const ts = c.ts ? (c.ts.includes('T') ? c.ts.split('T')[1]?.slice(0, 8) : c.ts) : '';
+      return `<tr><td style="white-space:nowrap;font-size:11px;color:var(--text-muted)">${ts}</td><td style="color:${lc};font-weight:600;width:45px">${c.level}</td><td style="font-size:11px;word-break:break-all" title="${(c.msg || '').replace(/"/g, '&quot;')}">${short}</td></tr>`;
+    }).join('');
 
-  const apiDetail = apiCalls.length > 0 ? `
-    <details style="margin-top:12px">
-      <summary style="cursor:pointer;font-weight:600;font-size:13px;color:var(--text-secondary);padding:8px 0">
-        API 호출 상세 (${Math.min(apiCalls.length, 100)}/${totalApi}건)
+    return `<details style="margin-bottom:8px;border:1px solid var(--border);border-radius:8px;border-left:3px solid ${pColor}">
+      <summary style="cursor:pointer;padding:10px 14px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:10px">
+        <span>${pName}</span>
+        <span style="font-size:11px;font-weight:400;color:var(--text-muted)">API ${totalApi} / 콘솔 ${totalConsole}${errN > 0 ? ` / <span style="color:var(--status-err)">Error ${errN}</span>` : ''}</span>
       </summary>
-      <div class="tbl-wrap" style="margin-top:8px;max-height:400px;overflow-y:auto">
-        <table><thead><tr><th>시간</th><th>메서드</th><th>상태</th><th>URL / 이벤트</th></tr></thead>
-        <tbody>${apiDetailRows}</tbody></table>
+      <div style="padding:10px 14px;border-top:1px solid var(--border)">
+        ${errBanner}
+        <div class="chart-grid">
+          <div class="tbl-wrap"><h4>API 메서드별</h4>
+            <table><thead><tr><th>메서드</th><th>건수</th></tr></thead>
+            <tbody>${methodRows || '<tr><td colspan="2" style="color:var(--text-muted)">없음</td></tr>'}</tbody></table></div>
+          <div class="tbl-wrap"><h4>콘솔 레벨별</h4>
+            <table><thead><tr><th>레벨</th><th>건수</th></tr></thead>
+            <tbody>${levelRows || '<tr><td colspan="2" style="color:var(--text-muted)">없음</td></tr>'}</tbody></table></div>
+        </div>
+        ${urlRows ? `<div class="tbl-wrap"><h4>상위 API URL</h4><table><thead><tr><th>URL</th><th>건수</th></tr></thead><tbody>${urlRows}</tbody></table></div>` : ''}
+        ${apiRows ? `<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12px;color:var(--text-secondary);padding:6px 0">API 호출 상세 (${Math.min(apiCalls.length,100)}/${totalApi}건)</summary><div class="tbl-wrap" style="margin-top:6px;max-height:350px;overflow-y:auto"><table><thead><tr><th>시간</th><th>메서드</th><th>상태</th><th>URL / 이벤트</th></tr></thead><tbody>${apiRows}</tbody></table></div></details>` : ''}
+        ${conRows ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:var(--text-secondary);padding:6px 0">콘솔 로그 상세 (${Math.min(consoleLogs.length,100)}/${totalConsole}건)</summary><div class="tbl-wrap" style="margin-top:6px;max-height:350px;overflow-y:auto"><table><thead><tr><th>시간</th><th>레벨</th><th>메시지</th></tr></thead><tbody>${conRows}</tbody></table></div></details>` : ''}
       </div>
-    </details>` : '';
-
-  // 콘솔 로그 상세 (접이식)
-  const consoleDetailRows = consoleLogs.slice(0, 100).map(c => {
-    const lvlColor = c.level === 'error' ? 'var(--status-err)' : c.level === 'warn' ? 'var(--status-warn)' : 'var(--text-muted)';
-    const short = (c.msg || '').length > 150 ? c.msg.slice(0, 147) + '...' : (c.msg || '');
-    const ts = c.ts ? (c.ts.includes('T') ? c.ts.split('T')[1]?.slice(0, 8) : c.ts) : '';
-    return `<tr>
-      <td style="white-space:nowrap;font-size:11px;color:var(--text-muted)">${ts}</td>
-      <td style="color:${lvlColor};font-weight:600;width:50px">${c.level}</td>
-      <td style="font-size:11px;word-break:break-all" title="${(c.msg || '').replace(/"/g, '&quot;')}">${short}</td>
-    </tr>`;
+    </details>`;
   }).join('');
-
-  const consoleDetail = consoleLogs.length > 0 ? `
-    <details style="margin-top:8px">
-      <summary style="cursor:pointer;font-weight:600;font-size:13px;color:var(--text-secondary);padding:8px 0">
-        콘솔 로그 상세 (${Math.min(consoleLogs.length, 100)}/${totalConsole}건)
-      </summary>
-      <div class="tbl-wrap" style="margin-top:8px;max-height:400px;overflow-y:auto">
-        <table><thead><tr><th>시간</th><th>레벨</th><th>메시지</th></tr></thead>
-        <tbody>${consoleDetailRows}</tbody></table>
-      </div>
-    </details>` : '';
 
   return `
-    ${runHeader}
-    ${errorBanner}
-    ${metricsHtml}
-    ${summaryTables}
-    ${urlTable}
-    ${apiDetail}
-    ${consoleDetail}
+    <div class="ov-summary" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <span style="font-weight:700;color:#60a5fa">최신 런 서버 로그</span>
+      <span><b>날짜:</b> ${latestDate}</span>
+      <span><b>페르소나:</b> ${sorted.length}종</span>
+      <span style="color:var(--text-muted);font-size:11px;margin-left:auto">갱신: ${updatedStr}</span>
+    </div>
+    <div class="persona-grid">${summaryCards}</div>
+    ${personaDetails}
   `;
 }
 
