@@ -647,6 +647,16 @@ async function fetchNruRuns() {
   return data || [];
 }
 
+let _serverLogs = {};  // { game_id: { run_id, run_date, persona, api_calls, console_logs, summary } }
+
+async function fetchServerLogs() {
+  const { data, error } = await sb.from('server_logs').select('*');
+  if (error) { console.warn('server_logs 조회 실패:', error.message); return {}; }
+  const map = {};
+  for (const row of (data || [])) map[row.game_id] = row;
+  return map;
+}
+
 /* ── 집계 ── */
 
 function aggregateOverview(runs) {
@@ -1490,8 +1500,8 @@ const NRU_TUTORIAL_ALL = [
   { key: 230024, content_id: 'gimmick_ice_card', name: '얼음 카드 기믹', scene: 'ingame', trigger: 'first_appear', triggerVal: 'ice_card', type: 'focus' },
   { key: 230025, content_id: 'booster_golden_ticket', name: '골든 티켓 부스터', scene: 'pre_level', trigger: 'level_clear', triggerVal: 24, type: 'focus', node: 'BOOSTER2' },
   { key: 230026, content_id: 'content_city_deco', name: '도시 꾸미기 (해머)', scene: 'lobby', trigger: 'condition', triggerVal: 'hammer_ready', type: 'focus', node: 'DECOBUTTON', skip: 'no_check' },
-  { key: 230027, content_id: 'gimmick_lock_key_tip', name: '잠금/열쇠 팁', scene: 'ingame', trigger: 'touch', triggerVal: 'lock_key', type: 'floating', skip: 'repeat_tip' },
-  { key: 230028, content_id: 'gimmick_ice_card_tip', name: '얼음 카드 팁', scene: 'ingame', trigger: 'touch', triggerVal: 'ice_card', type: 'floating', skip: 'repeat_tip' },
+  { key: 230027, content_id: 'gimmick_lock_key_tip', name: '잠금/열쇠 팁', scene: 'ingame', trigger: 'touch', triggerVal: 'lock_key', type: 'floating' },
+  { key: 230028, content_id: 'gimmick_ice_card_tip', name: '얼음 카드 팁', scene: 'ingame', trigger: 'touch', triggerVal: 'ice_card', type: 'floating' },
 ];
 const NRU_POPUP_SKIP = new Set(['BlockInput', 'blockInputLayer', 'PopupTutorial', 'PopupGameEntry', 'PopupCompleteLevel']);
 const NRU_POPUP_KR = {
@@ -3395,68 +3405,57 @@ function renderCatSecurity(gameId, runs) {
 }
 
 /* ══════════════════════════════════════════════
-   카테고리: 로그 & API
+   카테고리: 서버 로그 (최신 런)
    ══════════════════════════════════════════════ */
 function renderCatLogApi(gameId, runs) {
-  let totalApi = 0, totalConsole = 0;
-  const byMethod = {};
-  const topUrls = {};
-  const byLevel = {};
-  const allErrors = [];
-
-  for (const r of runs) {
-    const m = r.metrics || {};
-    totalApi += m.api_count || 0;
-    totalConsole += m.console_count || 0;
-
-    const apiS = m.api_summary || {};
-    for (const [method, cnt] of Object.entries(apiS.by_method || {})) {
-      byMethod[method] = (byMethod[method] || 0) + cnt;
-    }
-    for (const [url, cnt] of Object.entries(apiS.top_urls || {})) {
-      topUrls[url] = (topUrls[url] || 0) + cnt;
-    }
-
-    const conS = m.console_summary || {};
-    for (const [lvl, cnt] of Object.entries(conS.by_level || {})) {
-      byLevel[lvl] = (byLevel[lvl] || 0) + cnt;
-    }
-    for (const e of (conS.errors || [])) {
-      allErrors.push({ ...e, run_date: r.run_date, persona: r.persona });
-    }
+  const log = _serverLogs[gameId];
+  if (!log) {
+    return `<div style="color:var(--text-muted);padding:20px;text-align:center">
+      <div style="font-size:32px;opacity:.3;margin-bottom:8px">📡</div>
+      <div>서버 로그 데이터 없음</div>
+      <div style="font-size:12px;margin-top:4px">프리플레이 실행 후 자동으로 최신 런의 서버 로그가 표시됩니다.</div>
+    </div>`;
   }
 
-  const avgApi = runs.length ? Math.round(totalApi / runs.length) : 0;
-  const avgConsole = runs.length ? Math.round(totalConsole / runs.length) : 0;
+  const apiCalls = log.api_calls || [];
+  const consoleLogs = log.console_logs || [];
+  const summary = log.summary || {};
+  const totalApi = summary.api_total || apiCalls.length;
+  const totalConsole = summary.console_total || consoleLogs.length;
+  const byMethod = summary.by_method || {};
+  const byLevel = summary.by_level || {};
+  const topUrls = summary.top_urls || {};
+  const errors = summary.errors || [];
   const totalErrors = byLevel['error'] || 0;
   const totalWarns = byLevel['warn'] || 0;
 
-  const methodRows = Object.entries(byMethod).sort(([,a],[,b]) => b - a)
-    .map(([m, c]) => `<tr><td>${m}</td><td>${c.toLocaleString()}</td><td>${totalApi ? (c / totalApi * 100).toFixed(1) : 0}%</td></tr>`).join('');
+  // 런 정보 헤더
+  const updatedAt = log.updated_at ? new Date(log.updated_at).toLocaleString('ko') : '';
+  const runHeader = `<div class="ov-summary" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+    <span style="font-weight:700;color:#60a5fa">최신 런 서버 로그</span>
+    <span><b>날짜:</b> ${log.run_date || '-'}</span>
+    <span><b>페르소나:</b> ${PERSONA_KO[log.persona] || log.persona || '-'}</span>
+    <span style="color:var(--text-muted);font-size:11px;margin-left:auto">갱신: ${updatedAt}</span>
+  </div>`;
 
-  const urlRows = Object.entries(topUrls).sort(([,a],[,b]) => b - a).slice(0, 10)
-    .map(([url, c]) => {
-      const short = url.length > 60 ? url.slice(0, 57) + '...' : url;
-      return `<tr><td style="font-size:11px;word-break:break-all">${short}</td><td>${c.toLocaleString()}</td></tr>`;
-    }).join('');
+  // 요약 메트릭
+  const metricsHtml = `<div class="metric-row">
+    <div class="metric-box"><div class="label">API 호출</div><div class="value">${totalApi.toLocaleString()}</div></div>
+    <div class="metric-box"><div class="label">콘솔 로그</div><div class="value">${totalConsole.toLocaleString()}</div></div>
+    <div class="metric-box"><div class="label">Error</div><div class="value" style="color:${totalErrors > 0 ? 'var(--status-err)' : 'var(--status-ok)'}">${totalErrors}</div></div>
+    <div class="metric-box"><div class="label">Warn</div><div class="value" style="color:${totalWarns > 0 ? 'var(--status-warn)' : 'var(--status-ok)'}">${totalWarns}</div></div>
+  </div>`;
 
-  const levelColors = { log: 'var(--text-muted)', warn: 'var(--status-warn)', error: 'var(--status-err)', info: '#3b82f6', debug: '#8b5cf6' };
-  const levelRows = Object.entries(byLevel).sort(([,a],[,b]) => b - a)
-    .map(([lvl, c]) => `<tr><td style="color:${levelColors[lvl] || 'var(--text-secondary)'}">${lvl}</td><td>${c.toLocaleString()}</td><td>${totalConsole ? (c / totalConsole * 100).toFixed(1) : 0}%</td></tr>`).join('');
-
-  const apiNote = totalApi === 0 ? `<div style="font-size:11px;color:var(--text-muted);padding:6px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;margin-bottom:12px">ℹ️ API 호출 0건 — 이 게임은 자체 API 서버 대신 Facebook Instant Games 프레임워크를 통해 통신하므로 별도 API 로그가 수집되지 않습니다.</div>` : '';
-
-  // 에러 요약 배너 (error가 있을 때만)
+  // 에러 배너
   const errorBanner = totalErrors > 0 ? (() => {
-    const errOnly = allErrors.filter(e => e.level === 'error');
-    // 메시지가 저장 안 된 경우 by_level 카운트만으로 표시
-    const uniqueMsgs = errOnly.length ? [...new Set(errOnly.map(e => (e.message || '').slice(0, 100)))]
-      : [`(에러 상세 미수집 — 다음 프리플레이부터 자동 수집됩니다)`];
+    const errEntries = errors.filter(e => e.level === 'error');
+    const uniqueMsgs = errEntries.length
+      ? [...new Set(errEntries.map(e => (e.message || '').slice(0, 100)))]
+      : [`에러 ${totalErrors}건 감지`];
     const rows = uniqueMsgs.map(msg =>
       `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px">
         <span style="color:var(--status-err);font-weight:700">ERROR</span>
-        <span style="flex:1">${msg}</span>
-        <span style="color:var(--text-muted);font-size:11px">${errOnly.filter(e => e.message?.startsWith(msg.slice(0,80))).map(e => e.persona).filter((v,i,a) => a.indexOf(v)===i).join(', ')}</span>
+        <span style="flex:1;word-break:break-all">${msg}</span>
       </div>`
     ).join('');
     return `<div style="background:#7f1d1d22;border:1px solid #ef4444;border-radius:8px;padding:10px 14px;margin-bottom:12px">
@@ -3465,88 +3464,89 @@ function renderCatLogApi(gameId, runs) {
     </div>`;
   })() : '';
 
+  // API 메서드별 + 콘솔 레벨별 요약
+  const levelColors = { log: 'var(--text-muted)', warn: 'var(--status-warn)', error: 'var(--status-err)', info: '#3b82f6', debug: '#8b5cf6' };
+  const methodRows = Object.entries(byMethod).sort(([,a],[,b]) => b - a)
+    .map(([m, c]) => `<tr><td>${m}</td><td>${c.toLocaleString()}</td><td>${totalApi ? (c / totalApi * 100).toFixed(1) : 0}%</td></tr>`).join('');
+  const levelRows = Object.entries(byLevel).sort(([,a],[,b]) => b - a)
+    .map(([lvl, c]) => `<tr><td style="color:${levelColors[lvl] || 'var(--text-secondary)'}">${lvl}</td><td>${c.toLocaleString()}</td><td>${totalConsole ? (c / totalConsole * 100).toFixed(1) : 0}%</td></tr>`).join('');
+
+  const summaryTables = `<div class="chart-grid">
+    <div class="tbl-wrap"><h4>API 메서드별</h4>
+      <table><thead><tr><th>메서드</th><th>건수</th><th>비율</th></tr></thead>
+      <tbody>${methodRows || '<tr><td colspan="3" style="color:var(--text-muted)">데이터 없음</td></tr>'}</tbody></table></div>
+    <div class="tbl-wrap"><h4>콘솔 레벨별</h4>
+      <table><thead><tr><th>레벨</th><th>건수</th><th>비율</th></tr></thead>
+      <tbody>${levelRows || '<tr><td colspan="3" style="color:var(--text-muted)">데이터 없음</td></tr>'}</tbody></table></div>
+  </div>`;
+
+  // 상위 API URL
+  const urlRows = Object.entries(topUrls).sort(([,a],[,b]) => b - a).slice(0, 10)
+    .map(([url, c]) => {
+      const short = url.length > 60 ? url.slice(0, 57) + '...' : url;
+      return `<tr><td style="font-size:11px;word-break:break-all">${short}</td><td>${c.toLocaleString()}</td></tr>`;
+    }).join('');
+  const urlTable = `<div class="tbl-wrap"><h4>상위 API URL (Top 10)</h4>
+    <table><thead><tr><th>URL</th><th>건수</th></tr></thead>
+    <tbody>${urlRows || '<tr><td colspan="2" style="color:var(--text-muted)">데이터 없음</td></tr>'}</tbody></table></div>`;
+
+  // API 호출 상세 목록 (접이식)
+  const apiDetailRows = apiCalls.slice(0, 100).map(c => {
+    const statusColor = c.status < 300 ? '#4ade80' : c.status < 400 ? '#facc15' : '#f87171';
+    const short = (c.url || '').length > 80 ? c.url.slice(0, 77) + '...' : (c.url || '');
+    const evTag = c.event ? `<span style="background:#1e3a5f;color:#93c5fd;padding:1px 6px;border-radius:4px;font-size:10px;margin-left:4px">${c.event}</span>` : '';
+    const ts = c.ts ? c.ts.split('T')[1]?.slice(0, 8) || c.ts : '';
+    return `<tr>
+      <td style="white-space:nowrap;font-size:11px;color:var(--text-muted)">${ts}</td>
+      <td style="font-weight:600">${c.method || ''}</td>
+      <td style="color:${statusColor};font-weight:600">${c.status || ''}</td>
+      <td style="font-size:11px;word-break:break-all">${short}${evTag}</td>
+    </tr>`;
+  }).join('');
+
+  const apiDetail = apiCalls.length > 0 ? `
+    <details style="margin-top:12px">
+      <summary style="cursor:pointer;font-weight:600;font-size:13px;color:var(--text-secondary);padding:8px 0">
+        API 호출 상세 (${Math.min(apiCalls.length, 100)}/${totalApi}건)
+      </summary>
+      <div class="tbl-wrap" style="margin-top:8px;max-height:400px;overflow-y:auto">
+        <table><thead><tr><th>시간</th><th>메서드</th><th>상태</th><th>URL / 이벤트</th></tr></thead>
+        <tbody>${apiDetailRows}</tbody></table>
+      </div>
+    </details>` : '';
+
+  // 콘솔 로그 상세 (접이식)
+  const consoleDetailRows = consoleLogs.slice(0, 100).map(c => {
+    const lvlColor = c.level === 'error' ? 'var(--status-err)' : c.level === 'warn' ? 'var(--status-warn)' : 'var(--text-muted)';
+    const short = (c.msg || '').length > 150 ? c.msg.slice(0, 147) + '...' : (c.msg || '');
+    const ts = c.ts ? (c.ts.includes('T') ? c.ts.split('T')[1]?.slice(0, 8) : c.ts) : '';
+    return `<tr>
+      <td style="white-space:nowrap;font-size:11px;color:var(--text-muted)">${ts}</td>
+      <td style="color:${lvlColor};font-weight:600;width:50px">${c.level}</td>
+      <td style="font-size:11px;word-break:break-all" title="${(c.msg || '').replace(/"/g, '&quot;')}">${short}</td>
+    </tr>`;
+  }).join('');
+
+  const consoleDetail = consoleLogs.length > 0 ? `
+    <details style="margin-top:8px">
+      <summary style="cursor:pointer;font-weight:600;font-size:13px;color:var(--text-secondary);padding:8px 0">
+        콘솔 로그 상세 (${Math.min(consoleLogs.length, 100)}/${totalConsole}건)
+      </summary>
+      <div class="tbl-wrap" style="margin-top:8px;max-height:400px;overflow-y:auto">
+        <table><thead><tr><th>시간</th><th>레벨</th><th>메시지</th></tr></thead>
+        <tbody>${consoleDetailRows}</tbody></table>
+      </div>
+    </details>` : '';
+
   return `
-    ${apiNote}
+    ${runHeader}
     ${errorBanner}
-    <div class="metric-row">
-      <div class="metric-box"><div class="label">총 API 호출</div><div class="value">${totalApi.toLocaleString()}</div><div class="sub">런당 평균 ${avgApi}</div></div>
-      <div class="metric-box"><div class="label">총 콘솔 로그</div><div class="value">${totalConsole.toLocaleString()}</div><div class="sub">런당 평균 ${avgConsole}</div></div>
-      <div class="metric-box"><div class="label">Error</div><div class="value" style="color:${totalErrors > 0 ? 'var(--status-err)' : 'var(--status-ok)'}">${totalErrors}</div></div>
-      <div class="metric-box"><div class="label">Warn</div><div class="value" style="color:${totalWarns > 0 ? 'var(--status-warn)' : 'var(--status-ok)'}">${totalWarns}</div></div>
-      <div class="metric-box"><div class="label">총 런</div><div class="value">${runs.length}</div></div>
-    </div>
-    <div class="chart-grid">
-      <div class="tbl-wrap"><h4>API 메서드별</h4>
-        <table><thead><tr><th>메서드</th><th>건수</th><th>비율</th></tr></thead>
-        <tbody>${methodRows || '<tr><td colspan="3" style="color:var(--text-muted)">데이터 없음</td></tr>'}</tbody></table></div>
-      <div class="tbl-wrap"><h4>콘솔 레벨별</h4>
-        <table><thead><tr><th>레벨</th><th>건수</th><th>비율</th></tr></thead>
-        <tbody>${levelRows || '<tr><td colspan="3" style="color:var(--text-muted)">데이터 없음</td></tr>'}</tbody></table></div>
-    </div>
-    <div class="tbl-wrap"><h4>상위 API URL (Top 10)</h4>
-      <table><thead><tr><th>URL</th><th>건수</th></tr></thead>
-      <tbody>${urlRows || '<tr><td colspan="2" style="color:var(--text-muted)">데이터 없음</td></tr>'}</tbody></table></div>
-    ${renderConsoleErrors(allErrors)}
+    ${metricsHtml}
+    ${summaryTables}
+    ${urlTable}
+    ${apiDetail}
+    ${consoleDetail}
   `;
-}
-
-function renderConsoleErrors(allErrors) {
-  if (!allErrors.length) return '';
-
-  // 반복 에러 패턴 집계 (메시지 앞 80자 기준 그룹핑)
-  const patternMap = {};
-  for (const e of allErrors) {
-    const key = (e.message || '').slice(0, 80);
-    if (!patternMap[key]) patternMap[key] = { level: e.level, message: e.message, count: 0, runs: new Set() };
-    patternMap[key].count++;
-    patternMap[key].runs.add(e.run_date + '_' + e.persona);
-  }
-  const topPatterns = Object.values(patternMap).sort((a, b) => b.count - a.count).slice(0, 10);
-
-  const patternRows = topPatterns.map(p => {
-    const lvlColor = p.level === 'error' ? 'var(--status-err)' : 'var(--status-warn)';
-    const short = p.message.length > 100 ? p.message.slice(0, 97) + '...' : p.message;
-    return `<tr>
-      <td style="color:${lvlColor};font-weight:600;width:50px">${p.level}</td>
-      <td style="font-size:11px;word-break:break-all" title="${p.message.replace(/"/g, '&quot;')}">${short}</td>
-      <td style="text-align:center">${p.count}</td>
-      <td style="text-align:center;color:var(--text-muted)">${p.runs.size}</td>
-    </tr>`;
-  }).join('');
-
-  // 최근 에러 목록 (최신순 20건)
-  const recent = [...allErrors].sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || '')).slice(0, 20);
-  const recentRows = recent.map(e => {
-    const lvlColor = e.level === 'error' ? 'var(--status-err)' : 'var(--status-warn)';
-    const short = (e.message || '').length > 120 ? e.message.slice(0, 117) + '...' : (e.message || '');
-    const ts = e.timestamp ? e.timestamp.split('T')[1]?.slice(0, 8) || '' : '';
-    return `<tr>
-      <td style="color:${lvlColor};font-weight:600;width:50px">${e.level}</td>
-      <td style="font-size:11px;word-break:break-all" title="${(e.message || '').replace(/"/g, '&quot;')}">${short}</td>
-      <td style="white-space:nowrap;color:var(--text-muted);font-size:11px">${e.persona || ''}</td>
-      <td style="white-space:nowrap;color:var(--text-muted);font-size:11px">${ts}</td>
-    </tr>`;
-  }).join('');
-
-  const errCount = allErrors.filter(e => e.level === 'error').length;
-  const warnCount = allErrors.filter(e => e.level === 'warn').length;
-
-  return `
-    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-        <h4 style="margin:0">콘솔 에러/경고 로그</h4>
-        <span class="badge ${errCount > 0 ? 'badge-err' : 'badge-ok'}" style="font-size:11px">Error ${errCount}</span>
-        <span class="badge" style="font-size:11px;background:var(--status-warn);color:#000">Warn ${warnCount}</span>
-      </div>
-      <div class="chart-grid">
-        <div class="tbl-wrap"><h4>반복 에러 패턴 (Top 10)</h4>
-          <table><thead><tr><th>레벨</th><th>메시지</th><th>횟수</th><th>런 수</th></tr></thead>
-          <tbody>${patternRows}</tbody></table></div>
-        <div class="tbl-wrap"><h4>최근 에러/경고 (최신 20건)</h4>
-          <table><thead><tr><th>레벨</th><th>메시지</th><th>페르소나</th><th>시간</th></tr></thead>
-          <tbody>${recentRows}</tbody></table></div>
-      </div>
-    </div>`;
 }
 
 /* ══════════════════════════════════════════════
@@ -4553,6 +4553,9 @@ async function init() {
 
     // Realtime 구독 시작
     subscribeRealtime();
+
+    // Background: server_logs fetch (최신 런 서버 로그)
+    fetchServerLogs().then(logs => { _serverLogs = logs; }).catch(e => console.warn('server_logs fetch 실패:', e.message));
 
     // Background: runs fetch (런 관리자 + 이슈 카운트 + 게임 상세 탭용)
     fetchRuns().then(runs => {
