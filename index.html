@@ -2944,6 +2944,13 @@ function renderTimeCharts(gameId, stages, runs) {
   }
 }
 
+/* ── 스테이지 날짜 포맷 헬퍼 ── */
+function _fmtStageDate(iso) {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  return `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
 /* ══════════════════════════════════════════════
    카테고리: 스테이지 (CTZ 전용)
    ══════════════════════════════════════════════ */
@@ -2951,9 +2958,10 @@ function renderCatStagesCTZ(gameId, stages) {
   const byStage = {};
   for (const s of stages) {
     const key = s.stage_number || s.game_level || '?';
-    if (!byStage[key]) byStage[key] = { played: 0, times: [], level: s.game_level, scores: [], slotsUsed: [], tileKinds: [], continues: 0, personas: new Set() };
+    if (!byStage[key]) byStage[key] = { played: 0, times: [], level: s.game_level, scores: [], slotsUsed: [], tileKinds: [], continues: 0, personas: new Set(), dates: [] };
     const v = byStage[key];
     v.played++;
+    if (s.created_at) v.dates.push(s.created_at);
     if (s.persona) v.personas.add(s.persona);
     if (s.time_sec) v.times.push(s.time_sec);
     const d = s.details || {};
@@ -2971,10 +2979,12 @@ function renderCatStagesCTZ(gameId, stages) {
       const avgTK = v.tileKinds.length ? Math.round(v.tileKinds.reduce((a,b)=>a+b,0) / v.tileKinds.length) : 0;
       const tkColor = avgTK >= 7 ? '#ef4444' : avgTK >= 5 ? '#f59e0b' : avgTK > 0 ? '#10b981' : '#64748b';
       const personaList = [...v.personas].join(',');
-      return `<tr data-personas="${personaList}" data-tilekind="${avgTK}">
+      const latestDate = v.dates.length ? _fmtStageDate(v.dates.reduce((a,b) => a > b ? a : b)) : '-';
+      return `<tr data-personas="${personaList}" data-tilekind="${avgTK}" data-dates="${v.dates.map(d => d.slice(0,10)).join(',')}">
         <td>${st}</td><td>${v.played}</td>
         <td>${avgT}초</td><td>${avgScore}</td><td>${avgSlots}</td>
-        <td style="color:${tkColor};font-weight:600">${avgTK > 0 ? avgTK + '종' : '-'}</td><td>${v.continues}</td></tr>`;
+        <td style="color:${tkColor};font-weight:600">${avgTK > 0 ? avgTK + '종' : '-'}</td><td>${v.continues}</td>
+        <td style="color:var(--text-muted);font-size:11px">${latestDate}</td></tr>`;
     }).join('');
   const tkOptions = [...new Set(Object.values(byStage).map(v => v.tileKinds.length ? Math.round(v.tileKinds.reduce((a,b)=>a+b,0) / v.tileKinds.length) : 0))].filter(v => v > 0).sort((a,b) => a-b);
   const tkFilterOpts = tkOptions.map(tk => `<option value="${tk}">${tk}종</option>`).join('');
@@ -2997,6 +3007,10 @@ function renderCatStagesCTZ(gameId, stages) {
       <select id="stg-persona-${gameId}" onchange="filterStagesCTZ('${gameId}')" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-secondary);font-size:12px">
         <option value="">전체 모드</option>${personaFilterOpts}
       </select>
+      <span style="color:var(--text-muted);margin-left:4px">날짜:</span>
+      <input type="date" id="stg-datefrom-${gameId}" onchange="filterStagesCTZ('${gameId}')" style="padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-secondary);font-size:11px">
+      <span style="color:var(--text-muted)">~</span>
+      <input type="date" id="stg-dateto-${gameId}" onchange="filterStagesCTZ('${gameId}')" style="padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-secondary);font-size:11px">
       <button onclick="resetStageFilters('${gameId}')" style="padding:4px 10px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-muted);font-size:11px;cursor:pointer">필터 초기화</button>
     </div>
     <div class="tbl-wrap"><h4>스테이지별 상세 (${Object.keys(byStage).length}개)</h4>
@@ -3008,6 +3022,7 @@ function renderCatStagesCTZ(gameId, stages) {
         <th class="sortable" onclick="sortStageTable('${gameId}',4,'num')">슬롯 사용</th>
         <th class="sortable" onclick="sortStageTable('${gameId}',5,'num')">타일 종류</th>
         <th class="sortable" onclick="sortStageTable('${gameId}',6,'num')">이어하기</th>
+        <th class="sortable" onclick="sortStageTable('${gameId}',7,'str')">최근 플레이</th>
       </tr></thead>
       <tbody>${rows}</tbody></table></div>
   `;
@@ -3021,8 +3036,10 @@ function renderCatStages(gameId, stages) {
   const byStage = {};
   for (const s of stages) {
     const key = s.stage_number || s.game_level || '?';
-    if (!byStage[key]) byStage[key] = { played: 0, times: [], level: s.game_level, mapScores: [], mapDetails: [], turns: [], goldPnl: 0, difficulty: s.difficulty || 0, bets: [], personas: new Set() };
+    if (!byStage[key]) byStage[key] = { played: 0, times: [], level: s.game_level, levels: [], mapScores: [], mapDetails: [], turns: [], goldPnl: 0, difficulty: s.difficulty || 0, bets: [], personas: new Set(), dates: [] };
     byStage[key].played++;
+    if (s.created_at) byStage[key].dates.push(s.created_at);
+    if (s.game_level != null) byStage[key].levels.push(s.game_level);
     if (s.persona) byStage[key].personas.add(s.persona);
     if (s.time_sec) byStage[key].times.push(s.time_sec);
     const d = s.details || {};
@@ -3055,6 +3072,8 @@ function renderCatStages(gameId, stages) {
         entryFee: d.entry_fee || 0,
         goldPnl: d.gold_pnl || 0,
         betting: d.betting_multiplier || 1,
+        createdAt: s.created_at,
+        gameLevel: s.game_level,
       });
     }
     if (d.turns != null) byStage[key].turns.push(d.turns);
@@ -3098,15 +3117,19 @@ function renderCatStages(gameId, stages) {
         ? Object.entries(gimmickTypeSets).map(([name, cnt]) => `${name} (${cnt}/${md.length}판)`).join(', ')
         : '없음';
       const personaList = [...v.personas].join(',');
-      return `<tr style="cursor:pointer" data-personas="${personaList}" onclick="var d=document.getElementById('${rowId}');d.style.display=d.style.display==='none'?'table-row':'none'">
-        <td>${st}</td><td>Lv${v.level||'?'}</td><td>${v.played}</td>
+      const latestDate = v.dates.length ? _fmtStageDate(v.dates.reduce((a,b) => a > b ? a : b)) : '-';
+      const lvs = [...new Set(v.levels)].sort((a,b) => a-b);
+      const lvStr = lvs.length === 0 ? '?' : lvs.length === 1 ? `Lv${lvs[0]}` : `Lv${lvs[0]}~${lvs[lvs.length-1]}`;
+      return `<tr style="cursor:pointer" data-personas="${personaList}" data-dates="${v.dates.map(d => d.slice(0,10)).join(',')}" onclick="var d=document.getElementById('${rowId}');d.style.display=d.style.display==='none'?'table-row':'none'">
+        <td>${st}</td><td>${lvStr}</td><td>${v.played}</td>
         <td>${avgT}초</td>
         <td style="color:${goldColor}">${avgGold.toLocaleString()}</td>
         <td style="color:${turnsColor};font-weight:600">${avgTurns}</td>
         <td style="color:${msColor};font-weight:600">${avgMS}</td>
         <td style="color:${diffColor};font-weight:600">${diffName}</td>
-        <td>${v.bets.map(b => {const c = b>=4?'#ef4444':b>=2?'#f59e0b':'#10b981'; return `<span style="color:${c};font-weight:600">x${b}</span>`;}).join(', ')}</td></tr>
-      <tr id="${rowId}" style="display:none;background:rgba(56,189,248,.04)"><td></td><td colspan="8" style="padding:8px 12px;font-size:11px;color:var(--text-muted)">
+        <td>${v.bets.map(b => {const c = b>=4?'#ef4444':b>=2?'#f59e0b':'#10b981'; return `<span style="color:${c};font-weight:600">x${b}</span>`;}).join(', ')}</td>
+        <td style="color:var(--text-muted);font-size:11px">${latestDate}</td></tr>
+      <tr id="${rowId}" style="display:none;background:rgba(56,189,248,.04)"><td></td><td colspan="9" style="padding:8px 12px;font-size:11px;color:var(--text-muted)">
         <b>맵스코어 상세</b> (${md.length}회 플레이)<br>
         ${md.map((d, i) => {
           const gList = (d.gimmickTypes || []).join(', ');
@@ -3132,7 +3155,9 @@ function renderCatStages(gameId, stages) {
           const pName = PERSONA_KO[d.persona] || d.persona || '';
           const pColor = PERSONA_COLORS[d.persona] || '#999';
           const pStr = pName ? `<span style="color:${pColor};font-weight:600">${pName}</span> ` : '';
-          return `${i+1}회${betStr} ${pStr}: base ${d.base}${gsStr} = <b style="color:${scoreColor}">${d.score}</b> (카드 ${d.field}장${gPart})${rewardStr}${econStr}${evtStr}`;
+          const dateStr = d.createdAt ? `<span style="color:#64748b">[${_fmtStageDate(d.createdAt)}]</span> ` : '';
+          const lvlStr = d.gameLevel != null ? ` <span style="color:#3b82f6">Lv${d.gameLevel}</span>` : '';
+          return `${dateStr}${i+1}회${lvlStr}${betStr} ${pStr}: base ${d.base}${gsStr} = <b style="color:${scoreColor}">${d.score}</b> (카드 ${d.field}장${gPart})${rewardStr}${econStr}${evtStr}`;
         }).join('<br>')}
       </td></tr>`;
     }).join('');
@@ -3185,6 +3210,10 @@ function renderCatStages(gameId, stages) {
       <select id="stg-persona-${gameId}" onchange="filterStages('${gameId}')" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-secondary);font-size:12px">
         <option value="">전체 모드</option>${personaFilterOpts}
       </select>
+      <span style="color:var(--text-muted);margin-left:4px">날짜:</span>
+      <input type="date" id="stg-datefrom-${gameId}" onchange="filterStages('${gameId}')" style="padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-secondary);font-size:11px">
+      <span style="color:var(--text-muted)">~</span>
+      <input type="date" id="stg-dateto-${gameId}" onchange="filterStages('${gameId}')" style="padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-secondary);font-size:11px">
       <button onclick="resetStageFilters('${gameId}')" style="padding:4px 10px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-muted);font-size:11px;cursor:pointer">필터 초기화</button>
       <button onclick="resetStageSort('${gameId}')" style="padding:4px 10px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-muted);font-size:11px;cursor:pointer">정렬 원복 ↺</button>
     </div>
@@ -3199,6 +3228,7 @@ function renderCatStages(gameId, stages) {
         <th class="sortable" onclick="sortStageTable('${gameId}',6,'num')">맵 스코어</th>
         <th class="sortable" onclick="sortStageTable('${gameId}',7,'str')">난이도</th>
         <th class="sortable" onclick="sortStageTable('${gameId}',8,'num')">배수</th>
+        <th class="sortable" onclick="sortStageTable('${gameId}',9,'str')">최근 플레이</th>
       </tr></thead>
       <tbody>${rows}</tbody></table></div>
   `;
@@ -3952,6 +3982,14 @@ function filterStages(gameId) {
       const rowPersonas = row.getAttribute('data-personas') || '';
       if (!rowPersonas.split(',').includes(personaVal)) show = false;
     }
+    // 날짜 필터
+    const dateFrom = document.getElementById(`stg-datefrom-${gameId}`)?.value || '';
+    const dateTo = document.getElementById(`stg-dateto-${gameId}`)?.value || '';
+    if (dateFrom || dateTo) {
+      const dates = (row.getAttribute('data-dates') || '').split(',').filter(Boolean);
+      const inRange = dates.some(d => (!dateFrom || d >= dateFrom) && (!dateTo || d <= dateTo));
+      if (!inRange) show = false;
+    }
 
     row.style.display = show ? '' : 'none';
   });
@@ -3963,6 +4001,8 @@ function filterStagesCTZ(gameId) {
   const table = document.getElementById(`stg-table-${gameId}`);
   if (!table) return;
 
+  const dateFrom = document.getElementById(`stg-datefrom-${gameId}`)?.value || '';
+  const dateTo = document.getElementById(`stg-dateto-${gameId}`)?.value || '';
   table.querySelectorAll('tbody tr').forEach(row => {
     let show = true;
     if (tkVal) {
@@ -3973,12 +4013,17 @@ function filterStagesCTZ(gameId) {
       const rowPersonas = row.getAttribute('data-personas') || '';
       if (!rowPersonas.split(',').includes(personaVal)) show = false;
     }
+    if (dateFrom || dateTo) {
+      const dates = (row.getAttribute('data-dates') || '').split(',').filter(Boolean);
+      const inRange = dates.some(d => (!dateFrom || d >= dateFrom) && (!dateTo || d <= dateTo));
+      if (!inRange) show = false;
+    }
     row.style.display = show ? '' : 'none';
   });
 }
 
 function resetStageFilters(gameId) {
-  ['diff', 'gold', 'ms', 'turns', 'bet', 'persona', 'tk'].forEach(f => {
+  ['diff', 'gold', 'ms', 'turns', 'bet', 'persona', 'tk', 'datefrom', 'dateto'].forEach(f => {
     const el = document.getElementById(`stg-${f}-${gameId}`);
     if (el) el.value = '';
   });
