@@ -915,7 +915,7 @@ function renderNruSummary(nruRuns) {
     const trendDots = recent.slice().reverse().map(r => {
       const col = r.ready ? 'var(--status-ok)' : 'var(--status-err)';
       const d = (r.run_date || '').slice(5);
-      return `<div style="display:flex;flex-direction:column;align-items:center;gap:1px" title="${r.run_date} ${r.run_time || ''}&#10;Lv${r.levels_cleared}/${r.total_levels || 24}">
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:1px" title="${r.run_date} ${r.run_time || ''}&#10;Lv${r.levels_cleared}/${r.total_levels || 25}">
         <div style="width:14px;height:14px;border-radius:3px;background:${col}"></div>
         <span style="font-size:8px;color:var(--text-muted)">${d}</span>
       </div>`;
@@ -943,7 +943,7 @@ function renderNruSummary(nruRuns) {
         <td>${(r.run_date || '').slice(5)}</td>
         <td>${r.run_time || '-'}</td>
         <td style="${passStyle}">${r.ready ? 'PASS' : 'FAIL'}${failInfo}</td>
-        <td>${r.levels_cleared}/${r.total_levels || 24}</td>
+        <td>${r.levels_cleared}/${r.total_levels || 25}</td>
         <td>${timeStr}</td>
         <td>${r.total_retries || 0}</td>
         <td>${(r.gold || 0).toLocaleString()}</td>
@@ -966,7 +966,7 @@ function renderNruSummary(nruRuns) {
         </div>
         <div style="flex:1;min-width:130px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px">
           <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">평균 클리어 레벨</div>
-          <div style="font-size:22px;font-weight:700">${avgLevels}<span style="font-size:12px;color:var(--text-muted)">/${latest.total_levels || 24}</span></div>
+          <div style="font-size:22px;font-weight:700">${avgLevels}<span style="font-size:12px;color:var(--text-muted)">/${latest.total_levels || 25}</span></div>
         </div>
         <div style="flex:1;min-width:130px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px">
           <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">평균 소요 시간</div>
@@ -1701,7 +1701,7 @@ function renderCatNru(gameId) {
       <td>${(r.run_date || '').slice(5)}</td>
       <td>${r.run_time || '-'}</td>
       <td style="${passStyle}">${r.ready ? 'PASS' : 'FAIL'}</td>
-      <td>${r.levels_cleared}/${r.total_levels || 24}</td>
+      <td>${r.levels_cleared}/${r.total_levels || 25}</td>
       <td>${timeStr}</td>
       <td>${r.total_retries || 0}</td>
       <td>${(r.gold || 0).toLocaleString()}</td>
@@ -4131,7 +4131,7 @@ function renderNruManager() {
       <span style="min-width:80px">${r.run_date || '-'}</span>
       <span style="min-width:40px">${r.run_time || '-'}</span>
       <span style="${passStyle};min-width:40px">${r.ready ? 'PASS' : 'FAIL'}</span>
-      <span style="min-width:60px">${r.levels_cleared}/${r.total_levels || 24}</span>
+      <span style="min-width:60px">${r.levels_cleared}/${r.total_levels || 25}</span>
       <span style="min-width:50px">${timeStr}</span>
       <span style="min-width:40px">${r.total_retries || 0}회</span>
       <span style="color:var(--text-muted);font-size:10px">${(r.reason || '').slice(0, 30) || '-'}</span>
