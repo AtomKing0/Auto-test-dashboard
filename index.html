@@ -332,6 +332,22 @@ tr:hover td { background: rgba(59,130,246,.05); }
 }
 .sidebar.collapsed .sidebar-badge { opacity: 0; }
 
+/* Sidebar sortable drag & drop */
+.sidebar-sortable-ghost { opacity: 0.3; background: rgba(59,130,246,.15) !important; }
+.sidebar-sortable-chosen { background: rgba(59,130,246,.08) !important; cursor: grabbing; }
+.sidebar-sortable-drag {
+  background: var(--bg-topbar) !important; border: 1px solid #3b82f6;
+  border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,.3); opacity: 0.95;
+}
+.sidebar-item .drag-grip {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  color: var(--text-muted); font-size: 9px; opacity: 0; transition: opacity 0.15s;
+  padding: 4px; cursor: grab; letter-spacing: 1px; user-select: none;
+}
+.sidebar-item:hover .drag-grip { opacity: 0.4; }
+.sidebar-item:hover .drag-grip:hover { opacity: 0.8; }
+.sidebar.collapsed .drag-grip { display: none; }
+
 .sidebar-footer {
   border-top: 1px solid var(--border);
   padding: 8px 10px; flex-shrink: 0;
@@ -442,17 +458,22 @@ body.edit-mode .merge-btn { display: inline-block; }
         <!-- renderGameTabs()에서 동적 생성 -->
       </div>
       <div class="sidebar-section-label" style="margin-top:8px">System</div>
-      <div class="sidebar-item" onclick="sidebarSystemNav('health')" id="sidebar-health" title="Health Check">
-        <span class="sidebar-item-icon">🏥</span>
-        <span class="sidebar-item-text">Health Check</span>
-      </div>
-      <div class="sidebar-item" onclick="sidebarSystemNav('cron')" id="sidebar-cron" title="크론 이력">
-        <span class="sidebar-item-icon">⏰</span>
-        <span class="sidebar-item-text">크론 이력</span>
-      </div>
-      <div class="sidebar-item" onclick="sidebarSystemNav('runs')" id="sidebar-runs" title="런 관리">
-        <span class="sidebar-item-icon">🗂</span>
-        <span class="sidebar-item-text">런 관리</span>
+      <div id="sidebar-system">
+        <div class="sidebar-item" data-id="health" onclick="sidebarSystemNav('health')" id="sidebar-health" title="Health Check">
+          <span class="sidebar-item-icon">🏥</span>
+          <span class="sidebar-item-text">Health Check</span>
+          <span class="drag-grip">⋮⋮</span>
+        </div>
+        <div class="sidebar-item" data-id="cron" onclick="sidebarSystemNav('cron')" id="sidebar-cron" title="크론 이력">
+          <span class="sidebar-item-icon">⏰</span>
+          <span class="sidebar-item-text">크론 이력</span>
+          <span class="drag-grip">⋮⋮</span>
+        </div>
+        <div class="sidebar-item" data-id="runs" onclick="sidebarSystemNav('runs')" id="sidebar-runs" title="런 관리">
+          <span class="sidebar-item-icon">🗂</span>
+          <span class="sidebar-item-text">런 관리</span>
+          <span class="drag-grip">⋮⋮</span>
+        </div>
       </div>
     </nav>
     <div class="sidebar-footer">
@@ -1377,9 +1398,10 @@ function renderGameTabs(gameIds) {
   if (!container) return;
 
   // 종합 메뉴
-  let html = `<div class="sidebar-item active" id="sidebar-tab-overview" onclick="switchTab('overview', this)" title="종합 현황">
+  let html = `<div class="sidebar-item active" data-id="overview" id="sidebar-tab-overview" onclick="switchTab('overview', this)" title="종합 현황">
     <span class="sidebar-item-icon">📊</span>
     <span class="sidebar-item-text">종합</span>
+    <span class="drag-grip">⋮⋮</span>
   </div>`;
 
   // 각 게임 메뉴
@@ -1388,13 +1410,16 @@ function renderGameTabs(gameIds) {
     const name = GAME_NAMES[gid] || gid;
     const color = GAME_COLORS[gid] || PERSONA_COLORS.hardcore;
     const runs = _overviewGames[gid] ? _overviewGames[gid].runs : 0;
-    html += `<div class="sidebar-item" id="sidebar-tab-${gid}" onclick="switchTab('${gid}', this)" title="${name}" style="--tab-color:${color}">
+    html += `<div class="sidebar-item" data-id="${gid}" id="sidebar-tab-${gid}" onclick="switchTab('${gid}', this)" title="${name}" style="--tab-color:${color}">
       <span class="sidebar-item-icon">${icon}</span>
       <span class="sidebar-item-text" style="color:${color}">${gid}</span>
       ${runs ? `<span class="sidebar-badge">${runs}</span>` : ''}
+      <span class="drag-grip">⋮⋮</span>
     </div>`;
   }
   container.innerHTML = html;
+  restoreSidebarOrder('games', container);
+  initSidebarSortable();
 }
 
 function updateSidebarBadges() {
@@ -4725,6 +4750,61 @@ function resetLayout() {
 /* ═══════════════════════════════════════════════════════
    사이드바
    ═══════════════════════════════════════════════════════ */
+
+/* ── 사이드바 순서 변경 (드래그 앤 드롭) ── */
+let _sidebarGamesSortable = null;
+let _sidebarSystemSortable = null;
+
+function initSidebarSortable() {
+  const sortOpts = {
+    animation: 150,
+    ghostClass: 'sidebar-sortable-ghost',
+    chosenClass: 'sidebar-sortable-chosen',
+    dragClass: 'sidebar-sortable-drag',
+    handle: '.drag-grip',
+    dataIdAttr: 'data-id',
+  };
+  const gamesEl = document.getElementById('sidebar-games');
+  if (gamesEl) {
+    if (_sidebarGamesSortable) _sidebarGamesSortable.destroy();
+    _sidebarGamesSortable = new Sortable(gamesEl, {
+      ...sortOpts,
+      onEnd() { saveSidebarOrder('games', gamesEl); }
+    });
+  }
+  const systemEl = document.getElementById('sidebar-system');
+  if (systemEl && !_sidebarSystemSortable) {
+    restoreSidebarOrder('system', systemEl);
+    _sidebarSystemSortable = new Sortable(systemEl, {
+      ...sortOpts,
+      onEnd() { saveSidebarOrder('system', systemEl); }
+    });
+  }
+}
+
+function saveSidebarOrder(section, container) {
+  const order = Array.from(container.children)
+    .map(el => el.dataset.id).filter(Boolean);
+  localStorage.setItem(`dash_sidebar_${section}_order`, JSON.stringify(order));
+}
+
+function restoreSidebarOrder(section, container) {
+  const saved = localStorage.getItem(`dash_sidebar_${section}_order`);
+  if (!saved) return;
+  try {
+    const order = JSON.parse(saved);
+    const map = {};
+    Array.from(container.children).forEach(el => {
+      if (el.dataset.id) map[el.dataset.id] = el;
+    });
+    // 저장된 순서대로 재배치
+    for (const id of order) {
+      if (map[id]) { container.appendChild(map[id]); delete map[id]; }
+    }
+    // 저장 안 된 새 항목은 뒤에 유지
+    for (const el of Object.values(map)) container.appendChild(el);
+  } catch(e) { /* ignore */ }
+}
 
 function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
