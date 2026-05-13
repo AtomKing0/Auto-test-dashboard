@@ -901,6 +901,7 @@ function renderGameCard(gid, g) {
   return `
     <div class="game-card" style="--gc:${PERSONA_COLORS.hardcore}">
       <h3>${gid}</h3>
+      <div class="stat"><span class="stat-label">테스트 UID</span><span class="stat-value" style="font-size:11px">${((_serverLogs[gid]||[])[0]||{}).uid || '-'}</span></div>
       <div class="stat"><span class="stat-label">총 런/판</span><span class="stat-value">${g.runs}런 / ${g.levels.toLocaleString()}판</span></div>
       <div class="stat"><span class="stat-label">소요시간</span><span class="stat-value">${timeStr}</span></div>
       ${personaRows}
@@ -2003,7 +2004,15 @@ function renderGameDetail(gameId, stages, runs) {
     return `<div id="cat-${c.id}-${gameId}" class="cat-panel${i === 0 ? ' active' : ''}">${content}</div>`;
   }).join('');
 
+  // UID 표시 (server_logs에서 가져옴)
+  const gameLogs = _serverLogs[gameId] || [];
+  const uidVal = gameLogs.length ? gameLogs[0].uid : null;
+  const uidBar = uidVal ? `<div class="ov-summary" style="font-size:12px;padding:8px 14px;margin-bottom:8px">
+    <b>테스트 UID:</b> ${uidVal}
+  </div>` : '';
+
   return `
+    ${uidBar}
     <div class="cat-tabs">${tabsHtml}</div>
     ${panelsHtml}
   `;
@@ -3577,6 +3586,7 @@ function renderCatLogApi(gameId, runs) {
     <div class="ov-summary" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
       <span style="font-weight:700;color:#60a5fa">최신 런 서버 로그</span>
       <span><b>날짜:</b> ${latestDate}</span>
+      <span><b>UID:</b> ${sorted[0].uid || '-'}</span>
       <span><b>페르소나:</b> ${sorted.length}종</span>
       <span style="color:var(--text-muted);font-size:11px;margin-left:auto">갱신: ${updatedStr}</span>
     </div>
