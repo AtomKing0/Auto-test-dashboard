@@ -502,6 +502,7 @@ body.edit-mode .merge-btn { display: inline-block; }
         <button class="ctrl-btn" id="themeBtn" onclick="toggleTheme()" title="테마 전환">☀</button>
         <button class="ctrl-btn" onclick="downloadCSV()" title="CSV 다운로드">CSV</button>
         <button class="ctrl-btn" id="editBtn" onclick="toggleEditMode()" title="레이아웃 편집">Edit</button>
+        <button class="ctrl-btn" id="notifBtn" onclick="toggleNotifPermission()" title="데스크톱 알림">🔔</button>
         <span class="ts" id="update-time"></span>
       </div>
     </div>
@@ -4435,6 +4436,84 @@ function showToast(msg, duration = 3000) {
   }, duration);
 }
 
+/* ── 브라우저 데스크톱 알림 ── */
+
+let _notifEnabled = localStorage.getItem('notif_enabled') === 'true';
+
+function updateNotifBtn() {
+  const btn = document.getElementById('notifBtn');
+  if (!btn) return;
+  if (!('Notification' in window)) {
+    btn.style.display = 'none';
+    return;
+  }
+  if (Notification.permission === 'granted' && _notifEnabled) {
+    btn.style.background = '#3b82f6';
+    btn.style.color = '#fff';
+    btn.title = '데스크톱 알림 ON (클릭하여 끄기)';
+  } else {
+    btn.style.background = '';
+    btn.style.color = '';
+    btn.title = '데스크톱 알림 OFF (클릭하여 켜기)';
+  }
+}
+
+async function toggleNotifPermission() {
+  if (!('Notification' in window)) {
+    showToast('이 브라우저는 알림을 지원하지 않습니다.');
+    return;
+  }
+  if (Notification.permission === 'granted' && _notifEnabled) {
+    _notifEnabled = false;
+    localStorage.setItem('notif_enabled', 'false');
+    showToast('데스크톱 알림을 끕니다.');
+  } else if (Notification.permission === 'denied') {
+    showToast('브라우저 설정에서 알림을 허용해주세요.', 5000);
+  } else {
+    const perm = await Notification.requestPermission();
+    if (perm === 'granted') {
+      _notifEnabled = true;
+      localStorage.setItem('notif_enabled', 'true');
+      showToast('데스크톱 알림이 활성화되었습니다!');
+      playNotifSound();
+    } else {
+      showToast('알림 권한이 거부되었습니다.');
+    }
+  }
+  updateNotifBtn();
+}
+
+function sendBrowserNotif(title, body, tag) {
+  if (!_notifEnabled || Notification.permission !== 'granted') return;
+  try {
+    const n = new Notification(title, {
+      body,
+      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🎮</text></svg>',
+      tag: tag || 'dashboard-' + Date.now(),
+      requireInteraction: true
+    });
+    n.onclick = () => { window.focus(); n.close(); };
+    playNotifSound();
+  } catch (e) { console.warn('Notification 실패:', e); }
+}
+
+function playNotifSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(1047, ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.3);
+  } catch (e) { /* 소리 재생 실패 무시 */ }
+}
+
 /* ── Realtime 구독 ── */
 
 let _realtimeChannel = null;
@@ -4463,7 +4542,9 @@ function subscribeRealtime() {
       { event: 'INSERT', schema: 'public', table: 'freeplay_runs' },
       async (payload) => {
         await refreshOverviewFromViews();
-        showToast(`새 런 도착: ${payload.new.game_id} / ${payload.new.persona}`);
+        const msg = `새 런 도착: ${payload.new.game_id} / ${PERSONA_KO[payload.new.persona] || payload.new.persona}`;
+        showToast(msg);
+        sendBrowserNotif('🎮 프리플레이 완료', `${payload.new.game_id} ${PERSONA_KO[payload.new.persona] || payload.new.persona} — ${payload.new.levels_cleared || 0}판 클리어`, 'run-' + payload.new.id);
         if (_currentGameId === payload.new.game_id) {
           await refreshCurrentGameDetail();
         }
@@ -4485,7 +4566,9 @@ function subscribeRealtime() {
           _nruRuns = await fetchNruRuns();
           renderNruSummary(_nruRuns);
           const status = payload.new.ready ? 'PASS' : 'FAIL';
-          showToast(`NRU 결과 도착: ${status} (Lv${payload.new.levels_cleared})`);
+          const nruMsg = `NRU 결과 도착: ${status} (Lv${payload.new.levels_cleared})`;
+          showToast(nruMsg);
+          sendBrowserNotif('🧪 NRU 테스트 완료', `${status} — Lv${payload.new.levels_cleared} 클리어`, 'nru-' + payload.new.id);
         } catch (e) { console.warn('nru_runs 갱신 실패:', e.message); }
       }
     )
@@ -4571,6 +4654,7 @@ async function init() {
   applyTheme(getTheme());
   document.documentElement.style.setProperty('--fs-scale', FS_STEPS[fsIdx]);
   restoreSidebar();
+  updateNotifBtn();
 
   try {
     loadingEl.style.display = 'flex';
