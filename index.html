@@ -4593,9 +4593,7 @@ function subscribeRealtime() {
       { event: 'INSERT', schema: 'public', table: 'freeplay_runs' },
       async (payload) => {
         await refreshOverviewFromViews();
-        const msg = `새 런 도착: ${payload.new.game_id} / ${PERSONA_KO[payload.new.persona] || payload.new.persona}`;
-        showToast(msg);
-        sendBrowserNotif('🎮 프리플레이 완료', `${payload.new.game_id} ${PERSONA_KO[payload.new.persona] || payload.new.persona} — ${payload.new.levels_cleared || 0}판 클리어`, 'run-' + payload.new.id);
+        // 토스트/브라우저 알림은 server_logs 구독에서 통합 처리 (중복 방지)
         if (_currentGameId === payload.new.game_id) {
           await refreshCurrentGameDetail();
         }
@@ -4630,7 +4628,13 @@ function subscribeRealtime() {
         const pName = PERSONA_KO[row.persona] || row.persona;
         const apiN = (row.summary || {}).api_total || 0;
         const conN = (row.summary || {}).console_total || 0;
-        showToast(`서버 로그 갱신: ${row.game_id} / ${pName} (API ${apiN}, 콘솔 ${conN})`);
+        const buildStr = row.client_ver ? ` (빌드 ${row.client_ver})` : '';
+        showToast(`${row.game_id} / ${pName} 완료 — API ${apiN}, 콘솔 ${conN}${buildStr}`);
+        sendBrowserNotif(
+          `${row.game_id} 오토플레이 완료`,
+          `${pName} — API ${apiN}건, 콘솔 ${conN}건${buildStr}`,
+          'serverlog-' + row.game_id + '-' + row.persona
+        );
         // server_logs 캐시 갱신
         fetchServerLogs().then(logs => { _serverLogs = logs; });
       }
