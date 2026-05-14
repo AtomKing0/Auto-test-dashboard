@@ -551,6 +551,7 @@ let _charts = {};
 let _gameConfigs = [];
 let _overviewGames = {};
 let _lastFetchTime = '';
+let _runsPromise = null;
 
 /* ── 데이터 Fetch ── */
 
@@ -1483,7 +1484,15 @@ async function switchTab(id, _btn) {
   panels.innerHTML = '<div class="state-msg"><div class="icon">⏳</div><div>게임 데이터 로딩 중...</div></div>';
 
   try {
-    const stages = await fetchStages(id);
+    // runs가 아직 로드되지 않았으면 대기
+    if (!_allRuns.length && _runsPromise) {
+      await _runsPromise;
+    }
+    const [stages] = await Promise.all([
+      fetchStages(id),
+      // runs가 여전히 비어있으면 직접 fetch
+      _allRuns.length ? Promise.resolve() : fetchRuns().then(r => { _allRuns = r; }).catch(() => {})
+    ]);
     const gameRuns = _allRuns.filter(r => r.game_id === id);
     _currentGameStages = stages;
     _currentGameRuns = gameRuns;
@@ -4627,7 +4636,11 @@ async function refreshOverviewFromViews() {
 async function refreshCurrentGameDetail() {
   if (!_currentGameId) return;
   try {
-    const stages = await fetchStages(_currentGameId);
+    if (!_allRuns.length && _runsPromise) await _runsPromise;
+    const [stages] = await Promise.all([
+      fetchStages(_currentGameId),
+      _allRuns.length ? Promise.resolve() : fetchRuns().then(r => { _allRuns = r; }).catch(() => {})
+    ]);
     const gameRuns = _allRuns.filter(r => r.game_id === _currentGameId);
     _currentGameStages = stages;
     _currentGameRuns = gameRuns;
@@ -4691,7 +4704,7 @@ async function init() {
     fetchServerLogs().then(logs => { _serverLogs = logs; }).catch(e => console.warn('server_logs fetch 실패:', e.message));
 
     // Background: runs fetch (런 관리자 + 이슈 카운트 + 게임 상세 탭용)
-    fetchRuns().then(runs => {
+    _runsPromise = fetchRuns().then(runs => {
       _allRuns = runs;
       renderRunManager(runs);
       // 이슈 카운트 업데이트
@@ -4704,7 +4717,11 @@ async function init() {
         }
       }
       updateIssueSummary(_overviewGames);
-    }).catch(e => console.warn('runs 백그라운드 fetch 실패:', e.message));
+      return runs;
+    }).catch(e => {
+      console.warn('runs 백그라운드 fetch 실패:', e.message);
+      return [];
+    });
 
   } catch (e) {
     loadingEl.style.display = 'none';
