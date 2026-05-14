@@ -4669,6 +4669,7 @@ function updateNotifBadge() {
 /* ── Realtime 구독 ── */
 
 let _realtimeChannel = null;
+let _lastServerLogNotif = {};
 let _rtRetryCount = 0;
 const RT_MAX_RETRIES = 5;
 
@@ -4726,6 +4727,10 @@ function subscribeRealtime() {
       { event: '*', schema: 'public', table: 'server_logs' },
       async (payload) => {
         const row = payload.new;
+        const dedupKey = `${row.game_id}_${row.persona}`;
+        const now = Date.now();
+        if (_lastServerLogNotif[dedupKey] && now - _lastServerLogNotif[dedupKey] < 10000) return;
+        _lastServerLogNotif[dedupKey] = now;
         const pName = PERSONA_KO[row.persona] || row.persona;
         const apiN = (row.summary || {}).api_total || 0;
         const conN = (row.summary || {}).console_total || 0;
