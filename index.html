@@ -552,6 +552,7 @@ let _gameConfigs = [];
 let _overviewGames = {};
 let _lastFetchTime = '';
 let _runsPromise = null;
+let _serverLogsPromise = null;
 
 /* ── 데이터 Fetch ── */
 
@@ -1484,13 +1485,13 @@ async function switchTab(id, _btn) {
   panels.innerHTML = '<div class="state-msg"><div class="icon">⏳</div><div>게임 데이터 로딩 중...</div></div>';
 
   try {
-    // runs가 아직 로드되지 않았으면 대기
-    if (!_allRuns.length && _runsPromise) {
-      await _runsPromise;
-    }
+    // runs / serverLogs가 아직 로드되지 않았으면 대기
+    await Promise.all([
+      !_allRuns.length && _runsPromise ? _runsPromise : Promise.resolve(),
+      !Object.keys(_serverLogs).length && _serverLogsPromise ? _serverLogsPromise : Promise.resolve()
+    ]);
     const [stages] = await Promise.all([
       fetchStages(id),
-      // runs가 여전히 비어있으면 직접 fetch
       _allRuns.length ? Promise.resolve() : fetchRuns().then(r => { _allRuns = r; }).catch(() => {})
     ]);
     const gameRuns = _allRuns.filter(r => r.game_id === id);
@@ -3439,7 +3440,7 @@ function renderCatSecurity(gameId, runs) {
         <div style="margin-bottom:12px">
           <div style="font-weight:600;font-size:12px;color:var(--text-muted);margin-bottom:2px">API 에러 빈도</div>
           <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">4xx/5xx 에러 비율이 높으면 비정상 요청 또는 서버 불안정 의심</div>
-          ${apiErrors ? `<div style="font-size:12px;color:var(--status-err)">에러 ${apiErrors}건 / 총 ${apiTotal.toLocaleString()}건 (${(apiErrors/apiTotal*100).toFixed(1)}%)</div>` : '<div style="font-size:12px;color:var(--status-ok)">API 에러 없음</div>'}
+          ${apiErrors ? `<div style="font-size:12px;color:var(--status-err)">에러 ${apiErrors}건 / 총 ${apiTotal.toLocaleString()}건 (${apiTotal ? (apiErrors/apiTotal*100).toFixed(1) : '0.0'}%)</div>` : '<div style="font-size:12px;color:var(--status-ok)">API 에러 없음</div>'}
         </div>
         <div>
           <div style="font-weight:600;font-size:12px;color:var(--text-muted);margin-bottom:2px">IDOR 패턴 감지</div>
@@ -4701,7 +4702,7 @@ async function init() {
     subscribeRealtime();
 
     // Background: server_logs fetch (최신 런 서버 로그)
-    fetchServerLogs().then(logs => { _serverLogs = logs; }).catch(e => console.warn('server_logs fetch 실패:', e.message));
+    _serverLogsPromise = fetchServerLogs().then(logs => { _serverLogs = logs; return logs; }).catch(e => { console.warn('server_logs fetch 실패:', e.message); return {}; });
 
     // Background: runs fetch (런 관리자 + 이슈 카운트 + 게임 상세 탭용)
     _runsPromise = fetchRuns().then(runs => {
