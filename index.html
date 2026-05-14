@@ -3128,20 +3128,24 @@ function renderCatStagesCTZ(gameId, stages) {
 /* ══════════════════════════════════════════════
    카테고리: 스테이지 (SCJ / 공통)
    ══════════════════════════════════════════════ */
-function toggleScoreBelowMinScreenshot(runId, stageId, btnEl) {
+async function toggleScoreBelowMinScreenshot(runId, stageId, btnEl) {
   const imgId = `sbm_img_${runId}_${stageId}`.replace(/[^a-zA-Z0-9_]/g, '_');
   const existing = document.getElementById(imgId);
   if (existing) { existing.remove(); return; }
-  const run = (_currentGameRuns || []).find(r => r.id === runId);
-  if (!run) return;
-  const screenshots = (run.metrics || {}).screenshots || [];
-  const match = screenshots.find(ss => ss.label && ss.label.includes('score_below_min') && ss.label.includes(stageId));
-  if (!match) { btnEl.title = '스크린샷 없음'; return; }
-  const div = document.createElement('div');
-  div.id = imgId;
-  div.style.cssText = 'margin:6px 0;padding:4px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card)';
-  div.innerHTML = `<div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">${match.label} (${match.timestamp || ''})</div><img src="data:image/png;base64,${match.base64}" style="max-width:480px;border-radius:4px;cursor:pointer" onclick="this.style.maxWidth=this.style.maxWidth==='480px'?'100%':'480px'">`;
-  btnEl.parentElement.appendChild(div);
+  // 스크린샷을 온디맨드로 fetch (metrics JSONB에서 분리)
+  btnEl.title = '로딩 중...';
+  try {
+    const { data, error } = await sb.rpc('get_run_screenshots', { p_run_id: runId });
+    const screenshots = (!error && data && data.length) ? (data[0].screenshots || []) : [];
+    const match = screenshots.find(ss => ss.label && ss.label.includes('score_below_min') && ss.label.includes(stageId));
+    if (!match) { btnEl.title = '스크린샷 없음'; return; }
+    const div = document.createElement('div');
+    div.id = imgId;
+    div.style.cssText = 'margin:6px 0;padding:4px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card)';
+    div.innerHTML = `<div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">${match.label} (${match.timestamp || ''})</div><img src="data:image/png;base64,${match.base64}" style="max-width:480px;border-radius:4px;cursor:pointer" onclick="this.style.maxWidth=this.style.maxWidth==='480px'?'100%':'480px'">`;
+    btnEl.parentElement.appendChild(div);
+    btnEl.title = '스크린샷 토글';
+  } catch (e) { btnEl.title = '스크린샷 로딩 실패'; }
 }
 
 function renderCatStages(gameId, stages) {
