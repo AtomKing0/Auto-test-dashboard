@@ -566,13 +566,27 @@ async function fetchRuns() {
 }
 
 async function fetchGameRuns(gameId) {
-  const { data, error } = await sb
-    .from('v_runs_light')
-    .select('*')
+  // 1단계: metrics 없이 기본 정보만 빠르게 fetch
+  const { data: basicData, error: e1 } = await sb
+    .from('freeplay_runs')
+    .select('id,game_id,persona,run_date,uid,client_ver,levels_played,levels_cleared,clear_rate,total_time_sec,source_path,created_at')
     .eq('game_id', gameId)
     .order('run_date', { ascending: false });
-  if (error) throw error;
-  return data || [];
+  if (e1) throw e1;
+  const runs = basicData || [];
+
+  // 2단계: 경량 metrics만 RPC로 fetch (perf 제외)
+  const { data: metricsData, error: e2 } = await sb
+    .rpc('get_light_metrics', { p_game_id: gameId });
+  if (!e2 && metricsData) {
+    const mMap = {};
+    for (const m of metricsData) mMap[m.id] = m.metrics;
+    for (const r of runs) r.metrics = mMap[r.id] || {};
+  } else {
+    console.warn('light_metrics fetch 실패:', e2?.message);
+    for (const r of runs) r.metrics = {};
+  }
+  return runs;
 }
 
 async function fetchGamePerf(gameId) {
