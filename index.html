@@ -3200,8 +3200,10 @@ function renderCatStages(gameId, stages) {
   const byStage = {};
   for (const s of stages) {
     const key = s.stage_number || s.game_level || '?';
-    if (!byStage[key]) byStage[key] = { played: 0, times: [], level: s.game_level, levels: [], mapScores: [], mapDetails: [], turns: [], goldPnl: 0, difficulty: s.difficulty || 0, bets: [], personas: new Set(), dates: [] };
+    if (!byStage[key]) byStage[key] = { played: 0, cleared: 0, failed: 0, times: [], level: s.game_level, levels: [], mapScores: [], mapDetails: [], turns: [], goldPnl: 0, difficulty: s.difficulty || 0, bets: [], personas: new Set(), dates: [] };
     byStage[key].played++;
+    if (s.result === 'clear') byStage[key].cleared++;
+    else byStage[key].failed++;
     if (s.created_at) byStage[key].dates.push(s.created_at);
     if (s.game_level != null) byStage[key].levels.push(s.game_level);
     if (s.persona) byStage[key].personas.add(s.persona);
@@ -3255,6 +3257,8 @@ function renderCatStages(gameId, stages) {
       const avgTurns = v.turns.length ? (v.turns.reduce((a,b)=>a+b,0) / v.turns.length).toFixed(1) : '-';
       const avgGold = v.played ? Math.round(v.goldPnl / v.played) : 0;
       const goldColor = avgGold >= 0 ? 'var(--status-ok)' : 'var(--status-err)';
+      const clearRate = v.played ? (v.cleared / v.played * 100) : 0;
+      const crColor = clearRate >= 90 ? '#10b981' : clearRate >= 50 ? '#f59e0b' : '#ef4444';
       // 난이도 색상: 튜토리얼=회색, 노말=초록, 하드=노랑, 슈퍼하드=빨강
       const diffTier = v.difficulty || 0;
       const diffColor = diffTier === 4 ? '#ef4444' : diffTier === 3 ? '#f59e0b' : diffTier === 2 ? '#10b981' : '#64748b';
@@ -3288,6 +3292,9 @@ function renderCatStages(gameId, stages) {
       const lvStr = lvs.length === 0 ? '?' : lvs.length === 1 ? `Lv${lvs[0]}` : `Lv${lvs[0]}~${lvs[lvs.length-1]}`;
       return `<tr style="cursor:pointer" data-personas="${personaList}" data-dates="${v.dates.map(d => d.slice(0,10)).join(',')}" onclick="var d=document.getElementById('${rowId}');d.style.display=d.style.display==='none'?'table-row':'none'">
         <td>${st}</td><td>${lvStr}</td><td>${v.played}</td>
+        <td style="color:#10b981">${v.cleared}</td>
+        <td style="color:${v.failed ? '#ef4444' : 'var(--text-muted)'};font-weight:${v.failed ? '600' : 'normal'}">${v.failed}</td>
+        <td><div style="display:flex;align-items:center;gap:6px"><div style="height:6px;width:${Math.round(clearRate * 0.6)}px;background:${crColor};border-radius:3px;min-width:2px"></div><span style="color:${crColor};font-weight:600">${clearRate.toFixed(0)}%</span></div></td>
         <td>${avgT}초</td>
         <td style="color:${goldColor}">${avgGold.toLocaleString()}</td>
         <td style="color:${turnsColor};font-weight:600">${avgTurns}</td>
@@ -3295,7 +3302,7 @@ function renderCatStages(gameId, stages) {
         <td style="color:${diffColor};font-weight:600">${diffName}</td>
         <td>${v.bets.map(b => {const c = b>=4?'#ef4444':b>=2?'#f59e0b':'#10b981'; return `<span style="color:${c};font-weight:600">x${b}</span>`;}).join(', ')}</td>
         <td style="color:var(--text-muted);font-size:11px">${latestDate}</td></tr>
-      <tr id="${rowId}" style="display:none;background:rgba(56,189,248,.04)"><td></td><td colspan="9" style="padding:8px 12px;font-size:11px;color:var(--text-muted)">
+      <tr id="${rowId}" style="display:none;background:rgba(56,189,248,.04)"><td></td><td colspan="12" style="padding:8px 12px;font-size:11px;color:var(--text-muted)">
         <b>맵스코어 상세</b> (${md.length}회 플레이)<br>
         ${md.map((d, i) => {
           const gList = (d.gimmickTypes || []).join(', ');
@@ -3389,13 +3396,16 @@ function renderCatStages(gameId, stages) {
         <th class="sortable" onclick="sortStageTable('${gameId}',0,'str')">스테이지</th>
         <th class="sortable" onclick="sortStageTable('${gameId}',1,'num')">레벨</th>
         <th class="sortable" onclick="sortStageTable('${gameId}',2,'num')">플레이</th>
-        <th class="sortable" onclick="sortStageTable('${gameId}',3,'num')">평균 시간</th>
-        <th class="sortable" onclick="sortStageTable('${gameId}',4,'num')">골드 손익</th>
-        <th class="sortable" onclick="sortStageTable('${gameId}',5,'num')">평균 턴수</th>
-        <th class="sortable" onclick="sortStageTable('${gameId}',6,'num')">맵 스코어</th>
-        <th class="sortable" onclick="sortStageTable('${gameId}',7,'str')">난이도</th>
-        <th class="sortable" onclick="sortStageTable('${gameId}',8,'num')">배수</th>
-        <th class="sortable" onclick="sortStageTable('${gameId}',9,'str')">최근 플레이</th>
+        <th class="sortable" onclick="sortStageTable('${gameId}',3,'num')">클리어</th>
+        <th class="sortable" onclick="sortStageTable('${gameId}',4,'num')">실패</th>
+        <th class="sortable" onclick="sortStageTable('${gameId}',5,'num')">클리어율</th>
+        <th class="sortable" onclick="sortStageTable('${gameId}',6,'num')">평균 시간</th>
+        <th class="sortable" onclick="sortStageTable('${gameId}',7,'num')">골드 손익</th>
+        <th class="sortable" onclick="sortStageTable('${gameId}',8,'num')">평균 턴수</th>
+        <th class="sortable" onclick="sortStageTable('${gameId}',9,'num')">맵 스코어</th>
+        <th class="sortable" onclick="sortStageTable('${gameId}',10,'str')">난이도</th>
+        <th class="sortable" onclick="sortStageTable('${gameId}',11,'num')">배수</th>
+        <th class="sortable" onclick="sortStageTable('${gameId}',12,'str')">최근 플레이</th>
       </tr></thead>
       <tbody>${rows}</tbody></table></div>
   `;
@@ -4098,11 +4108,11 @@ function filterStages(gameId) {
   const rows = table.querySelectorAll('tbody tr');
   rows.forEach(row => {
     const cells = row.querySelectorAll('td');
-    if (cells.length < 8) return;
-    const turns = parseFloat(cells[4].textContent) || 0;
-    const ms = parseInt(cells[5].textContent) || 0;
-    const gold = parseInt(cells[6].textContent.replace(/,/g, '')) || 0;
-    const diffText = cells[7].textContent.trim();
+    if (cells.length < 11) return;
+    const turns = parseFloat(cells[8].textContent) || 0;
+    const ms = parseInt(cells[9].textContent) || 0;
+    const gold = parseInt(cells[7].textContent.replace(/,/g, '')) || 0;
+    const diffText = cells[10].textContent.trim();
 
     let show = true;
     // 난이도 필터
@@ -4121,7 +4131,7 @@ function filterStages(gameId) {
     // 배수 필터
     const betVal = document.getElementById(`stg-bet-${gameId}`)?.value || '';
     if (betVal) {
-      const betText = cells[8]?.textContent || '';
+      const betText = cells[11]?.textContent || '';
       if (!betText.includes(`x${betVal}`)) show = false;
     }
     // 모드(페르소나) 필터
