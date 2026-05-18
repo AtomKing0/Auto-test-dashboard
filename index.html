@@ -4056,7 +4056,9 @@ function sortStageTable(gameId, colIdx, type) {
   // 데이터행 + 상세행 쌍으로 재배치
   dataRows.forEach(r => {
     tbody.appendChild(r);
-    const st = r.querySelectorAll('td')[0]?.textContent.trim();
+    const cells = r.querySelectorAll('td');
+    const stIdx = cells.length >= 14 ? 1 : 0;  // SCJ(NO+13컬럼)=1, CTZ(8컬럼)=0
+    const st = cells[stIdx]?.textContent.trim();
     const detail = detailRows.find(d => d.id === `ms_${gameId}_${st}`);
     if (detail) tbody.appendChild(detail);
   });
@@ -4084,7 +4086,8 @@ function resetStageSort(gameId) {
   rows.forEach(r => {
     tbody.appendChild(r);
     const cells = r.querySelectorAll('td');
-    const st = cells[0]?.textContent.trim();
+    const stIdx = cells.length >= 14 ? 1 : 0;  // SCJ(NO+13컬럼)=1, CTZ(8컬럼)=0
+    const st = cells[stIdx]?.textContent.trim();
     const detail = detailRows.find(d => d.id === `ms_${gameId}_${st}`);
     if (detail) tbody.appendChild(detail);
   });
