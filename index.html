@@ -178,9 +178,6 @@ tr:hover td { background: rgba(59,130,246,.05); }
 .gauge-fill { height: 100%; border-radius: 4px; transition: width .3s; }
 
 /* ── Run Manager ── */
-.rm-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid var(--border); font-size: 12px; }
-.rm-row:hover { background: rgba(59,130,246,.05); }
-.rm-row input[type="checkbox"] { cursor: pointer; }
 .rm-date-filter { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; font-size: 12px; }
 .rm-date-filter input[type="date"] { padding: 4px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-card); color: var(--text-secondary); font-size: 12px; }
 .rm-actions { display: flex; gap: 8px; margin-top: 10px; }
@@ -188,6 +185,24 @@ tr:hover td { background: rgba(59,130,246,.05); }
 .rm-btn:hover { border-color: var(--text-secondary); color: var(--text-primary); }
 .rm-btn-danger { border-color: #ef4444; color: #ef4444; }
 .rm-btn-danger:hover { background: #ef444422; }
+.rm-date-group { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px; overflow: hidden; }
+.rm-date-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; user-select: none; font-size: 13px; font-weight: 600; background: rgba(59,130,246,.04); }
+.rm-date-header:hover { background: rgba(59,130,246,.08); }
+.rm-date-header .rm-arrow { color: var(--text-muted); font-size: 11px; min-width: 14px; }
+.rm-date-header .rm-date-badges { display: flex; gap: 6px; margin-left: 8px; }
+.rm-date-header .rm-game-badge { font-size: 11px; font-weight: 500; padding: 1px 6px; border-radius: 4px; background: rgba(59,130,246,.1); color: var(--text-secondary); }
+.rm-date-body { display: none; padding: 4px 12px 10px; }
+.rm-date-body.open { display: block; }
+.rm-grid { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 4px; }
+.rm-grid th { padding: 4px 8px; text-align: center; font-weight: 600; color: var(--text-muted); font-size: 11px; border-bottom: 1px solid var(--border); }
+.rm-grid td { padding: 5px 8px; text-align: center; border-bottom: 1px solid rgba(255,255,255,.03); }
+.rm-grid td.rm-game-label { text-align: left; font-weight: 600; min-width: 40px; }
+.rm-grid tr:last-child td { border-bottom: none; }
+.rm-cell { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; }
+.rm-cell-plays { font-weight: 600; }
+.rm-cell-gold { font-size: 10px; }
+.rm-cell-empty { color: var(--text-muted); font-size: 10px; }
+.rm-cell input[type="checkbox"] { cursor: pointer; margin-bottom: 1px; }
 
 /* ── Layout Editor ── */
 .edit-mode .layout-section {
@@ -4254,42 +4269,77 @@ function filterRunManager() {
     if (gameFilter && r.game_id !== gameFilter) return false;
     if (personaFilter && r.persona !== personaFilter) return false;
     return true;
-  }).sort((a, b) => {
-    if (a.game_id !== b.game_id) return a.game_id.localeCompare(b.game_id);
-    if (a.run_date !== b.run_date) return b.run_date.localeCompare(a.run_date);
-    return (PERSONA_ORDER.indexOf(a.persona)===-1?99:PERSONA_ORDER.indexOf(a.persona)) - (PERSONA_ORDER.indexOf(b.persona)===-1?99:PERSONA_ORDER.indexOf(b.persona));
   });
 
   if (!filtered.length) {
     listEl.innerHTML = '<div style="color:var(--text-muted);padding:8px;font-size:12px">해당 조건에 데이터 없음</div>';
+    document.getElementById('rm-status').textContent = '0건';
     return;
   }
 
-  listEl.innerHTML = filtered.map(r => {
-    const m = r.metrics || {};
-    const pColor = PERSONA_COLORS[r.persona] || '#999';
-    const pName = PERSONA_KO[r.persona] || r.persona;
-    const goldPnl = m.gold_pnl != null ? m.gold_pnl.toLocaleString() : '-';
-    const goldColor = (m.gold_pnl || 0) >= 0 ? 'var(--status-ok)' : 'var(--status-err)';
-    return `<div class="rm-row" data-run-id="${r.id}">
-      <input type="checkbox" class="rm-check" value="${r.id}">
-      <span style="font-weight:600;min-width:36px;color:var(--text-muted)">${r.game_id}</span>
-      <span style="min-width:80px">${r.run_date}</span>
-      <span style="color:${pColor};font-weight:600;min-width:40px">${pName}</span>
-      <span style="min-width:50px">${r.levels_played}판</span>
-      <span style="color:${goldColor};min-width:70px">골드 ${goldPnl}</span>
-      <span style="color:var(--text-muted);min-width:50px">${r.total_time_sec ? Math.round(r.total_time_sec) + '초' : '-'}</span>
-      <span style="color:var(--text-muted);font-size:10px">${r.id.slice(0, 8)}</span>
+  // 날짜별 그룹핑
+  const byDate = {};
+  for (const r of filtered) {
+    if (!byDate[r.run_date]) byDate[r.run_date] = [];
+    byDate[r.run_date].push(r);
+  }
+  const sortedDates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+  const personas = personaFilter ? [personaFilter] : [...new Set(filtered.map(r => r.persona))].sort((a, b) =>
+    (PERSONA_ORDER.indexOf(a)===-1?99:PERSONA_ORDER.indexOf(a)) - (PERSONA_ORDER.indexOf(b)===-1?99:PERSONA_ORDER.indexOf(b))
+  );
+  const games = gameFilter ? [gameFilter] : [...new Set(filtered.map(r => r.game_id))].sort();
+
+  listEl.innerHTML = sortedDates.map((date, di) => {
+    const dayRuns = byDate[date];
+    const gameCounts = {};
+    for (const r of dayRuns) { gameCounts[r.game_id] = (gameCounts[r.game_id] || 0) + 1; }
+    const badges = games.filter(g => gameCounts[g]).map(g => `<span class="rm-game-badge">${g} ${gameCounts[g]}</span>`).join('');
+    const isFirst = di === 0;
+
+    // 게임×페르소나 그리드
+    const gridRows = games.filter(g => dayRuns.some(r => r.game_id === g)).map(g => {
+      const cells = personas.map(p => {
+        const run = dayRuns.find(r => r.game_id === g && r.persona === p);
+        if (!run) return '<td><span class="rm-cell-empty">-</span></td>';
+        const m = run.metrics || {};
+        const goldPnl = m.gold_pnl != null ? m.gold_pnl : null;
+        const goldStr = goldPnl != null ? `<span class="rm-cell-gold" style="color:${goldPnl >= 0 ? 'var(--status-ok)' : 'var(--status-err)'}">${goldPnl >= 0 ? '+' : ''}${goldPnl.toLocaleString()}</span>` : '';
+        const timeStr = run.total_time_sec ? `<span style="color:var(--text-muted);font-size:10px">${Math.round(run.total_time_sec/60)}분</span>` : '';
+        return `<td><div class="rm-cell"><input type="checkbox" class="rm-check" value="${run.id}"><span class="rm-cell-plays">${run.levels_played}판</span>${goldStr}${timeStr}</div></td>`;
+      }).join('');
+      return `<tr><td class="rm-game-label">${g}</td>${cells}</tr>`;
+    }).join('');
+
+    const pHeaders = personas.map(p => `<th style="color:${PERSONA_COLORS[p] || '#999'}">${PERSONA_KO[p] || p}</th>`).join('');
+
+    return `<div class="rm-date-group">
+      <div class="rm-date-header" onclick="this.nextElementSibling.classList.toggle('open');this.querySelector('.rm-arrow').textContent=this.nextElementSibling.classList.contains('open')?'\\u25BC':'\\u25B6'">
+        <span class="rm-arrow">${isFirst ? '\u25BC' : '\u25B6'}</span>
+        <span>${date}</span>
+        <div class="rm-date-badges">${badges}</div>
+        <span style="margin-left:auto;font-size:11px;color:var(--text-muted);font-weight:400">${dayRuns.length}런</span>
+        <label style="font-weight:400;font-size:11px;color:var(--text-muted)" onclick="event.stopPropagation()"><input type="checkbox" class="rm-date-check" data-date="${date}" onclick="toggleDateRuns(this)"> 전체</label>
+      </div>
+      <div class="rm-date-body${isFirst ? ' open' : ''}">
+        <table class="rm-grid"><thead><tr><th></th>${pHeaders}</tr></thead><tbody>${gridRows}</tbody></table>
+      </div>
     </div>`;
   }).join('');
 
-  document.getElementById('rm-status').textContent = `${filtered.length}건 표시`;
+  document.getElementById('rm-status').textContent = `${filtered.length}건 (${sortedDates.length}일)`;
   const selectAll = document.getElementById('rm-select-all');
   if (selectAll) selectAll.checked = false;
 }
 
+function toggleDateRuns(el) {
+  const date = el.dataset.date;
+  const group = el.closest('.rm-date-group');
+  if (!group) return;
+  group.querySelectorAll('.rm-check').forEach(cb => cb.checked = el.checked);
+}
+
 function toggleAllRuns(checked) {
-  document.querySelectorAll('.rm-check').forEach(cb => cb.checked = checked);
+  document.querySelectorAll('.rm-check, .rm-date-check').forEach(cb => cb.checked = checked);
 }
 
 async function deleteSelectedRuns() {
