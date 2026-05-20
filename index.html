@@ -3401,8 +3401,59 @@ async function toggleScoreBelowMinScreenshot(runId, stageId, btnEl) {
   } catch (e) { btnEl.title = '스크린샷 로딩 실패'; }
 }
 
+function renderCatStagesMJG(gameId, stages) {
+  if (!stages.length) return '<div style="color:var(--text-muted);padding:20px">스테이지 데이터 없음</div>';
+  const byStage = {};
+  for (const s of stages) {
+    const key = s.game_level || s.stage_number || '?';
+    if (!byStage[key]) byStage[key] = { played:0, cleared:0, times:[], scores:[], combos:[], difficulty:s.difficulty||0, totalTile:0, maxFloor:0, items:0, deadlocks:0, personas:new Set() };
+    const v = byStage[key];
+    v.played++;
+    if (s.result === 'clear') v.cleared++;
+    if (s.time_sec) v.times.push(s.time_sec);
+    if (s.persona) v.personas.add(s.persona);
+    const d = s.details || {};
+    if (d.score) v.scores.push(d.score);
+    if (d.combo_count) v.combos.push(d.combo_count);
+    if (d.deadlock_count) v.deadlocks += d.deadlock_count;
+    const sd = d.stage_detail || {};
+    if (sd.totalTile) v.totalTile = sd.totalTile;
+    if (sd.maxFloor) v.maxFloor = sd.maxFloor;
+    const it = d.items_used || {};
+    v.items += (it.shuffle||0)+(it.hint||0)+(it.undo||0)+(it.highlight||0);
+    if (s.difficulty) v.difficulty = s.difficulty;
+  }
+  const diffNames = {1:'튜토리얼',2:'보통',3:'어려움',4:'매우 어려움'};
+  const rows = Object.entries(byStage).sort(([,a],[,b]) => (a.played||0) - (b.played||0)).map(([st, v]) => {
+    const avgT = v.times.length ? (v.times.reduce((a,b)=>a+b,0)/v.times.length).toFixed(1) : '-';
+    const avgScore = v.scores.length ? Math.round(v.scores.reduce((a,b)=>a+b,0)/v.scores.length).toLocaleString() : '-';
+    const avgCombo = v.combos.length ? (v.combos.reduce((a,b)=>a+b,0)/v.combos.length).toFixed(1) : '-';
+    const cr = v.played ? (v.cleared/v.played*100) : 0;
+    const crColor = cr >= 90 ? '#10b981' : cr >= 50 ? '#f59e0b' : '#ef4444';
+    const diffColor = v.difficulty===4?'#ef4444':v.difficulty===3?'#f59e0b':v.difficulty===2?'#10b981':'#64748b';
+    return `<tr>
+      <td>${st}</td>
+      <td style="color:${diffColor}">${diffNames[v.difficulty]||'-'}</td>
+      <td>${v.played}</td>
+      <td style="color:${crColor}">${cr.toFixed(0)}%</td>
+      <td>${avgScore}</td>
+      <td>${avgCombo}</td>
+      <td>${v.maxFloor||'-'}층</td>
+      <td>${v.totalTile||'-'}</td>
+      <td>${avgT}초</td>
+      <td>${v.items}</td>
+      <td>${v.deadlocks}</td>
+    </tr>`;
+  }).join('');
+  return `<div class="tbl-wrap"><table>
+    <thead><tr><th>스테이지</th><th>난이도</th><th>판수</th><th>클리어율</th><th>평균 점수</th><th>평균 콤보</th><th>레이어</th><th>타일 수</th><th>평균 시간</th><th>아이템</th><th>교착</th></tr></thead>
+    <tbody>${rows||'<tr><td colspan="11" style="color:var(--text-muted)">데이터 없음</td></tr>'}</tbody>
+  </table></div>`;
+}
+
 function renderCatStages(gameId, stages) {
   if (gameId === 'CTZ') return renderCatStagesCTZ(gameId, stages);
+  if (gameId === 'MJG') return renderCatStagesMJG(gameId, stages);
   const byStage = {};
   for (const s of stages) {
     const key = s.stage_number || s.game_level || '?';
@@ -3809,12 +3860,14 @@ function renderCatLogApi(gameId, runs) {
     const conN = s.console_total || (log.console_logs || []).length;
     const errN = (s.by_level || {})['error'] || 0;
     const warnN = (s.by_level || {})['warn'] || 0;
+    const apiErrN = s.error_count || 0;
     const pColor = PERSONA_COLORS[log.persona] || '#3b82f6';
     return `<div class="persona-card" style="border-left:3px solid ${pColor}">
       <h5>${PERSONA_KO[log.persona] || log.persona}</h5>
       <div class="stat"><span class="stat-label">API</span><span class="stat-value">${apiN}</span></div>
       <div class="stat"><span class="stat-label">콘솔</span><span class="stat-value">${conN}</span></div>
-      <div class="stat"><span class="stat-label">Error</span><span class="stat-value" style="color:${errN > 0 ? 'var(--status-err)' : 'var(--status-ok)'}">${errN}</span></div>
+      <div class="stat"><span class="stat-label">API 에러</span><span class="stat-value" style="color:${apiErrN > 0 ? 'var(--status-err)' : 'var(--status-ok)'}">${apiErrN}</span></div>
+      <div class="stat"><span class="stat-label">콘솔 Error</span><span class="stat-value" style="color:${errN > 0 ? 'var(--status-err)' : 'var(--status-ok)'}">${errN}</span></div>
       <div class="stat"><span class="stat-label">Warn</span><span class="stat-value" style="color:${warnN > 0 ? 'var(--status-warn)' : 'var(--status-ok)'}">${warnN}</span></div>
     </div>`;
   }).join('');
@@ -3835,15 +3888,34 @@ function renderCatLogApi(gameId, runs) {
     const topUrls = s.top_urls || {};
     const errors = s.errors || [];
     const errN = byLevel['error'] || 0;
+    const apiErrors = s.api_errors || [];
+    const apiErrN = s.error_count || 0;
+    const byCategory = s.by_category || {};
 
-    // 에러 배너
+    // API 에러 배너
+    const apiErrBanner = apiErrN > 0 ? (() => {
+      const catLines = Object.entries(byCategory).sort(([,a],[,b]) => b - a)
+        .map(([cat, cnt]) => `<span style="display:inline-block;background:#7f1d1d44;padding:2px 8px;border-radius:4px;margin:2px 4px 2px 0">${cat} <b>${cnt}</b>건</span>`).join('');
+      const detailRows = apiErrors.slice(0, 10).map(e => {
+        const ev = e.event ? `<span style="background:#1e3a5f;color:#93c5fd;padding:1px 6px;border-radius:4px;font-size:10px;margin-left:4px">${e.event}</span>` : '';
+        const shortUrl = (e.url || '').length > 60 ? e.url.slice(0, 57) + '...' : (e.url || '');
+        return `<tr><td style="white-space:nowrap;font-size:11px;color:var(--text-muted)">${e.ts || ''}</td><td style="font-weight:600">${e.method || ''}</td><td style="color:#f87171;font-weight:700">${e.status}</td><td style="font-size:11px">${e.category}</td><td style="font-size:11px;word-break:break-all">${shortUrl}${ev}</td></tr>`;
+      }).join('');
+      return `<div style="background:#7f1d1d22;border:1px solid #ef4444;border-radius:6px;padding:10px 12px;margin-bottom:10px;font-size:12px">
+        <div style="margin-bottom:6px"><span style="color:var(--status-err);font-weight:700">⚠ API 에러 ${apiErrN}건</span></div>
+        <div style="margin-bottom:8px">${catLines}</div>
+        <table style="width:100%;font-size:11px"><thead><tr><th>시간</th><th>메서드</th><th>상태</th><th>원인</th><th>URL / 이벤트</th></tr></thead><tbody>${detailRows}</tbody></table>
+      </div>`;
+    })() : '';
+
+    // 콘솔 에러 배너
     const errBanner = errN > 0 ? (() => {
       const errEntries = errors.filter(e => e.level === 'error');
       const msgs = errEntries.length
         ? [...new Set(errEntries.map(e => (e.message || '').slice(0, 100)))]
         : [`에러 ${errN}건`];
       return `<div style="background:#7f1d1d22;border:1px solid #ef4444;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:12px">
-        <span style="color:var(--status-err);font-weight:700">Error ${errN}건</span>
+        <span style="color:var(--status-err);font-weight:700">콘솔 Error ${errN}건</span>
         ${msgs.map(m => `<div style="margin-top:4px;word-break:break-all">${m}</div>`).join('')}
       </div>`;
     })() : '';
@@ -3881,9 +3953,10 @@ function renderCatLogApi(gameId, runs) {
     return `<details style="margin-bottom:8px;border:1px solid var(--border);border-radius:8px;border-left:3px solid ${pColor}">
       <summary style="cursor:pointer;padding:10px 14px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:10px">
         <span>${pName}</span>
-        <span style="font-size:11px;font-weight:400;color:var(--text-muted)">API ${totalApi} / 콘솔 ${totalConsole}${errN > 0 ? ` / <span style="color:var(--status-err)">Error ${errN}</span>` : ''}</span>
+        <span style="font-size:11px;font-weight:400;color:var(--text-muted)">API ${totalApi} / 콘솔 ${totalConsole}${apiErrN > 0 ? ` / <span style="color:var(--status-err)">API에러 ${apiErrN}</span>` : ''}${errN > 0 ? ` / <span style="color:var(--status-err)">콘솔에러 ${errN}</span>` : ''}</span>
       </summary>
       <div style="padding:10px 14px;border-top:1px solid var(--border)">
+        ${apiErrBanner}
         ${errBanner}
         <div class="chart-grid">
           <div class="tbl-wrap"><h4>API 메서드별</h4>
