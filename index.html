@@ -3405,7 +3405,7 @@ function renderCatStagesMJG(gameId, stages) {
   if (!stages.length) return '<div style="color:var(--text-muted);padding:20px">스테이지 데이터 없음</div>';
   const byStage = {};
   for (const s of stages) {
-    const key = s.game_level || s.stage_number || '?';
+    const key = s.stage_number || s.game_level || '?';
     if (!byStage[key]) byStage[key] = { played:0, cleared:0, times:[], scores:[], combos:[], difficulty:s.difficulty||0, totalTile:0, maxFloor:0, items:0, deadlocks:0, personas:new Set() };
     const v = byStage[key];
     v.played++;
