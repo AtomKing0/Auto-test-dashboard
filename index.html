@@ -3381,7 +3381,7 @@ function renderCatStagesCTZ(gameId, stages) {
 /* ══════════════════════════════════════════════
    카테고리: 스테이지 (SCJ / 공통)
    ══════════════════════════════════════════════ */
-async function toggleScoreBelowMinScreenshot(runId, stageId, btnEl) {
+async function toggleScoreOutOfRangeScreenshot(runId, stageId, btnEl) {
   const imgId = `sbm_img_${runId}_${stageId}`.replace(/[^a-zA-Z0-9_]/g, '_');
   const existing = document.getElementById(imgId);
   if (existing) { existing.remove(); return; }
@@ -3390,7 +3390,7 @@ async function toggleScoreBelowMinScreenshot(runId, stageId, btnEl) {
   try {
     const { data, error } = await sb.rpc('get_run_screenshots', { p_run_id: runId });
     const screenshots = (!error && data && data.length) ? (data[0].screenshots || []) : [];
-    const match = screenshots.find(ss => ss.label && ss.label.includes('score_below_min') && ss.label.includes(stageId));
+    const match = screenshots.find(ss => ss.label && (ss.label.includes('score_below_min') || ss.label.includes('score_above_max')) && ss.label.includes(stageId));
     if (!match) { btnEl.title = '스크린샷 없음'; return; }
     const div = document.createElement('div');
     div.id = imgId;
@@ -3482,6 +3482,7 @@ function renderCatStages(gameId, stages) {
         gimmick: d.gimmick_score || 0, field: d.field_total || 0,
         gimmickTypes: [...detailGimmicks],
         scoreBelowMin: d.score_below_min || false,
+        scoreAboveMax: d.score_above_max || false,
         persona: s.persona,
         rewards: {
           coin: cr.coin || '0',
@@ -3587,8 +3588,9 @@ function renderCatStages(gameId, stages) {
           const pStr = pName ? `<span style="color:${pColor};font-weight:600">${pName}</span> ` : '';
           const dateStr = d.createdAt ? `<span style="color:#64748b">[${_fmtStageDate(d.createdAt)}]</span> ` : '';
           const lvlStr = d.gameLevel != null ? ` <span style="color:#3b82f6">Lv${d.gameLevel}</span>` : '';
-          const sbmStr = d.scoreBelowMin && d.runId ? ` <span style="color:#ef4444;font-weight:700;cursor:pointer;text-decoration:underline" title="클릭하여 스크린샷 보기 — PlusCard로 map_score가 tier score_min 미만 하락" onclick="event.stopPropagation();toggleScoreBelowMinScreenshot('${d.runId}','${st}',this)">⚠ score_below_min 📷</span>` : d.scoreBelowMin ? ' <span style="color:#ef4444;font-weight:700" title="PlusCard로 map_score가 tier score_min 미만으로 하락">⚠ score_below_min</span>' : '';
-          return `${dateStr}${i+1}회${lvlStr}${betStr} ${pStr}: base ${d.base}${gsStr} = <b style="color:${scoreColor}">${d.score}</b> (카드 ${d.field}장${gPart})${sbmStr}${rewardStr}${econStr}${evtStr}`;
+          const sbmStr = d.scoreBelowMin && d.runId ? ` <span style="color:#ef4444;font-weight:700;cursor:pointer;text-decoration:underline" title="클릭하여 스크린샷 보기 — PlusCard로 map_score가 tier score_min 미만 하락" onclick="event.stopPropagation();toggleScoreOutOfRangeScreenshot('${d.runId}','${st}',this)">⚠ score_below_min 📷</span>` : d.scoreBelowMin ? ' <span style="color:#ef4444;font-weight:700" title="PlusCard로 map_score가 tier score_min 미만으로 하락">⚠ score_below_min</span>' : '';
+          const samStr = d.scoreAboveMax && d.runId ? ` <span style="color:#f59e0b;font-weight:700;cursor:pointer;text-decoration:underline" title="클릭하여 스크린샷 보기 — 기믹으로 map_score가 tier score_max 초과" onclick="event.stopPropagation();toggleScoreOutOfRangeScreenshot('${d.runId}','${st}',this)">⚠ score_above_max 📷</span>` : d.scoreAboveMax ? ' <span style="color:#f59e0b;font-weight:700" title="기믹으로 map_score가 tier score_max 초과">⚠ score_above_max</span>' : '';
+          return `${dateStr}${i+1}회${lvlStr}${betStr} ${pStr}: base ${d.base}${gsStr} = <b style="color:${scoreColor}">${d.score}</b> (카드 ${d.field}장${gPart})${sbmStr}${samStr}${rewardStr}${econStr}${evtStr}`;
         }).join('<br>')}
       </td></tr>`;
     }).join('');
