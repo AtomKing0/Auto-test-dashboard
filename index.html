@@ -2506,38 +2506,46 @@ function renderCatEconomy(gameId, stages, runs) {
     totalItemCost += d.item_cost || 0;
     totalStreakGold += (d.streak_gold || 0);
   }
-  const totalIncome = totalReward + totalStreakGold;
-  const totalExpense = totalEntryFee + totalItemCost;
+  const n = stages.length || 1;
+  const avgReward = Math.round(totalReward / n);
+  const avgEntryFee = Math.round(totalEntryFee / n);
+  const avgItemCost = Math.round(totalItemCost / n);
+  const avgStreak = Math.round(totalStreakGold / n);
+  const avgIncome = avgReward + avgStreak;
+  const avgExpense = avgEntryFee + avgItemCost;
+  const avgPnl = stages.length ? Math.round(totalGoldPnl / runs.length) : 0;
 
-  /* ── 골드 흐름 카드 ── */
+  /* ── 골드 흐름 카드 (판당 평균) ── */
+  const _sub = (total) => `<span style="font-size:10px;color:var(--text-muted);margin-left:4px">(총 ${total >= 0 ? '+' : ''}${total.toLocaleString()})</span>`;
   const extIncomeRow = totalExternal > 0
     ? `<div class="flow-item"><span>외부 지급 (어드민)</span><span class="fy">+${totalExternal.toLocaleString()}</span></div>` : '';
   const extResultRow = totalExternal !== 0
     ? `<div class="flow-item"><span>외부 골드</span><span class="fy">+${totalExternal.toLocaleString()}</span></div>` : '';
-  const incomeTotal = totalIncome + Math.max(0, totalExternal);
   const hammerRow = totalHammerDelta !== 0
     ? `<div class="metric-row" style="margin-top:0">
-        <div class="metric-box"><div class="label">해머 변동</div><div class="value">${totalHammerDelta >= 0 ? '+' : ''}${totalHammerDelta.toLocaleString()}</div></div>
+        <div class="metric-box"><div class="label">해머 변동</div><div class="value">${totalHammerDelta >= 0 ? '+' : ''}${totalHammerDelta.toLocaleString()}</div>
+        <div class="sub">${n.toLocaleString()}판 기준</div></div>
       </div>` : '';
 
   const flowHtml = `
     <div class="gold-flow">
       <div class="gold-flow-col income">
-        <div class="flow-header">수입</div>
-        <div class="flow-item"><span>레벨 보상</span><span class="fg">+${totalReward.toLocaleString()}</span></div>
-        <div class="flow-item"><span>스트릭 보너스</span><span class="fg">+${totalStreakGold.toLocaleString()}</span></div>
+        <div class="flow-header">수입 (판당 평균)</div>
+        <div class="flow-item"><span>레벨 보상</span><span class="fg">+${avgReward.toLocaleString()} ${_sub(totalReward)}</span></div>
+        <div class="flow-item"><span>스트릭 보너스</span><span class="fg">+${avgStreak.toLocaleString()} ${_sub(totalStreakGold)}</span></div>
         ${extIncomeRow}
-        <div class="flow-total"><span class="ft-label">합계</span><span class="fg">+${incomeTotal.toLocaleString()}</span></div>
+        <div class="flow-total"><span class="ft-label">합계</span><span class="fg">+${avgIncome.toLocaleString()}/판</span></div>
       </div>
       <div class="gold-flow-col expense">
-        <div class="flow-header">지출</div>
-        <div class="flow-item"><span>입장료</span><span class="fr">-${totalEntryFee.toLocaleString()}</span></div>
-        <div class="flow-item"><span>와일드카드 구매</span><span class="fr">-${totalItemCost.toLocaleString()}</span></div>
-        <div class="flow-total"><span class="ft-label">합계</span><span class="fr">-${totalExpense.toLocaleString()}</span></div>
+        <div class="flow-header">지출 (판당 평균)</div>
+        <div class="flow-item"><span>입장료</span><span class="fr">-${avgEntryFee.toLocaleString()} ${_sub(-totalEntryFee)}</span></div>
+        <div class="flow-item"><span>와일드카드 구매</span><span class="fr">-${avgItemCost.toLocaleString()} ${_sub(-totalItemCost)}</span></div>
+        <div class="flow-total"><span class="ft-label">합계</span><span class="fr">-${avgExpense.toLocaleString()}/판</span></div>
       </div>
       <div class="gold-flow-col result">
-        <div class="flow-header">결과</div>
-        <div class="flow-item"><span>게임 손익</span><span class="${totalGoldPnl >= 0 ? 'fg' : 'fr'}">${totalGoldPnl >= 0 ? '+' : ''}${totalGoldPnl.toLocaleString()}</span></div>
+        <div class="flow-header">결과 (${n.toLocaleString()}판)</div>
+        <div class="flow-item"><span>게임 손익/런</span><span class="${avgPnl >= 0 ? 'fg' : 'fr'}">${avgPnl >= 0 ? '+' : ''}${avgPnl.toLocaleString()}</span></div>
+        <div class="flow-item"><span>게임 손익 합계</span><span class="${totalGoldPnl >= 0 ? 'fg' : 'fr'}">${totalGoldPnl >= 0 ? '+' : ''}${totalGoldPnl.toLocaleString()}</span></div>
         ${extResultRow}
         <div class="flow-total"><span class="ft-label">실제 변동</span><span class="${totalActual >= 0 ? 'fb' : 'fr'}">${totalActual >= 0 ? '+' : ''}${totalActual.toLocaleString()}</span></div>
       </div>
