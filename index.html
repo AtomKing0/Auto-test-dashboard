@@ -178,6 +178,9 @@ tr:hover td { background: rgba(59,130,246,.05); }
 .gauge-fill { height: 100%; border-radius: 4px; transition: width .3s; }
 
 /* ── Run Manager ── */
+.rm-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid var(--border); font-size: 12px; }
+.rm-row:hover { background: rgba(59,130,246,.05); }
+.rm-row input[type="checkbox"] { cursor: pointer; }
 .rm-date-filter { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; font-size: 12px; }
 .rm-date-filter input[type="date"] { padding: 4px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-card); color: var(--text-secondary); font-size: 12px; }
 .rm-actions { display: flex; gap: 8px; margin-top: 10px; }
@@ -185,24 +188,6 @@ tr:hover td { background: rgba(59,130,246,.05); }
 .rm-btn:hover { border-color: var(--text-secondary); color: var(--text-primary); }
 .rm-btn-danger { border-color: #ef4444; color: #ef4444; }
 .rm-btn-danger:hover { background: #ef444422; }
-.rm-date-group { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px; overflow: hidden; }
-.rm-date-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; user-select: none; font-size: 13px; font-weight: 600; background: rgba(59,130,246,.04); }
-.rm-date-header:hover { background: rgba(59,130,246,.08); }
-.rm-date-header .rm-arrow { color: var(--text-muted); font-size: 11px; min-width: 14px; }
-.rm-date-header .rm-date-badges { display: flex; gap: 6px; margin-left: 8px; }
-.rm-date-header .rm-game-badge { font-size: 11px; font-weight: 500; padding: 1px 6px; border-radius: 4px; background: rgba(59,130,246,.1); color: var(--text-secondary); }
-.rm-date-body { display: none; padding: 4px 12px 10px; }
-.rm-date-body.open { display: block; }
-.rm-grid { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 4px; }
-.rm-grid th { padding: 4px 8px; text-align: center; font-weight: 600; color: var(--text-muted); font-size: 11px; border-bottom: 1px solid var(--border); }
-.rm-grid td { padding: 5px 8px; text-align: center; border-bottom: 1px solid rgba(255,255,255,.03); }
-.rm-grid td.rm-game-label { text-align: left; font-weight: 600; min-width: 40px; }
-.rm-grid tr:last-child td { border-bottom: none; }
-.rm-cell { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; }
-.rm-cell-plays { font-weight: 600; }
-.rm-cell-gold { font-size: 10px; }
-.rm-cell-empty { color: var(--text-muted); font-size: 10px; }
-.rm-cell input[type="checkbox"] { cursor: pointer; margin-bottom: 1px; }
 
 /* ── Layout Editor ── */
 .edit-mode .layout-section {
@@ -278,46 +263,10 @@ tr:hover td { background: rgba(59,130,246,.05); }
 .db-usage-track { height: 8px; border-radius: 4px; background: var(--border); overflow: hidden; margin-top: 6px; }
 .db-usage-fill { height: 100%; border-radius: 4px; transition: width .3s; }
 
-/* ── Notification Panel ── */
-.notif-panel {
-  position: fixed; right: -360px; top: 0; bottom: 0; z-index: 300;
-  width: 350px; background: var(--bg-card); border-left: 1px solid var(--border);
-  display: flex; flex-direction: column; transition: right .25s ease;
-  box-shadow: -4px 0 20px rgba(0,0,0,.3);
-}
-.notif-panel.open { right: 0; }
-.notif-header {
-  display: flex; align-items: center; gap: 8px; padding: 12px 16px;
-  border-bottom: 1px solid var(--border); flex-shrink: 0;
-}
-.notif-header h4 { margin: 0; font-size: 14px; flex: 1; }
-.notif-clear { background: none; border: 1px solid var(--border); border-radius: 4px; color: var(--text-muted); font-size: 11px; padding: 3px 8px; cursor: pointer; }
-.notif-clear:hover { color: var(--status-err); border-color: var(--status-err); }
-.notif-close { background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; padding: 0 4px; }
-.notif-close:hover { color: var(--text-primary); }
-.notif-list { flex: 1; overflow-y: auto; padding: 8px; }
-.notif-item {
-  display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px;
-  border-bottom: 1px solid var(--border); font-size: 12px;
-}
-.notif-item:hover { background: rgba(59,130,246,.05); }
-.notif-item .notif-time { color: var(--text-muted); font-size: 10px; white-space: nowrap; min-width: 50px; }
-.notif-item .notif-msg { flex: 1; color: var(--text-secondary); line-height: 1.4; }
-.notif-item .notif-msg b { color: var(--text-primary); }
-.notif-item .notif-dismiss { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; padding: 0; line-height: 1; }
-.notif-item .notif-dismiss:hover { color: var(--status-err); }
-.notif-empty { color: var(--text-muted); text-align: center; padding: 40px 16px; font-size: 13px; }
-.notif-badge {
-  position: absolute; top: -2px; right: -2px; min-width: 16px; height: 16px;
-  background: var(--status-err); color: #fff; font-size: 10px; font-weight: 700;
-  border-radius: 8px; display: flex; align-items: center; justify-content: center; padding: 0 4px;
-}
-
 @media (max-width: 768px) {
   .cards { grid-template-columns: 1fr; }
   .chart-grid { grid-template-columns: 1fr; }
   .persona-grid { grid-template-columns: 1fr 1fr; }
-  .notif-panel { width: 100%; right: -100%; }
 }
 
 /* ── Sidebar ── */
@@ -382,22 +331,6 @@ tr:hover td { background: rgba(59,130,246,.05); }
   flex-shrink: 0; transition: opacity 0.2s;
 }
 .sidebar.collapsed .sidebar-badge { opacity: 0; }
-
-/* Sidebar sortable drag & drop */
-.sidebar-sortable-ghost { opacity: 0.3; background: rgba(59,130,246,.15) !important; }
-.sidebar-sortable-chosen { background: rgba(59,130,246,.08) !important; cursor: grabbing; }
-.sidebar-sortable-drag {
-  background: var(--bg-topbar) !important; border: 1px solid #3b82f6;
-  border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,.3); opacity: 0.95;
-}
-.sidebar-item .drag-grip {
-  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
-  color: var(--text-muted); font-size: 9px; opacity: 0; transition: opacity 0.15s;
-  padding: 4px; cursor: grab; letter-spacing: 1px; user-select: none;
-}
-.sidebar-item:hover .drag-grip { opacity: 0.4; }
-.sidebar-item:hover .drag-grip:hover { opacity: 0.8; }
-.sidebar.collapsed .drag-grip { display: none; }
 
 .sidebar-footer {
   border-top: 1px solid var(--border);
@@ -509,22 +442,17 @@ body.edit-mode .merge-btn { display: inline-block; }
         <!-- renderGameTabs()에서 동적 생성 -->
       </div>
       <div class="sidebar-section-label" style="margin-top:8px">System</div>
-      <div id="sidebar-system">
-        <div class="sidebar-item" data-id="health" onclick="sidebarSystemNav('health')" id="sidebar-health" title="Health Check">
-          <span class="sidebar-item-icon">🏥</span>
-          <span class="sidebar-item-text">Health Check</span>
-          <span class="drag-grip">⋮⋮</span>
-        </div>
-        <div class="sidebar-item" data-id="cron" onclick="sidebarSystemNav('cron')" id="sidebar-cron" title="크론 이력">
-          <span class="sidebar-item-icon">⏰</span>
-          <span class="sidebar-item-text">크론 이력</span>
-          <span class="drag-grip">⋮⋮</span>
-        </div>
-        <div class="sidebar-item" data-id="runs" onclick="sidebarSystemNav('runs')" id="sidebar-runs" title="런 관리">
-          <span class="sidebar-item-icon">🗂</span>
-          <span class="sidebar-item-text">런 관리</span>
-          <span class="drag-grip">⋮⋮</span>
-        </div>
+      <div class="sidebar-item" onclick="sidebarSystemNav('health')" id="sidebar-health" title="Health Check">
+        <span class="sidebar-item-icon">🏥</span>
+        <span class="sidebar-item-text">Health Check</span>
+      </div>
+      <div class="sidebar-item" onclick="sidebarSystemNav('cron')" id="sidebar-cron" title="크론 이력">
+        <span class="sidebar-item-icon">⏰</span>
+        <span class="sidebar-item-text">크론 이력</span>
+      </div>
+      <div class="sidebar-item" onclick="sidebarSystemNav('runs')" id="sidebar-runs" title="런 관리">
+        <span class="sidebar-item-icon">🗂</span>
+        <span class="sidebar-item-text">런 관리</span>
       </div>
     </nav>
     <div class="sidebar-footer">
@@ -553,22 +481,10 @@ body.edit-mode .merge-btn { display: inline-block; }
         <button class="ctrl-btn" id="themeBtn" onclick="toggleTheme()" title="테마 전환">☀</button>
         <button class="ctrl-btn" onclick="downloadCSV()" title="CSV 다운로드">CSV</button>
         <button class="ctrl-btn" id="editBtn" onclick="toggleEditMode()" title="레이아웃 편집">Edit</button>
-        <button class="ctrl-btn" id="notifBtn" onclick="toggleNotifPermission()" title="데스크톱 알림">🔔</button>
-        <button class="ctrl-btn" style="position:relative" onclick="toggleNotifPanel()" title="알림 내역">📋<span class="notif-badge" id="notif-badge" style="display:none">0</span></button>
         <span class="ts" id="update-time"></span>
       </div>
     </div>
     <div class="toast-container" id="toast-container"></div>
-    <div class="notif-panel" id="notif-panel">
-      <div class="notif-header">
-        <h4>알림 내역</h4>
-        <button class="notif-clear" onclick="clearAllNotifs()">전체 삭제</button>
-        <button class="notif-close" onclick="toggleNotifPanel()">&times;</button>
-      </div>
-      <div class="notif-list" id="notif-list">
-        <div class="notif-empty">알림이 없습니다</div>
-      </div>
-    </div>
 
     <div class="edit-bar" id="editBar">
       <span>📐 레이아웃 편집 모드 — 섹션을 드래그하여 순서 변경, 👁 버튼으로 표시/숨기기, 열 수 조절 및 섹션 합치기 지원</span>
@@ -613,46 +529,15 @@ let _charts = {};
 let _gameConfigs = [];
 let _overviewGames = {};
 let _lastFetchTime = '';
-let _runsPromise = null;
-let _serverLogsPromise = null;
 
 /* ── 데이터 Fetch ── */
 
 async function fetchRuns() {
   const { data, error } = await sb
     .from('freeplay_runs')
-    .select('id,game_id,persona,run_date,uid,client_ver,levels_played,levels_cleared,clear_rate,total_time_sec,source_path,created_at')
+    .select('*')
     .order('run_date', { ascending: false });
   if (error) throw error;
-  return data || [];
-}
-
-async function fetchGameRuns(gameId) {
-  // 기본 정보 + 경량 metrics를 병렬 fetch
-  const [basicRes, metricsRes] = await Promise.all([
-    sb.from('freeplay_runs')
-      .select('id,game_id,persona,run_date,uid,client_ver,levels_played,levels_cleared,clear_rate,total_time_sec,source_path,created_at')
-      .eq('game_id', gameId)
-      .order('run_date', { ascending: false }),
-    sb.rpc('get_light_metrics', { p_game_id: gameId })
-  ]);
-  if (basicRes.error) throw basicRes.error;
-  const runs = basicRes.data || [];
-  if (!metricsRes.error && metricsRes.data) {
-    const mMap = {};
-    for (const m of metricsRes.data) mMap[m.id] = m.metrics;
-    for (const r of runs) r.metrics = mMap[r.id] || {};
-  } else {
-    console.warn('light_metrics fetch 실패:', metricsRes.error?.message);
-    for (const r of runs) r.metrics = {};
-  }
-  return runs;
-}
-
-async function fetchGamePerf(gameId) {
-  const { data, error } = await sb
-    .rpc('get_perf_data', { p_game_id: gameId });
-  if (error) { console.warn('perf fetch 실패:', error.message); return []; }
   return data || [];
 }
 
@@ -760,19 +645,6 @@ async function fetchNruRuns() {
     .limit(100);
   if (error) { console.warn('nru_runs 조회 실패:', error.message); return []; }
   return data || [];
-}
-
-let _serverLogs = {};  // { game_id: [ {persona, run_date, api_calls, console_logs, summary, ...}, ... ] }
-
-async function fetchServerLogs() {
-  const { data, error } = await sb.from('server_logs').select('*');
-  if (error) { console.warn('server_logs 조회 실패:', error.message); return {}; }
-  const map = {};
-  for (const row of (data || [])) {
-    if (!map[row.game_id]) map[row.game_id] = [];
-    map[row.game_id].push(row);
-  }
-  return map;
 }
 
 /* ── 집계 ── */
@@ -921,11 +793,13 @@ function renderOverview(games) {
     <div id="cron-section"></div>
     <div id="run-manager"></div>
     <div id="db-usage-section"></div>
+    <div id="cookie-status-section"></div>
   `;
   panel.style.display = 'block';
   if (_allRuns.length) renderRunManager(_allRuns);
   if (_nruRuns.length) { renderNruSummary(_nruRuns); renderNruManager(); }
   renderDbUsage();
+  renderCookieStatus();
 
   renderAvgTimeChart(games);
   renderDailyRunsChart(games);
@@ -995,8 +869,6 @@ function renderGameCard(gid, g) {
   return `
     <div class="game-card" style="--gc:${PERSONA_COLORS.hardcore}">
       <h3>${gid}</h3>
-      <div class="stat"><span class="stat-label">테스트 UID</span><span class="stat-value" style="font-size:11px">${((_serverLogs[gid]||[])[0]||{}).uid || '-'}</span></div>
-      <div class="stat"><span class="stat-label">빌드</span><span class="stat-value">${((_serverLogs[gid]||[])[0]||{}).client_ver || '-'}</span></div>
       <div class="stat"><span class="stat-label">총 런/판</span><span class="stat-value">${g.runs}런 / ${g.levels.toLocaleString()}판</span></div>
       <div class="stat"><span class="stat-label">소요시간</span><span class="stat-value">${timeStr}</span></div>
       ${personaRows}
@@ -1497,10 +1369,9 @@ function renderGameTabs(gameIds) {
   if (!container) return;
 
   // 종합 메뉴
-  let html = `<div class="sidebar-item active" data-id="overview" id="sidebar-tab-overview" onclick="switchTab('overview', this)" title="종합 현황">
+  let html = `<div class="sidebar-item active" id="sidebar-tab-overview" onclick="switchTab('overview', this)" title="종합 현황">
     <span class="sidebar-item-icon">📊</span>
     <span class="sidebar-item-text">종합</span>
-    <span class="drag-grip">⋮⋮</span>
   </div>`;
 
   // 각 게임 메뉴
@@ -1509,16 +1380,13 @@ function renderGameTabs(gameIds) {
     const name = GAME_NAMES[gid] || gid;
     const color = GAME_COLORS[gid] || PERSONA_COLORS.hardcore;
     const runs = _overviewGames[gid] ? _overviewGames[gid].runs : 0;
-    html += `<div class="sidebar-item" data-id="${gid}" id="sidebar-tab-${gid}" onclick="switchTab('${gid}', this)" title="${name}" style="--tab-color:${color}">
+    html += `<div class="sidebar-item" id="sidebar-tab-${gid}" onclick="switchTab('${gid}', this)" title="${name}" style="--tab-color:${color}">
       <span class="sidebar-item-icon">${icon}</span>
       <span class="sidebar-item-text" style="color:${color}">${gid}</span>
       ${runs ? `<span class="sidebar-badge">${runs}</span>` : ''}
-      <span class="drag-grip">⋮⋮</span>
     </div>`;
   }
   container.innerHTML = html;
-  restoreSidebarOrder('games', container);
-  initSidebarSortable();
 }
 
 function updateSidebarBadges() {
@@ -1576,13 +1444,8 @@ async function switchTab(id, _btn) {
   panels.innerHTML = '<div class="state-msg"><div class="icon">⏳</div><div>게임 데이터 로딩 중...</div></div>';
 
   try {
-    // serverLogs가 아직 로드되지 않았으면 대기
-    if (!Object.keys(_serverLogs).length && _serverLogsPromise) await _serverLogsPromise;
-    // stages + 해당 게임 runs(metrics 포함)를 병렬 fetch
-    const [stages, gameRuns] = await Promise.all([
-      fetchStages(id),
-      fetchGameRuns(id)
-    ]);
+    const stages = await fetchStages(id);
+    const gameRuns = _allRuns.filter(r => r.game_id === id);
     _currentGameStages = stages;
     _currentGameRuns = gameRuns;
     _currentGameId = id;
@@ -2062,15 +1925,15 @@ const CATEGORY_RENDERERS = {
   stages: (gid, stages, runs) => renderCatStages(gid, stages),
   security: (gid, stages, runs) => renderCatSecurity(gid, runs),
   logapi: (gid, stages, runs) => renderCatLogApi(gid, runs),
-  perf: (gid, stages, runs) => '<div class="state-msg"><div class="icon">⏳</div><div>성능 데이터 로딩 중...</div></div>',
+  perf: (gid, stages, runs) => renderCatPerf(gid, runs),
   // SCJ 전용
   economy: (gid, stages, runs) => renderCatEconomy(gid, runs),
   balance: (gid, stages, runs) => renderCatBalance(gid, stages, runs),
   gimmick: (gid, stages, runs) => renderCatGimmick(gid, stages, runs),
-  // CTZ / MJG
-  tiles: (gid, stages, runs) => gid === 'MJG' ? renderCatMjgTiles(gid, stages, runs) : renderCatTiles(gid, stages, runs),
-  items: (gid, stages, runs) => gid === 'MJG' ? renderCatMjgItems(gid, stages, runs) : renderCatCtzItems(gid, stages, runs),
-  time_analysis: (gid, stages, runs) => gid === 'MJG' ? renderCatMjgTimeAnalysis(gid, stages, runs) : renderCatTimeAnalysis(gid, stages, runs),
+  // CTZ 전용
+  tiles: (gid, stages, runs) => renderCatTiles(gid, stages, runs),
+  items: (gid, stages, runs) => renderCatCtzItems(gid, stages, runs),
+  time_analysis: (gid, stages, runs) => renderCatTimeAnalysis(gid, stages, runs),
   // PBM 전용
   rounds: (gid, stages, runs) => renderCatRounds(gid, stages, runs),
   // NRU (SCJ)
@@ -2082,22 +1945,10 @@ const CHART_RENDERERS = {
   economy: (id, stages, runs) => renderEconomyCharts(id, stages, runs),
   balance: (id, stages, runs) => renderBalanceCharts(id, stages, runs),
   gimmick: (id, stages, runs) => renderGimmickCharts(id, stages),
-  // CTZ / MJG
-  tiles: (id, stages, runs) => id === 'MJG' ? renderMjgTileCharts(id, stages) : renderTileCharts(id, stages, runs),
-  items: (id, stages, runs) => id === 'MJG' ? renderMjgItemCharts(id, stages) : null,
-  time_analysis: (id, stages, runs) => id === 'MJG' ? renderMjgTimeCharts(id, stages) : renderTimeCharts(id, stages, runs),
-  perf: async (id, stages, runs) => {
-    const panel = document.getElementById(`cat-perf-${id}`);
-    if (!panel) return;
-    try {
-      const perfData = await fetchGamePerf(id);
-      const perfRuns = perfData.map(p => ({ ...runs.find(r => r.id === p.id) || {}, metrics: { perf: p.perf } })).filter(r => r.id);
-      panel.innerHTML = renderCatPerf(id, perfRuns);
-      renderPerfCharts(id, perfRuns);
-    } catch (e) {
-      panel.innerHTML = `<div style="color:var(--text-muted);padding:20px">성능 데이터 로딩 실패: ${e.message}</div>`;
-    }
-  },
+  // CTZ
+  tiles: (id, stages, runs) => renderTileCharts(id, stages, runs),
+  time_analysis: (id, stages, runs) => renderTimeCharts(id, stages, runs),
+  perf: (id, stages, runs) => renderPerfCharts(id, runs),
   // PBM
   rounds: (id, stages, runs) => renderRoundCharts(id, stages, runs),
 };
@@ -2116,16 +1967,7 @@ function renderGameDetail(gameId, stages, runs) {
     return `<div id="cat-${c.id}-${gameId}" class="cat-panel${i === 0 ? ' active' : ''}">${content}</div>`;
   }).join('');
 
-  // UID 표시 (server_logs에서 가져옴)
-  const gameLogs = _serverLogs[gameId] || [];
-  const uidVal = gameLogs.length ? gameLogs[0].uid : null;
-  const buildVal = gameLogs.length ? gameLogs[0].client_ver : null;
-  const uidBar = uidVal ? `<div class="ov-summary" style="font-size:12px;padding:8px 14px;margin-bottom:8px">
-    <b>테스트 UID:</b> ${uidVal} &nbsp;·&nbsp; <b>빌드:</b> ${buildVal || '-'}
-  </div>` : '';
-
   return `
-    ${uidBar}
     <div class="cat-tabs">${tabsHtml}</div>
     ${panelsHtml}
   `;
@@ -2262,18 +2104,6 @@ function renderCatSummary(gameId, stages, runs) {
       <div class="metric-box"><div class="label">판당 평균 시간</div><div class="value">${avgTime}초</div></div>
       <div class="metric-box"><div class="label">총 플레이</div><div class="value">${totalPlayed.toLocaleString()}판</div></div>
       <div class="metric-box"><div class="label">총 런</div><div class="value">${runs.length}</div></div>`;
-  } else if (gameId === 'MJG') {
-    const avgScore = totalPlayed ? Math.round(totalScore / totalPlayed).toLocaleString() : '-';
-    const avgTime = totalPlayed ? (totalTime / totalPlayed).toFixed(1) : '-';
-    let maxCombo = 0, totalDeadlocks = 0;
-    for (const r of runs) { const m = r.metrics || {}; maxCombo = Math.max(maxCombo, m.max_combo || 0); totalDeadlocks += m.total_deadlocks || 0; }
-    topMetrics = `
-      <div class="metric-box"><div class="label">평균 점수/판</div><div class="value">${avgScore}</div></div>
-      <div class="metric-box"><div class="label">최대 콤보</div><div class="value">${maxCombo}</div></div>
-      <div class="metric-box"><div class="label">교착 상태</div><div class="value">${totalDeadlocks}</div></div>
-      <div class="metric-box"><div class="label">판당 평균 시간</div><div class="value">${avgTime}초</div></div>
-      <div class="metric-box"><div class="label">총 플레이</div><div class="value">${totalPlayed.toLocaleString()}판</div></div>
-      <div class="metric-box"><div class="label">총 런</div><div class="value">${runs.length}</div></div>`;
   } else {
     const goldPerGame = totalPlayed ? Math.round(totalGoldPnl / totalPlayed).toLocaleString() : '-';
     const goldColor = totalGoldPnl >= 0 ? 'var(--status-ok)' : 'var(--status-err)';
@@ -2301,12 +2131,6 @@ function renderCatSummary(gameId, stages, runs) {
         <div class="stat"><span class="stat-label">판 수</span><span class="stat-value">${d.played}판 (${d.runs}런)</span></div>
         <div class="stat"><span class="stat-label">평균 점수</span><span class="stat-value">${pScore}</span></div>
         <div class="stat"><span class="stat-label">이어하기</span><span class="stat-value">${d.continues}</span></div>
-        <div class="stat"><span class="stat-label">평균 시간</span><span class="stat-value">${avgTime}초</span></div>`;
-    } else if (gameId === 'MJG') {
-      const pScore = d.played ? Math.round(d.score / d.played).toLocaleString() : '-';
-      statsHtml = `
-        <div class="stat"><span class="stat-label">판 수</span><span class="stat-value">${d.played}판 (${d.runs}런)</span></div>
-        <div class="stat"><span class="stat-label">평균 점수</span><span class="stat-value">${pScore}</span></div>
         <div class="stat"><span class="stat-label">평균 시간</span><span class="stat-value">${avgTime}초</span></div>`;
     } else {
       const pGold = d.played ? Math.round(d.goldPnl / d.played).toLocaleString() : '-';
@@ -3122,178 +2946,6 @@ function renderTimeCharts(gameId, stages, runs) {
   }
 }
 
-/* ══════════════════════════════════════════════
-   카테고리: 타일 (MJG 전용)
-   ══════════════════════════════════════════════ */
-function renderCatMjgTiles(gameId, stages, runs) {
-  if (!stages.length) return '<div style="color:var(--text-muted);padding:20px">타일 데이터 없음</div>';
-  let totalScore = 0, totalCombo = 0, totalDeadlocks = 0;
-  const layerCounts = {}, tileKindCounts = {};
-  for (const s of stages) {
-    const d = s.details || {};
-    totalScore += d.score || 0;
-    totalCombo += d.combo_count || 0;
-    totalDeadlocks += d.deadlock_count || 0;
-    const sd = d.stage_detail || {};
-    if (sd.maxFloor) { const k = String(sd.maxFloor); layerCounts[k] = (layerCounts[k] || 0) + 1; }
-    if (sd.tileKind) { const k = String(sd.tileKind); tileKindCounts[k] = (tileKindCounts[k] || 0) + 1; }
-  }
-  const avgScore = Math.round(totalScore / stages.length);
-  const avgCombo = (totalCombo / stages.length).toFixed(1);
-  return `
-    <div class="metric-row">
-      <div class="metric-box"><div class="label">평균 점수</div><div class="value">${avgScore.toLocaleString()}</div></div>
-      <div class="metric-box"><div class="label">평균 콤보</div><div class="value">${avgCombo}</div></div>
-      <div class="metric-box"><div class="label">교착 상태</div><div class="value">${totalDeadlocks}</div></div>
-      <div class="metric-box"><div class="label">총 판수</div><div class="value">${stages.length}</div></div>
-    </div>
-    <div class="chart-grid">
-      <div class="chart-box"><h4>레이어 깊이 분포</h4><canvas id="chart-layers-${gameId}"></canvas></div>
-      <div class="chart-box"><h4>타일 종류 수 분포</h4><canvas id="chart-tilekind-${gameId}"></canvas></div>
-    </div>`;
-}
-
-function renderMjgTileCharts(gameId, stages) {
-  const layerCounts = {}, tileKindCounts = {};
-  for (const s of stages) {
-    const sd = (s.details || {}).stage_detail || {};
-    if (sd.maxFloor) { const k = String(sd.maxFloor); layerCounts[k] = (layerCounts[k] || 0) + 1; }
-    if (sd.tileKind) { const k = String(sd.tileKind); tileKindCounts[k] = (tileKindCounts[k] || 0) + 1; }
-  }
-  const colors = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#84cc16'];
-  // 레이어 깊이
-  const lKeys = Object.keys(layerCounts).sort((a,b) => +a - +b);
-  const lk = `layers-${gameId}`;
-  if (_charts[lk]) _charts[lk].destroy();
-  const lCanvas = document.getElementById(`chart-layers-${gameId}`);
-  if (lCanvas && lKeys.length) {
-    _charts[lk] = new Chart(lCanvas, { type:'bar', data:{ labels:lKeys.map(k=>k+'층'), datasets:[{label:'판 수',data:lKeys.map(k=>layerCounts[k]),backgroundColor:colors.slice(0,lKeys.length).map(c=>c+'99'),borderColor:colors.slice(0,lKeys.length),borderWidth:1.5,borderRadius:6}]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
-  }
-  // 타일 종류 수
-  const tkKeys = Object.keys(tileKindCounts).sort((a,b) => +a - +b);
-  const tkk = `tilekind-${gameId}`;
-  if (_charts[tkk]) _charts[tkk].destroy();
-  const tkCanvas = document.getElementById(`chart-tilekind-${gameId}`);
-  if (tkCanvas && tkKeys.length) {
-    _charts[tkk] = new Chart(tkCanvas, { type:'bar', data:{ labels:tkKeys.map(k=>k+'종'), datasets:[{label:'판 수',data:tkKeys.map(k=>tileKindCounts[k]),backgroundColor:colors.slice(0,tkKeys.length).map(c=>c+'99'),borderColor:colors.slice(0,tkKeys.length),borderWidth:1.5,borderRadius:6}]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
-  }
-}
-
-/* ══════════════════════════════════════════════
-   카테고리: 아이템 (MJG 전용)
-   ══════════════════════════════════════════════ */
-function renderCatMjgItems(gameId, stages, runs) {
-  let highlight = 0, hint = 0, shuffle = 0, undo = 0;
-  const byPersona = {};
-  for (const s of stages) {
-    const items = (s.details || {}).items_used || {};
-    highlight += items.highlight || 0;
-    hint += items.hint || 0;
-    shuffle += items.shuffle || 0;
-    undo += items.undo || 0;
-    const p = s.persona;
-    if (!byPersona[p]) byPersona[p] = { highlight:0, hint:0, shuffle:0, undo:0, deadlock:0, levels:0 };
-    byPersona[p].highlight += items.highlight || 0;
-    byPersona[p].hint += items.hint || 0;
-    byPersona[p].shuffle += items.shuffle || 0;
-    byPersona[p].undo += items.undo || 0;
-    byPersona[p].deadlock += (s.details || {}).deadlock_count || 0;
-    byPersona[p].levels++;
-  }
-  const pRows = Object.entries(byPersona).sort(([a],[b]) => (PERSONA_ORDER.indexOf(a)===-1?99:PERSONA_ORDER.indexOf(a)) - (PERSONA_ORDER.indexOf(b)===-1?99:PERSONA_ORDER.indexOf(b))).map(([p,d]) =>
-    `<tr><td style="color:${PERSONA_COLORS[p]||'#999'}">${PERSONA_KO[p]||p}</td><td>${d.highlight}</td><td>${d.hint}</td><td>${d.shuffle}</td><td>${d.undo}</td><td>${d.deadlock}</td><td>${d.levels}</td></tr>`
-  ).join('');
-  return `
-    <div class="metric-row">
-      <div class="metric-box"><div class="label">하이라이트</div><div class="value">${highlight}</div></div>
-      <div class="metric-box"><div class="label">힌트</div><div class="value">${hint}</div></div>
-      <div class="metric-box"><div class="label">셔플</div><div class="value">${shuffle}</div></div>
-      <div class="metric-box"><div class="label">되돌리기</div><div class="value">${undo}</div></div>
-    </div>
-    <div class="chart-grid">
-      <div class="chart-box"><h4>아이템 사용 비율</h4><canvas id="chart-mjgitems-${gameId}"></canvas></div>
-    </div>
-    <div class="tbl-wrap"><h4>페르소나별 아이템 사용</h4>
-      <table><thead><tr><th>페르소나</th><th>하이라이트</th><th>힌트</th><th>셔플</th><th>되돌리기</th><th>교착</th><th>판수</th></tr></thead>
-      <tbody>${pRows || '<tr><td colspan="7" style="color:var(--text-muted)">데이터 없음</td></tr>'}</tbody></table></div>`;
-}
-
-function renderMjgItemCharts(gameId, stages) {
-  let highlight=0,hint=0,shuffle=0,undo=0;
-  for (const s of stages) { const it=(s.details||{}).items_used||{}; highlight+=it.highlight||0; hint+=it.hint||0; shuffle+=it.shuffle||0; undo+=it.undo||0; }
-  const ik=`mjgitems-${gameId}`;
-  if (_charts[ik]) _charts[ik].destroy();
-  const canvas = document.getElementById(`chart-mjgitems-${gameId}`);
-  if (canvas && (highlight+hint+shuffle+undo > 0)) {
-    _charts[ik] = new Chart(canvas, { type:'doughnut', data:{ labels:['하이라이트','힌트','셔플','되돌리기'], datasets:[{data:[highlight,hint,shuffle,undo], backgroundColor:['#3b82f6','#10b981','#f59e0b','#8b5cf6']}]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#94a3b8'}}}}});
-  }
-}
-
-/* ══════════════════════════════════════════════
-   카테고리: 소요시간 (MJG 전용)
-   ══════════════════════════════════════════════ */
-function renderCatMjgTimeAnalysis(gameId, stages, runs) {
-  const byLayers = {}, byDifficulty = {};
-  for (const s of stages) {
-    const d = s.details || {};
-    const t = s.time_sec || 0;
-    const sd = d.stage_detail || {};
-    const ml = sd.maxFloor || 0;
-    if (ml > 0) {
-      if (!byLayers[ml]) byLayers[ml] = { times:[], count:0 };
-      byLayers[ml].times.push(t); byLayers[ml].count++;
-    }
-    const diff = s.difficulty || 0;
-    if (diff > 0) {
-      if (!byDifficulty[diff]) byDifficulty[diff] = { times:[], count:0 };
-      byDifficulty[diff].times.push(t); byDifficulty[diff].count++;
-    }
-  }
-  const diffNames = {1:'튜토리얼',2:'보통',3:'어려움',4:'매우 어려움'};
-  const layerRows = Object.entries(byLayers).sort(([a],[b])=>+a-+b).map(([k,v])=>{
-    const avg=v.times.length?(v.times.reduce((a,b)=>a+b,0)/v.times.length).toFixed(1):'-';
-    const max=v.times.length?Math.max(...v.times).toFixed(1):'-';
-    return `<tr><td>${k}층</td><td>${v.count}</td><td>${avg}초</td><td>${max}초</td></tr>`;
-  }).join('');
-  const diffRows = Object.entries(byDifficulty).sort(([a],[b])=>+a-+b).map(([k,v])=>{
-    const avg=v.times.length?(v.times.reduce((a,b)=>a+b,0)/v.times.length).toFixed(1):'-';
-    return `<tr><td>${diffNames[k]||k}</td><td>${v.count}</td><td>${avg}초</td></tr>`;
-  }).join('');
-  return `
-    <div class="chart-grid">
-      <div class="chart-box"><h4>레이어별 평균 소요시간</h4><canvas id="chart-timelayer-${gameId}"></canvas></div>
-      <div class="chart-box"><h4>난이도별 평균 소요시간</h4><canvas id="chart-timediff-${gameId}"></canvas></div>
-    </div>
-    <div class="tbl-wrap"><h4>레이어별 소요시간 상세</h4>
-      <table><thead><tr><th>레이어</th><th>판수</th><th>평균</th><th>최대</th></tr></thead>
-      <tbody>${layerRows||'<tr><td colspan="4" style="color:var(--text-muted)">데이터 없음</td></tr>'}</tbody></table></div>
-    <div class="tbl-wrap"><h4>난이도별 소요시간</h4>
-      <table><thead><tr><th>난이도</th><th>판수</th><th>평균</th></tr></thead>
-      <tbody>${diffRows||'<tr><td colspan="3" style="color:var(--text-muted)">데이터 없음</td></tr>'}</tbody></table></div>`;
-}
-
-function renderMjgTimeCharts(gameId, stages) {
-  const byLayers={},byDiff={};
-  for(const s of stages){const sd=(s.details||{}).stage_detail||{};const t=s.time_sec||0;
-    if(sd.maxFloor){if(!byLayers[sd.maxFloor])byLayers[sd.maxFloor]=[];byLayers[sd.maxFloor].push(t);}
-    if(s.difficulty){if(!byDiff[s.difficulty])byDiff[s.difficulty]=[];byDiff[s.difficulty].push(t);}
-  }
-  const colors=['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6'];
-  const diffNames={1:'튜토리얼',2:'보통',3:'어려움',4:'매우 어려움'};
-  // 레이어별
-  const lKeys=Object.keys(byLayers).sort((a,b)=>+a-+b);
-  const lk=`timelayer-${gameId}`;
-  if(_charts[lk])_charts[lk].destroy();
-  const lc=document.getElementById(`chart-timelayer-${gameId}`);
-  if(lc&&lKeys.length){_charts[lk]=new Chart(lc,{type:'bar',data:{labels:lKeys.map(k=>k+'층'),datasets:[{label:'평균(초)',data:lKeys.map(k=>{const a=byLayers[k];return+(a.reduce((x,y)=>x+y,0)/a.length).toFixed(1);}),backgroundColor:colors.slice(0,lKeys.length).map(c=>c+'99'),borderColor:colors.slice(0,lKeys.length),borderWidth:1.5,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});}
-  // 난이도별
-  const dKeys=Object.keys(byDiff).sort((a,b)=>+a-+b);
-  const dk=`timediff-${gameId}`;
-  if(_charts[dk])_charts[dk].destroy();
-  const dc=document.getElementById(`chart-timediff-${gameId}`);
-  if(dc&&dKeys.length){_charts[dk]=new Chart(dc,{type:'bar',data:{labels:dKeys.map(k=>diffNames[k]||k),datasets:[{label:'평균(초)',data:dKeys.map(k=>{const a=byDiff[k];return+(a.reduce((x,y)=>x+y,0)/a.length).toFixed(1);}),backgroundColor:['#06b6d4','#10b981','#f59e0b','#ef4444'].slice(0,dKeys.length).map(c=>c+'99'),borderColor:['#06b6d4','#10b981','#f59e0b','#ef4444'].slice(0,dKeys.length),borderWidth:1.5,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});}
-}
-
 /* ── 스테이지 날짜 포맷 헬퍼 ── */
 function _fmtStageDate(iso) {
   if (!iso) return '-';
@@ -3381,86 +3033,13 @@ function renderCatStagesCTZ(gameId, stages) {
 /* ══════════════════════════════════════════════
    카테고리: 스테이지 (SCJ / 공통)
    ══════════════════════════════════════════════ */
-async function toggleScoreOutOfRangeScreenshot(runId, stageId, btnEl) {
-  const imgId = `sbm_img_${runId}_${stageId}`.replace(/[^a-zA-Z0-9_]/g, '_');
-  const existing = document.getElementById(imgId);
-  if (existing) { existing.remove(); return; }
-  // 스크린샷을 온디맨드로 fetch (metrics JSONB에서 분리)
-  btnEl.title = '로딩 중...';
-  try {
-    const { data, error } = await sb.rpc('get_run_screenshots', { p_run_id: runId });
-    const screenshots = (!error && data && data.length) ? (data[0].screenshots || []) : [];
-    const match = screenshots.find(ss => ss.label && (ss.label.includes('score_below_min') || ss.label.includes('score_above_max')) && ss.label.includes(stageId));
-    if (!match) { btnEl.title = '스크린샷 없음'; return; }
-    const div = document.createElement('div');
-    div.id = imgId;
-    div.style.cssText = 'margin:6px 0;padding:4px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card)';
-    div.innerHTML = `<div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">${match.label} (${match.timestamp || ''})</div><img src="data:image/png;base64,${match.base64}" style="max-width:480px;border-radius:4px;cursor:pointer" onclick="this.style.maxWidth=this.style.maxWidth==='480px'?'100%':'480px'">`;
-    btnEl.parentElement.appendChild(div);
-    btnEl.title = '스크린샷 토글';
-  } catch (e) { btnEl.title = '스크린샷 로딩 실패'; }
-}
-
-function renderCatStagesMJG(gameId, stages) {
-  if (!stages.length) return '<div style="color:var(--text-muted);padding:20px">스테이지 데이터 없음</div>';
-  const byStage = {};
-  for (const s of stages) {
-    const key = s.stage_number || s.game_level || '?';
-    if (!byStage[key]) byStage[key] = { played:0, cleared:0, times:[], scores:[], combos:[], difficulty:s.difficulty||0, totalTile:0, maxFloor:0, items:0, deadlocks:0, personas:new Set() };
-    const v = byStage[key];
-    v.played++;
-    if (s.result === 'clear') v.cleared++;
-    if (s.time_sec) v.times.push(s.time_sec);
-    if (s.persona) v.personas.add(s.persona);
-    const d = s.details || {};
-    if (d.score) v.scores.push(d.score);
-    if (d.combo_count) v.combos.push(d.combo_count);
-    if (d.deadlock_count) v.deadlocks += d.deadlock_count;
-    const sd = d.stage_detail || {};
-    if (sd.totalTile) v.totalTile = sd.totalTile;
-    if (sd.maxFloor) v.maxFloor = sd.maxFloor;
-    const it = d.items_used || {};
-    v.items += (it.shuffle||0)+(it.hint||0)+(it.undo||0)+(it.highlight||0);
-    if (s.difficulty) v.difficulty = s.difficulty;
-  }
-  const diffNames = {1:'튜토리얼',2:'보통',3:'어려움',4:'매우 어려움'};
-  const rows = Object.entries(byStage).sort(([,a],[,b]) => (a.played||0) - (b.played||0)).map(([st, v]) => {
-    const avgT = v.times.length ? (v.times.reduce((a,b)=>a+b,0)/v.times.length).toFixed(1) : '-';
-    const avgScore = v.scores.length ? Math.round(v.scores.reduce((a,b)=>a+b,0)/v.scores.length).toLocaleString() : '-';
-    const avgCombo = v.combos.length ? (v.combos.reduce((a,b)=>a+b,0)/v.combos.length).toFixed(1) : '-';
-    const cr = v.played ? (v.cleared/v.played*100) : 0;
-    const crColor = cr >= 90 ? '#10b981' : cr >= 50 ? '#f59e0b' : '#ef4444';
-    const diffColor = v.difficulty===4?'#ef4444':v.difficulty===3?'#f59e0b':v.difficulty===2?'#10b981':'#64748b';
-    return `<tr>
-      <td>${st}</td>
-      <td style="color:${diffColor}">${diffNames[v.difficulty]||'-'}</td>
-      <td>${v.played}</td>
-      <td style="color:${crColor}">${cr.toFixed(0)}%</td>
-      <td>${avgScore}</td>
-      <td>${avgCombo}</td>
-      <td>${v.maxFloor||'-'}층</td>
-      <td>${v.totalTile||'-'}</td>
-      <td>${avgT}초</td>
-      <td>${v.items}</td>
-      <td>${v.deadlocks}</td>
-    </tr>`;
-  }).join('');
-  return `<div class="tbl-wrap"><table>
-    <thead><tr><th>스테이지</th><th>난이도</th><th>판수</th><th>클리어율</th><th>평균 점수</th><th>평균 콤보</th><th>레이어</th><th>타일 수</th><th>평균 시간</th><th>아이템</th><th>교착</th></tr></thead>
-    <tbody>${rows||'<tr><td colspan="11" style="color:var(--text-muted)">데이터 없음</td></tr>'}</tbody>
-  </table></div>`;
-}
-
 function renderCatStages(gameId, stages) {
   if (gameId === 'CTZ') return renderCatStagesCTZ(gameId, stages);
-  if (gameId === 'MJG') return renderCatStagesMJG(gameId, stages);
   const byStage = {};
   for (const s of stages) {
     const key = s.stage_number || s.game_level || '?';
-    if (!byStage[key]) byStage[key] = { played: 0, cleared: 0, failed: 0, times: [], level: s.game_level, levels: [], mapScores: [], mapDetails: [], turns: [], goldPnl: 0, difficulty: s.difficulty || 0, bets: [], personas: new Set(), dates: [] };
+    if (!byStage[key]) byStage[key] = { played: 0, times: [], level: s.game_level, levels: [], mapScores: [], mapDetails: [], turns: [], goldPnl: 0, difficulty: s.difficulty || 0, bets: [], personas: new Set(), dates: [] };
     byStage[key].played++;
-    if (s.result === 'clear') byStage[key].cleared++;
-    else byStage[key].failed++;
     if (s.created_at) byStage[key].dates.push(s.created_at);
     if (s.game_level != null) byStage[key].levels.push(s.game_level);
     if (s.persona) byStage[key].personas.add(s.persona);
@@ -3481,8 +3060,6 @@ function renderCatStages(gameId, stages) {
         score: d.map_score, base: d.map_score_base || 0,
         gimmick: d.gimmick_score || 0, field: d.field_total || 0,
         gimmickTypes: [...detailGimmicks],
-        scoreBelowMin: d.score_below_min || false,
-        scoreAboveMax: d.score_above_max || false,
         persona: s.persona,
         rewards: {
           coin: cr.coin || '0',
@@ -3499,7 +3076,6 @@ function renderCatStages(gameId, stages) {
         betting: d.betting_multiplier || 1,
         createdAt: s.created_at,
         gameLevel: s.game_level,
-        runId: s.run_id || null,
       });
     }
     if (d.turns != null) byStage[key].turns.push(d.turns);
@@ -3509,14 +3085,12 @@ function renderCatStages(gameId, stages) {
   }
   const rows = Object.entries(byStage)
     .sort(([,a],[,b]) => (a.level||0) - (b.level||0))
-    .map(([st, v], idx) => {
+    .map(([st, v]) => {
       const avgT = v.times.length ? (v.times.reduce((a,b)=>a+b,0) / v.times.length).toFixed(1) : '-';
       const avgMS = v.mapScores.length ? Math.round(v.mapScores.reduce((a,b)=>a+b,0) / v.mapScores.length) : '-';
       const avgTurns = v.turns.length ? (v.turns.reduce((a,b)=>a+b,0) / v.turns.length).toFixed(1) : '-';
       const avgGold = v.played ? Math.round(v.goldPnl / v.played) : 0;
       const goldColor = avgGold >= 0 ? 'var(--status-ok)' : 'var(--status-err)';
-      const clearRate = v.played ? (v.cleared / v.played * 100) : 0;
-      const crColor = clearRate >= 90 ? '#10b981' : clearRate >= 50 ? '#f59e0b' : '#ef4444';
       // 난이도 색상: 튜토리얼=회색, 노말=초록, 하드=노랑, 슈퍼하드=빨강
       const diffTier = v.difficulty || 0;
       const diffColor = diffTier === 4 ? '#ef4444' : diffTier === 3 ? '#f59e0b' : diffTier === 2 ? '#10b981' : '#64748b';
@@ -3549,10 +3123,7 @@ function renderCatStages(gameId, stages) {
       const lvs = [...new Set(v.levels)].sort((a,b) => a-b);
       const lvStr = lvs.length === 0 ? '?' : lvs.length === 1 ? `Lv${lvs[0]}` : `Lv${lvs[0]}~${lvs[lvs.length-1]}`;
       return `<tr style="cursor:pointer" data-personas="${personaList}" data-dates="${v.dates.map(d => d.slice(0,10)).join(',')}" onclick="var d=document.getElementById('${rowId}');d.style.display=d.style.display==='none'?'table-row':'none'">
-        <td style="color:var(--text-muted)">${idx + 1}</td><td>${st}</td><td>${lvStr}</td><td>${v.played}</td>
-        <td style="color:#10b981">${v.cleared}</td>
-        <td style="color:${v.failed ? '#ef4444' : 'var(--text-muted)'};font-weight:${v.failed ? '600' : 'normal'}">${v.failed}</td>
-        <td><div style="display:flex;align-items:center;gap:6px"><div style="height:6px;width:${Math.round(clearRate * 0.6)}px;background:${crColor};border-radius:3px;min-width:2px"></div><span style="color:${crColor};font-weight:600">${clearRate.toFixed(0)}%</span></div></td>
+        <td>${st}</td><td>${lvStr}</td><td>${v.played}</td>
         <td>${avgT}초</td>
         <td style="color:${goldColor}">${avgGold.toLocaleString()}</td>
         <td style="color:${turnsColor};font-weight:600">${avgTurns}</td>
@@ -3560,7 +3131,7 @@ function renderCatStages(gameId, stages) {
         <td style="color:${diffColor};font-weight:600">${diffName}</td>
         <td>${v.bets.map(b => {const c = b>=4?'#ef4444':b>=2?'#f59e0b':'#10b981'; return `<span style="color:${c};font-weight:600">x${b}</span>`;}).join(', ')}</td>
         <td style="color:var(--text-muted);font-size:11px">${latestDate}</td></tr>
-      <tr id="${rowId}" style="display:none;background:rgba(56,189,248,.04)"><td></td><td colspan="13" style="padding:8px 12px;font-size:11px;color:var(--text-muted)">
+      <tr id="${rowId}" style="display:none;background:rgba(56,189,248,.04)"><td></td><td colspan="9" style="padding:8px 12px;font-size:11px;color:var(--text-muted)">
         <b>맵스코어 상세</b> (${md.length}회 플레이)<br>
         ${md.map((d, i) => {
           const gList = (d.gimmickTypes || []).join(', ');
@@ -3588,9 +3159,7 @@ function renderCatStages(gameId, stages) {
           const pStr = pName ? `<span style="color:${pColor};font-weight:600">${pName}</span> ` : '';
           const dateStr = d.createdAt ? `<span style="color:#64748b">[${_fmtStageDate(d.createdAt)}]</span> ` : '';
           const lvlStr = d.gameLevel != null ? ` <span style="color:#3b82f6">Lv${d.gameLevel}</span>` : '';
-          const sbmStr = d.scoreBelowMin && d.runId ? ` <span style="color:#ef4444;font-weight:700;cursor:pointer;text-decoration:underline" title="클릭하여 스크린샷 보기 — PlusCard로 map_score가 tier score_min 미만 하락" onclick="event.stopPropagation();toggleScoreOutOfRangeScreenshot('${d.runId}','${st}',this)">⚠ score_below_min 📷</span>` : d.scoreBelowMin ? ' <span style="color:#ef4444;font-weight:700" title="PlusCard로 map_score가 tier score_min 미만으로 하락">⚠ score_below_min</span>' : '';
-          const samStr = d.scoreAboveMax && d.runId ? ` <span style="color:#f59e0b;font-weight:700;cursor:pointer;text-decoration:underline" title="클릭하여 스크린샷 보기 — 기믹으로 map_score가 tier score_max 초과" onclick="event.stopPropagation();toggleScoreOutOfRangeScreenshot('${d.runId}','${st}',this)">⚠ score_above_max 📷</span>` : d.scoreAboveMax ? ' <span style="color:#f59e0b;font-weight:700" title="기믹으로 map_score가 tier score_max 초과">⚠ score_above_max</span>' : '';
-          return `${dateStr}${i+1}회${lvlStr}${betStr} ${pStr}: base ${d.base}${gsStr} = <b style="color:${scoreColor}">${d.score}</b> (카드 ${d.field}장${gPart})${sbmStr}${samStr}${rewardStr}${econStr}${evtStr}`;
+          return `${dateStr}${i+1}회${lvlStr}${betStr} ${pStr}: base ${d.base}${gsStr} = <b style="color:${scoreColor}">${d.score}</b> (카드 ${d.field}장${gPart})${rewardStr}${econStr}${evtStr}`;
         }).join('<br>')}
       </td></tr>`;
     }).join('');
@@ -3652,20 +3221,16 @@ function renderCatStages(gameId, stages) {
     </div>
     <div class="tbl-wrap"><h4>스테이지별 상세 (${Object.keys(byStage).length}개)</h4>
       <table id="stg-table-${gameId}"><thead><tr>
-        <th class="sortable" onclick="sortStageTable('${gameId}',0,'num')">NO</th>
-        <th class="sortable" onclick="sortStageTable('${gameId}',1,'str')">스테이지</th>
-        <th class="sortable" onclick="sortStageTable('${gameId}',2,'num')">레벨</th>
-        <th class="sortable" onclick="sortStageTable('${gameId}',3,'num')">플레이</th>
-        <th class="sortable" onclick="sortStageTable('${gameId}',4,'num')">클리어</th>
-        <th class="sortable" onclick="sortStageTable('${gameId}',5,'num')">실패</th>
-        <th class="sortable" onclick="sortStageTable('${gameId}',6,'num')">클리어율</th>
-        <th class="sortable" onclick="sortStageTable('${gameId}',7,'num')">평균 시간</th>
-        <th class="sortable" onclick="sortStageTable('${gameId}',8,'num')">골드 손익</th>
-        <th class="sortable" onclick="sortStageTable('${gameId}',9,'num')">평균 턴수</th>
-        <th class="sortable" onclick="sortStageTable('${gameId}',10,'num')">맵 스코어</th>
-        <th class="sortable" onclick="sortStageTable('${gameId}',11,'str')">난이도</th>
-        <th class="sortable" onclick="sortStageTable('${gameId}',12,'num')">배수</th>
-        <th class="sortable" onclick="sortStageTable('${gameId}',13,'str')">최근 플레이</th>
+        <th class="sortable" onclick="sortStageTable('${gameId}',0,'str')">스테이지</th>
+        <th class="sortable" onclick="sortStageTable('${gameId}',1,'num')">레벨</th>
+        <th class="sortable" onclick="sortStageTable('${gameId}',2,'num')">플레이</th>
+        <th class="sortable" onclick="sortStageTable('${gameId}',3,'num')">평균 시간</th>
+        <th class="sortable" onclick="sortStageTable('${gameId}',4,'num')">골드 손익</th>
+        <th class="sortable" onclick="sortStageTable('${gameId}',5,'num')">평균 턴수</th>
+        <th class="sortable" onclick="sortStageTable('${gameId}',6,'num')">맵 스코어</th>
+        <th class="sortable" onclick="sortStageTable('${gameId}',7,'str')">난이도</th>
+        <th class="sortable" onclick="sortStageTable('${gameId}',8,'num')">배수</th>
+        <th class="sortable" onclick="sortStageTable('${gameId}',9,'str')">최근 플레이</th>
       </tr></thead>
       <tbody>${rows}</tbody></table></div>
   `;
@@ -3798,7 +3363,7 @@ function renderCatSecurity(gameId, runs) {
         <div style="margin-bottom:12px">
           <div style="font-weight:600;font-size:12px;color:var(--text-muted);margin-bottom:2px">API 에러 빈도</div>
           <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">4xx/5xx 에러 비율이 높으면 비정상 요청 또는 서버 불안정 의심</div>
-          ${apiErrors ? `<div style="font-size:12px;color:var(--status-err)">에러 ${apiErrors}건 / 총 ${apiTotal.toLocaleString()}건 (${apiTotal ? (apiErrors/apiTotal*100).toFixed(1) : '0.0'}%)</div>` : '<div style="font-size:12px;color:var(--status-ok)">API 에러 없음</div>'}
+          ${apiErrors ? `<div style="font-size:12px;color:var(--status-err)">에러 ${apiErrors}건 / 총 ${apiTotal.toLocaleString()}건 (${(apiErrors/apiTotal*100).toFixed(1)}%)</div>` : '<div style="font-size:12px;color:var(--status-ok)">API 에러 없음</div>'}
         </div>
         <div>
           <div style="font-weight:600;font-size:12px;color:var(--text-muted);margin-bottom:2px">IDOR 패턴 감지</div>
@@ -3832,161 +3397,158 @@ function renderCatSecurity(gameId, runs) {
 }
 
 /* ══════════════════════════════════════════════
-   카테고리: 서버 로그 (최신 런)
+   카테고리: 로그 & API
    ══════════════════════════════════════════════ */
 function renderCatLogApi(gameId, runs) {
-  const logs = _serverLogs[gameId];
-  if (!logs || !logs.length) {
-    return `<div style="color:var(--text-muted);padding:20px;text-align:center">
-      <div style="font-size:32px;opacity:.3;margin-bottom:8px">📡</div>
-      <div>서버 로그 데이터 없음</div>
-      <div style="font-size:12px;margin-top:4px">프리플레이 실행 후 자동으로 최신 런의 서버 로그가 표시됩니다.</div>
-    </div>`;
+  let totalApi = 0, totalConsole = 0;
+  const byMethod = {};
+  const topUrls = {};
+  const byLevel = {};
+  const allErrors = [];
+
+  for (const r of runs) {
+    const m = r.metrics || {};
+    totalApi += m.api_count || 0;
+    totalConsole += m.console_count || 0;
+
+    const apiS = m.api_summary || {};
+    for (const [method, cnt] of Object.entries(apiS.by_method || {})) {
+      byMethod[method] = (byMethod[method] || 0) + cnt;
+    }
+    for (const [url, cnt] of Object.entries(apiS.top_urls || {})) {
+      topUrls[url] = (topUrls[url] || 0) + cnt;
+    }
+
+    const conS = m.console_summary || {};
+    for (const [lvl, cnt] of Object.entries(conS.by_level || {})) {
+      byLevel[lvl] = (byLevel[lvl] || 0) + cnt;
+    }
+    for (const e of (conS.errors || [])) {
+      allErrors.push({ ...e, run_date: r.run_date, persona: r.persona });
+    }
   }
 
-  // 페르소나 정렬
-  const sorted = [...logs].sort((a, b) =>
-    (PERSONA_ORDER.indexOf(a.persona)===-1?99:PERSONA_ORDER.indexOf(a.persona))
-    - (PERSONA_ORDER.indexOf(b.persona)===-1?99:PERSONA_ORDER.indexOf(b.persona))
-  );
+  const avgApi = runs.length ? Math.round(totalApi / runs.length) : 0;
+  const avgConsole = runs.length ? Math.round(totalConsole / runs.length) : 0;
+  const totalErrors = byLevel['error'] || 0;
+  const totalWarns = byLevel['warn'] || 0;
 
-  // 전체 요약 헤더
-  const latestDate = sorted[0].run_date || '-';
-  const updatedAt = sorted.reduce((latest, l) => l.updated_at > latest ? l.updated_at : latest, '');
-  const updatedStr = updatedAt ? new Date(updatedAt).toLocaleString('ko') : '';
+  const methodRows = Object.entries(byMethod).sort(([,a],[,b]) => b - a)
+    .map(([m, c]) => `<tr><td>${m}</td><td>${c.toLocaleString()}</td><td>${totalApi ? (c / totalApi * 100).toFixed(1) : 0}%</td></tr>`).join('');
 
-  // 페르소나별 요약 카드
-  const summaryCards = sorted.map(log => {
-    const s = log.summary || {};
-    const apiN = s.api_total || (log.api_calls || []).length;
-    const conN = s.console_total || (log.console_logs || []).length;
-    const errN = (s.by_level || {})['error'] || 0;
-    const warnN = (s.by_level || {})['warn'] || 0;
-    const apiErrN = s.error_count || 0;
-    const pColor = PERSONA_COLORS[log.persona] || '#3b82f6';
-    return `<div class="persona-card" style="border-left:3px solid ${pColor}">
-      <h5>${PERSONA_KO[log.persona] || log.persona}</h5>
-      <div class="stat"><span class="stat-label">API</span><span class="stat-value">${apiN}</span></div>
-      <div class="stat"><span class="stat-label">콘솔</span><span class="stat-value">${conN}</span></div>
-      <div class="stat"><span class="stat-label">API 에러</span><span class="stat-value" style="color:${apiErrN > 0 ? 'var(--status-err)' : 'var(--status-ok)'}">${apiErrN}</span></div>
-      <div class="stat"><span class="stat-label">콘솔 Error</span><span class="stat-value" style="color:${errN > 0 ? 'var(--status-err)' : 'var(--status-ok)'}">${errN}</span></div>
-      <div class="stat"><span class="stat-label">Warn</span><span class="stat-value" style="color:${warnN > 0 ? 'var(--status-warn)' : 'var(--status-ok)'}">${warnN}</span></div>
-    </div>`;
-  }).join('');
+  const urlRows = Object.entries(topUrls).sort(([,a],[,b]) => b - a).slice(0, 10)
+    .map(([url, c]) => {
+      const short = url.length > 60 ? url.slice(0, 57) + '...' : url;
+      return `<tr><td style="font-size:11px;word-break:break-all">${short}</td><td>${c.toLocaleString()}</td></tr>`;
+    }).join('');
 
-  // 페르소나별 상세 (접이식)
   const levelColors = { log: 'var(--text-muted)', warn: 'var(--status-warn)', error: 'var(--status-err)', info: '#3b82f6', debug: '#8b5cf6' };
+  const levelRows = Object.entries(byLevel).sort(([,a],[,b]) => b - a)
+    .map(([lvl, c]) => `<tr><td style="color:${levelColors[lvl] || 'var(--text-secondary)'}">${lvl}</td><td>${c.toLocaleString()}</td><td>${totalConsole ? (c / totalConsole * 100).toFixed(1) : 0}%</td></tr>`).join('');
 
-  const personaDetails = sorted.map(log => {
-    const pName = PERSONA_KO[log.persona] || log.persona;
-    const pColor = PERSONA_COLORS[log.persona] || '#3b82f6';
-    const apiCalls = log.api_calls || [];
-    const consoleLogs = log.console_logs || [];
-    const s = log.summary || {};
-    const totalApi = s.api_total || apiCalls.length;
-    const totalConsole = s.console_total || consoleLogs.length;
-    const byMethod = s.by_method || {};
-    const byLevel = s.by_level || {};
-    const topUrls = s.top_urls || {};
-    const errors = s.errors || [];
-    const errN = byLevel['error'] || 0;
-    const apiErrors = s.api_errors || [];
-    const apiErrN = s.error_count || 0;
-    const byCategory = s.by_category || {};
+  const apiNote = totalApi === 0 ? `<div style="font-size:11px;color:var(--text-muted);padding:6px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;margin-bottom:12px">ℹ️ API 호출 0건 — 이 게임은 자체 API 서버 대신 Facebook Instant Games 프레임워크를 통해 통신하므로 별도 API 로그가 수집되지 않습니다.</div>` : '';
 
-    // API 에러 배너
-    const apiErrBanner = apiErrN > 0 ? (() => {
-      const catLines = Object.entries(byCategory).sort(([,a],[,b]) => b - a)
-        .map(([cat, cnt]) => `<span style="display:inline-block;background:#7f1d1d44;padding:2px 8px;border-radius:4px;margin:2px 4px 2px 0">${cat} <b>${cnt}</b>건</span>`).join('');
-      const detailRows = apiErrors.slice(0, 10).map(e => {
-        const ev = e.event ? `<span style="background:#1e3a5f;color:#93c5fd;padding:1px 6px;border-radius:4px;font-size:10px;margin-left:4px">${e.event}</span>` : '';
-        const shortUrl = (e.url || '').length > 60 ? e.url.slice(0, 57) + '...' : (e.url || '');
-        return `<tr><td style="white-space:nowrap;font-size:11px;color:var(--text-muted)">${e.ts || ''}</td><td style="font-weight:600">${e.method || ''}</td><td style="color:#f87171;font-weight:700">${e.status}</td><td style="font-size:11px">${e.category}</td><td style="font-size:11px;word-break:break-all">${shortUrl}${ev}</td></tr>`;
-      }).join('');
-      return `<div style="background:#7f1d1d22;border:1px solid #ef4444;border-radius:6px;padding:10px 12px;margin-bottom:10px;font-size:12px">
-        <div style="margin-bottom:6px"><span style="color:var(--status-err);font-weight:700">⚠ API 에러 ${apiErrN}건</span></div>
-        <div style="margin-bottom:8px">${catLines}</div>
-        <table style="width:100%;font-size:11px"><thead><tr><th>시간</th><th>메서드</th><th>상태</th><th>원인</th><th>URL / 이벤트</th></tr></thead><tbody>${detailRows}</tbody></table>
-      </div>`;
-    })() : '';
-
-    // 콘솔 에러 배너
-    const errBanner = errN > 0 ? (() => {
-      const errEntries = errors.filter(e => e.level === 'error');
-      const msgs = errEntries.length
-        ? [...new Set(errEntries.map(e => (e.message || '').slice(0, 100)))]
-        : [`에러 ${errN}건`];
-      return `<div style="background:#7f1d1d22;border:1px solid #ef4444;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:12px">
-        <span style="color:var(--status-err);font-weight:700">콘솔 Error ${errN}건</span>
-        ${msgs.map(m => `<div style="margin-top:4px;word-break:break-all">${m}</div>`).join('')}
-      </div>`;
-    })() : '';
-
-    // 메서드별 + 레벨별
-    const methodRows = Object.entries(byMethod).sort(([,a],[,b]) => b - a)
-      .map(([m, c]) => `<tr><td>${m}</td><td>${c}</td></tr>`).join('');
-    const levelRows = Object.entries(byLevel).sort(([,a],[,b]) => b - a)
-      .map(([lvl, c]) => `<tr><td style="color:${levelColors[lvl] || 'var(--text-secondary)'}">${lvl}</td><td>${c}</td></tr>`).join('');
-
-    // 상위 URL
-    const urlRows = Object.entries(topUrls).sort(([,a],[,b]) => b - a).slice(0, 5)
-      .map(([url, c]) => {
-        const short = url.length > 55 ? url.slice(0, 52) + '...' : url;
-        return `<tr><td style="font-size:11px;word-break:break-all">${short}</td><td>${c}</td></tr>`;
-      }).join('');
-
-    // API 상세
-    const apiRows = apiCalls.slice(0, 100).map(c => {
-      const sc = c.status < 300 ? '#4ade80' : c.status < 400 ? '#facc15' : '#f87171';
-      const short = (c.url || '').length > 70 ? c.url.slice(0, 67) + '...' : (c.url || '');
-      const ev = c.event ? `<span style="background:#1e3a5f;color:#93c5fd;padding:1px 6px;border-radius:4px;font-size:10px;margin-left:4px">${c.event}</span>` : '';
-      const ts = c.ts ? c.ts.split('T')[1]?.slice(0, 8) || c.ts : '';
-      return `<tr><td style="white-space:nowrap;font-size:11px;color:var(--text-muted)">${ts}</td><td style="font-weight:600">${c.method || ''}</td><td style="color:${sc};font-weight:600">${c.status || ''}</td><td style="font-size:11px;word-break:break-all">${short}${ev}</td></tr>`;
-    }).join('');
-
-    // 콘솔 상세
-    const conRows = consoleLogs.slice(0, 100).map(c => {
-      const lc = c.level === 'error' ? 'var(--status-err)' : c.level === 'warn' ? 'var(--status-warn)' : 'var(--text-muted)';
-      const short = (c.msg || '').length > 120 ? c.msg.slice(0, 117) + '...' : (c.msg || '');
-      const ts = c.ts ? (c.ts.includes('T') ? c.ts.split('T')[1]?.slice(0, 8) : c.ts) : '';
-      return `<tr><td style="white-space:nowrap;font-size:11px;color:var(--text-muted)">${ts}</td><td style="color:${lc};font-weight:600;width:45px">${c.level}</td><td style="font-size:11px;word-break:break-all" title="${(c.msg || '').replace(/"/g, '&quot;')}">${short}</td></tr>`;
-    }).join('');
-
-    return `<details style="margin-bottom:8px;border:1px solid var(--border);border-radius:8px;border-left:3px solid ${pColor}">
-      <summary style="cursor:pointer;padding:10px 14px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:10px">
-        <span>${pName}</span>
-        <span style="font-size:11px;font-weight:400;color:var(--text-muted)">API ${totalApi} / 콘솔 ${totalConsole}${apiErrN > 0 ? ` / <span style="color:var(--status-err)">API에러 ${apiErrN}</span>` : ''}${errN > 0 ? ` / <span style="color:var(--status-err)">콘솔에러 ${errN}</span>` : ''}</span>
-      </summary>
-      <div style="padding:10px 14px;border-top:1px solid var(--border)">
-        ${apiErrBanner}
-        ${errBanner}
-        <div class="chart-grid">
-          <div class="tbl-wrap"><h4>API 메서드별</h4>
-            <table><thead><tr><th>메서드</th><th>건수</th></tr></thead>
-            <tbody>${methodRows || '<tr><td colspan="2" style="color:var(--text-muted)">없음</td></tr>'}</tbody></table></div>
-          <div class="tbl-wrap"><h4>콘솔 레벨별</h4>
-            <table><thead><tr><th>레벨</th><th>건수</th></tr></thead>
-            <tbody>${levelRows || '<tr><td colspan="2" style="color:var(--text-muted)">없음</td></tr>'}</tbody></table></div>
-        </div>
-        ${urlRows ? `<div class="tbl-wrap"><h4>상위 API URL</h4><table><thead><tr><th>URL</th><th>건수</th></tr></thead><tbody>${urlRows}</tbody></table></div>` : ''}
-        ${apiRows ? `<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12px;color:var(--text-secondary);padding:6px 0">API 호출 상세 (${Math.min(apiCalls.length,100)}/${totalApi}건)</summary><div class="tbl-wrap" style="margin-top:6px;max-height:350px;overflow-y:auto"><table><thead><tr><th>시간</th><th>메서드</th><th>상태</th><th>URL / 이벤트</th></tr></thead><tbody>${apiRows}</tbody></table></div></details>` : ''}
-        ${conRows ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:var(--text-secondary);padding:6px 0">콘솔 로그 상세 (${Math.min(consoleLogs.length,100)}/${totalConsole}건)</summary><div class="tbl-wrap" style="margin-top:6px;max-height:350px;overflow-y:auto"><table><thead><tr><th>시간</th><th>레벨</th><th>메시지</th></tr></thead><tbody>${conRows}</tbody></table></div></details>` : ''}
-      </div>
-    </details>`;
-  }).join('');
+  // 에러 요약 배너 (error가 있을 때만)
+  const errorBanner = totalErrors > 0 ? (() => {
+    const errOnly = allErrors.filter(e => e.level === 'error');
+    // 메시지가 저장 안 된 경우 by_level 카운트만으로 표시
+    const uniqueMsgs = errOnly.length ? [...new Set(errOnly.map(e => (e.message || '').slice(0, 100)))]
+      : [`(에러 상세 미수집 — 다음 프리플레이부터 자동 수집됩니다)`];
+    const rows = uniqueMsgs.map(msg =>
+      `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px">
+        <span style="color:var(--status-err);font-weight:700">ERROR</span>
+        <span style="flex:1">${msg}</span>
+        <span style="color:var(--text-muted);font-size:11px">${errOnly.filter(e => e.message?.startsWith(msg.slice(0,80))).map(e => e.persona).filter((v,i,a) => a.indexOf(v)===i).join(', ')}</span>
+      </div>`
+    ).join('');
+    return `<div style="background:#7f1d1d22;border:1px solid #ef4444;border-radius:8px;padding:10px 14px;margin-bottom:12px">
+      <div style="font-weight:700;color:var(--status-err);margin-bottom:4px">Error ${totalErrors}건 감지</div>
+      ${rows}
+    </div>`;
+  })() : '';
 
   return `
-    <div class="ov-summary" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-      <span style="font-weight:700;color:#60a5fa">최신 런 서버 로그</span>
-      <span><b>날짜:</b> ${latestDate}</span>
-      <span><b>UID:</b> ${sorted[0].uid || '-'}</span>
-      <span><b>빌드:</b> ${sorted[0].client_ver || '-'}</span>
-      <span><b>페르소나:</b> ${sorted.length}종</span>
-      <span style="color:var(--text-muted);font-size:11px;margin-left:auto">갱신: ${updatedStr}</span>
+    ${apiNote}
+    ${errorBanner}
+    <div class="metric-row">
+      <div class="metric-box"><div class="label">총 API 호출</div><div class="value">${totalApi.toLocaleString()}</div><div class="sub">런당 평균 ${avgApi}</div></div>
+      <div class="metric-box"><div class="label">총 콘솔 로그</div><div class="value">${totalConsole.toLocaleString()}</div><div class="sub">런당 평균 ${avgConsole}</div></div>
+      <div class="metric-box"><div class="label">Error</div><div class="value" style="color:${totalErrors > 0 ? 'var(--status-err)' : 'var(--status-ok)'}">${totalErrors}</div></div>
+      <div class="metric-box"><div class="label">Warn</div><div class="value" style="color:${totalWarns > 0 ? 'var(--status-warn)' : 'var(--status-ok)'}">${totalWarns}</div></div>
+      <div class="metric-box"><div class="label">총 런</div><div class="value">${runs.length}</div></div>
     </div>
-    <div class="persona-grid">${summaryCards}</div>
-    ${personaDetails}
+    <div class="chart-grid">
+      <div class="tbl-wrap"><h4>API 메서드별</h4>
+        <table><thead><tr><th>메서드</th><th>건수</th><th>비율</th></tr></thead>
+        <tbody>${methodRows || '<tr><td colspan="3" style="color:var(--text-muted)">데이터 없음</td></tr>'}</tbody></table></div>
+      <div class="tbl-wrap"><h4>콘솔 레벨별</h4>
+        <table><thead><tr><th>레벨</th><th>건수</th><th>비율</th></tr></thead>
+        <tbody>${levelRows || '<tr><td colspan="3" style="color:var(--text-muted)">데이터 없음</td></tr>'}</tbody></table></div>
+    </div>
+    <div class="tbl-wrap"><h4>상위 API URL (Top 10)</h4>
+      <table><thead><tr><th>URL</th><th>건수</th></tr></thead>
+      <tbody>${urlRows || '<tr><td colspan="2" style="color:var(--text-muted)">데이터 없음</td></tr>'}</tbody></table></div>
+    ${renderConsoleErrors(allErrors)}
   `;
+}
+
+function renderConsoleErrors(allErrors) {
+  if (!allErrors.length) return '';
+
+  // 반복 에러 패턴 집계 (메시지 앞 80자 기준 그룹핑)
+  const patternMap = {};
+  for (const e of allErrors) {
+    const key = (e.message || '').slice(0, 80);
+    if (!patternMap[key]) patternMap[key] = { level: e.level, message: e.message, count: 0, runs: new Set() };
+    patternMap[key].count++;
+    patternMap[key].runs.add(e.run_date + '_' + e.persona);
+  }
+  const topPatterns = Object.values(patternMap).sort((a, b) => b.count - a.count).slice(0, 10);
+
+  const patternRows = topPatterns.map(p => {
+    const lvlColor = p.level === 'error' ? 'var(--status-err)' : 'var(--status-warn)';
+    const short = p.message.length > 100 ? p.message.slice(0, 97) + '...' : p.message;
+    return `<tr>
+      <td style="color:${lvlColor};font-weight:600;width:50px">${p.level}</td>
+      <td style="font-size:11px;word-break:break-all" title="${p.message.replace(/"/g, '&quot;')}">${short}</td>
+      <td style="text-align:center">${p.count}</td>
+      <td style="text-align:center;color:var(--text-muted)">${p.runs.size}</td>
+    </tr>`;
+  }).join('');
+
+  // 최근 에러 목록 (최신순 20건)
+  const recent = [...allErrors].sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || '')).slice(0, 20);
+  const recentRows = recent.map(e => {
+    const lvlColor = e.level === 'error' ? 'var(--status-err)' : 'var(--status-warn)';
+    const short = (e.message || '').length > 120 ? e.message.slice(0, 117) + '...' : (e.message || '');
+    const ts = e.timestamp ? e.timestamp.split('T')[1]?.slice(0, 8) || '' : '';
+    return `<tr>
+      <td style="color:${lvlColor};font-weight:600;width:50px">${e.level}</td>
+      <td style="font-size:11px;word-break:break-all" title="${(e.message || '').replace(/"/g, '&quot;')}">${short}</td>
+      <td style="white-space:nowrap;color:var(--text-muted);font-size:11px">${e.persona || ''}</td>
+      <td style="white-space:nowrap;color:var(--text-muted);font-size:11px">${ts}</td>
+    </tr>`;
+  }).join('');
+
+  const errCount = allErrors.filter(e => e.level === 'error').length;
+  const warnCount = allErrors.filter(e => e.level === 'warn').length;
+
+  return `
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <h4 style="margin:0">콘솔 에러/경고 로그</h4>
+        <span class="badge ${errCount > 0 ? 'badge-err' : 'badge-ok'}" style="font-size:11px">Error ${errCount}</span>
+        <span class="badge" style="font-size:11px;background:var(--status-warn);color:#000">Warn ${warnCount}</span>
+      </div>
+      <div class="chart-grid">
+        <div class="tbl-wrap"><h4>반복 에러 패턴 (Top 10)</h4>
+          <table><thead><tr><th>레벨</th><th>메시지</th><th>횟수</th><th>런 수</th></tr></thead>
+          <tbody>${patternRows}</tbody></table></div>
+        <div class="tbl-wrap"><h4>최근 에러/경고 (최신 20건)</h4>
+          <table><thead><tr><th>레벨</th><th>메시지</th><th>페르소나</th><th>시간</th></tr></thead>
+          <tbody>${recentRows}</tbody></table></div>
+      </div>
+    </div>`;
 }
 
 /* ══════════════════════════════════════════════
@@ -4337,9 +3899,7 @@ function sortStageTable(gameId, colIdx, type) {
   // 데이터행 + 상세행 쌍으로 재배치
   dataRows.forEach(r => {
     tbody.appendChild(r);
-    const cells = r.querySelectorAll('td');
-    const stIdx = cells.length >= 14 ? 1 : 0;  // SCJ(NO+13컬럼)=1, CTZ(8컬럼)=0
-    const st = cells[stIdx]?.textContent.trim();
+    const st = r.querySelectorAll('td')[0]?.textContent.trim();
     const detail = detailRows.find(d => d.id === `ms_${gameId}_${st}`);
     if (detail) tbody.appendChild(detail);
   });
@@ -4367,8 +3927,7 @@ function resetStageSort(gameId) {
   rows.forEach(r => {
     tbody.appendChild(r);
     const cells = r.querySelectorAll('td');
-    const stIdx = cells.length >= 14 ? 1 : 0;  // SCJ(NO+13컬럼)=1, CTZ(8컬럼)=0
-    const st = cells[stIdx]?.textContent.trim();
+    const st = cells[0]?.textContent.trim();
     const detail = detailRows.find(d => d.id === `ms_${gameId}_${st}`);
     if (detail) tbody.appendChild(detail);
   });
@@ -4393,11 +3952,11 @@ function filterStages(gameId) {
   const rows = table.querySelectorAll('tbody tr');
   rows.forEach(row => {
     const cells = row.querySelectorAll('td');
-    if (cells.length < 12) return;
-    const turns = parseFloat(cells[9].textContent) || 0;
-    const ms = parseInt(cells[10].textContent) || 0;
-    const gold = parseInt(cells[8].textContent.replace(/,/g, '')) || 0;
-    const diffText = cells[11].textContent.trim();
+    if (cells.length < 8) return;
+    const turns = parseFloat(cells[4].textContent) || 0;
+    const ms = parseInt(cells[5].textContent) || 0;
+    const gold = parseInt(cells[6].textContent.replace(/,/g, '')) || 0;
+    const diffText = cells[7].textContent.trim();
 
     let show = true;
     // 난이도 필터
@@ -4416,7 +3975,7 @@ function filterStages(gameId) {
     // 배수 필터
     const betVal = document.getElementById(`stg-bet-${gameId}`)?.value || '';
     if (betVal) {
-      const betText = cells[12]?.textContent || '';
+      const betText = cells[8]?.textContent || '';
       if (!betText.includes(`x${betVal}`)) show = false;
     }
     // 모드(페르소나) 필터
@@ -4535,77 +4094,42 @@ function filterRunManager() {
     if (gameFilter && r.game_id !== gameFilter) return false;
     if (personaFilter && r.persona !== personaFilter) return false;
     return true;
+  }).sort((a, b) => {
+    if (a.game_id !== b.game_id) return a.game_id.localeCompare(b.game_id);
+    if (a.run_date !== b.run_date) return b.run_date.localeCompare(a.run_date);
+    return (PERSONA_ORDER.indexOf(a.persona)===-1?99:PERSONA_ORDER.indexOf(a.persona)) - (PERSONA_ORDER.indexOf(b.persona)===-1?99:PERSONA_ORDER.indexOf(b.persona));
   });
 
   if (!filtered.length) {
     listEl.innerHTML = '<div style="color:var(--text-muted);padding:8px;font-size:12px">해당 조건에 데이터 없음</div>';
-    document.getElementById('rm-status').textContent = '0건';
     return;
   }
 
-  // 날짜별 그룹핑
-  const byDate = {};
-  for (const r of filtered) {
-    if (!byDate[r.run_date]) byDate[r.run_date] = [];
-    byDate[r.run_date].push(r);
-  }
-  const sortedDates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
-  const personas = personaFilter ? [personaFilter] : [...new Set(filtered.map(r => r.persona))].sort((a, b) =>
-    (PERSONA_ORDER.indexOf(a)===-1?99:PERSONA_ORDER.indexOf(a)) - (PERSONA_ORDER.indexOf(b)===-1?99:PERSONA_ORDER.indexOf(b))
-  );
-  const games = gameFilter ? [gameFilter] : [...new Set(filtered.map(r => r.game_id))].sort();
-
-  listEl.innerHTML = sortedDates.map((date, di) => {
-    const dayRuns = byDate[date];
-    const gameCounts = {};
-    for (const r of dayRuns) { gameCounts[r.game_id] = (gameCounts[r.game_id] || 0) + 1; }
-    const badges = games.filter(g => gameCounts[g]).map(g => `<span class="rm-game-badge">${g} ${gameCounts[g]}</span>`).join('');
-    const isFirst = di === 0;
-
-    // 게임×페르소나 그리드
-    const gridRows = games.filter(g => dayRuns.some(r => r.game_id === g)).map(g => {
-      const cells = personas.map(p => {
-        const run = dayRuns.find(r => r.game_id === g && r.persona === p);
-        if (!run) return '<td><span class="rm-cell-empty">-</span></td>';
-        const m = run.metrics || {};
-        const goldPnl = m.gold_pnl != null ? m.gold_pnl : null;
-        const goldStr = goldPnl != null ? `<span class="rm-cell-gold" style="color:${goldPnl >= 0 ? 'var(--status-ok)' : 'var(--status-err)'}">${goldPnl >= 0 ? '+' : ''}${goldPnl.toLocaleString()}</span>` : '';
-        const timeStr = run.total_time_sec ? `<span style="color:var(--text-muted);font-size:10px">${Math.round(run.total_time_sec/60)}분</span>` : '';
-        return `<td><div class="rm-cell"><input type="checkbox" class="rm-check" value="${run.id}"><span class="rm-cell-plays">${run.levels_played}판</span>${goldStr}${timeStr}</div></td>`;
-      }).join('');
-      return `<tr><td class="rm-game-label">${g}</td>${cells}</tr>`;
-    }).join('');
-
-    const pHeaders = personas.map(p => `<th style="color:${PERSONA_COLORS[p] || '#999'}">${PERSONA_KO[p] || p}</th>`).join('');
-
-    return `<div class="rm-date-group">
-      <div class="rm-date-header" onclick="this.nextElementSibling.classList.toggle('open');this.querySelector('.rm-arrow').textContent=this.nextElementSibling.classList.contains('open')?'\\u25BC':'\\u25B6'">
-        <span class="rm-arrow">${isFirst ? '\u25BC' : '\u25B6'}</span>
-        <span>${date}</span>
-        <div class="rm-date-badges">${badges}</div>
-        <span style="margin-left:auto;font-size:11px;color:var(--text-muted);font-weight:400">${dayRuns.length}런</span>
-        <label style="font-weight:400;font-size:11px;color:var(--text-muted)" onclick="event.stopPropagation()"><input type="checkbox" class="rm-date-check" data-date="${date}" onclick="toggleDateRuns(this)"> 전체</label>
-      </div>
-      <div class="rm-date-body${isFirst ? ' open' : ''}">
-        <table class="rm-grid"><thead><tr><th></th>${pHeaders}</tr></thead><tbody>${gridRows}</tbody></table>
-      </div>
+  listEl.innerHTML = filtered.map(r => {
+    const m = r.metrics || {};
+    const pColor = PERSONA_COLORS[r.persona] || '#999';
+    const pName = PERSONA_KO[r.persona] || r.persona;
+    const goldPnl = m.gold_pnl != null ? m.gold_pnl.toLocaleString() : '-';
+    const goldColor = (m.gold_pnl || 0) >= 0 ? 'var(--status-ok)' : 'var(--status-err)';
+    return `<div class="rm-row" data-run-id="${r.id}">
+      <input type="checkbox" class="rm-check" value="${r.id}">
+      <span style="font-weight:600;min-width:36px;color:var(--text-muted)">${r.game_id}</span>
+      <span style="min-width:80px">${r.run_date}</span>
+      <span style="color:${pColor};font-weight:600;min-width:40px">${pName}</span>
+      <span style="min-width:50px">${r.levels_played}판</span>
+      <span style="color:${goldColor};min-width:70px">골드 ${goldPnl}</span>
+      <span style="color:var(--text-muted);min-width:50px">${r.total_time_sec ? Math.round(r.total_time_sec) + '초' : '-'}</span>
+      <span style="color:var(--text-muted);font-size:10px">${r.id.slice(0, 8)}</span>
     </div>`;
   }).join('');
 
-  document.getElementById('rm-status').textContent = `${filtered.length}건 (${sortedDates.length}일)`;
+  document.getElementById('rm-status').textContent = `${filtered.length}건 표시`;
   const selectAll = document.getElementById('rm-select-all');
   if (selectAll) selectAll.checked = false;
 }
 
-function toggleDateRuns(el) {
-  const date = el.dataset.date;
-  const group = el.closest('.rm-date-group');
-  if (!group) return;
-  group.querySelectorAll('.rm-check').forEach(cb => cb.checked = el.checked);
-}
-
 function toggleAllRuns(checked) {
-  document.querySelectorAll('.rm-check, .rm-date-check').forEach(cb => cb.checked = checked);
+  document.querySelectorAll('.rm-check').forEach(cb => cb.checked = checked);
 }
 
 async function deleteSelectedRuns() {
@@ -4832,6 +4356,53 @@ async function renderDbUsage() {
   }
 }
 
+/* ── 쿠키 만료 상태 ── */
+
+function renderCookieStatus() {
+  const section = document.getElementById('cookie-status-section');
+  if (!section) return;
+
+  const cookies = [
+    { game: 'SCJ', expiry: '2027-05-28', color: '#3b82f6' },
+    { game: 'CTZ', expiry: '2027-04-10', color: '#f59e0b' },
+    { game: 'PBM', expiry: '2027-05-12', color: '#a855f7' },
+    { game: 'MJG', expiry: '2027-05-26', color: '#06b6d4' },
+    { game: 'CM',  expiry: '2027-05-27', color: '#10b981' },
+  ];
+
+  const now = new Date();
+  const rows = cookies.map(c => {
+    const exp = new Date(c.expiry);
+    const days = Math.ceil((exp - now) / 86400000);
+    let statusColor, statusLabel;
+    if (days <= 0) { statusColor = 'var(--status-err)'; statusLabel = '만료됨'; }
+    else if (days <= 30) { statusColor = 'var(--status-err)'; statusLabel = `${days}일 (긴급)`; }
+    else if (days <= 90) { statusColor = 'var(--status-warn)'; statusLabel = `${days}일`; }
+    else { statusColor = 'var(--status-ok)'; statusLabel = `${days}일`; }
+    return `<tr>
+      <td><span style="color:${c.color};font-weight:700">${c.game}</span></td>
+      <td>${c.expiry}</td>
+      <td style="color:${statusColor};font-weight:600">${statusLabel}</td>
+    </tr>`;
+  }).join('');
+
+  const minDays = Math.min(...cookies.map(c => Math.ceil((new Date(c.expiry) - now) / 86400000)));
+  const summaryColor = minDays <= 30 ? 'var(--status-err)' : minDays <= 90 ? 'var(--status-warn)' : 'var(--status-ok)';
+
+  section.innerHTML = `
+    <div class="tbl-wrap">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span style="font-weight:700;font-size:14px">쿠키 상태</span>
+        <span style="font-size:12px;color:${summaryColor}">최소 ${minDays}일 남음</span>
+      </div>
+      <table>
+        <thead><tr><th>게임</th><th>만료일</th><th>남은 기간</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
 /* ── 이슈 요약 업데이트 (백그라운드 runs fetch 후 호출) ── */
 
 function updateIssueSummary(games) {
@@ -4864,142 +4435,9 @@ function showToast(msg, duration = 3000) {
   }, duration);
 }
 
-/* ── 브라우저 데스크톱 알림 ── */
-
-let _notifEnabled = localStorage.getItem('notif_enabled') === 'true';
-
-function updateNotifBtn() {
-  const btn = document.getElementById('notifBtn');
-  if (!btn) return;
-  if (!('Notification' in window)) {
-    btn.style.display = 'none';
-    return;
-  }
-  if (Notification.permission === 'granted' && _notifEnabled) {
-    btn.style.background = '#3b82f6';
-    btn.style.color = '#fff';
-    btn.title = '데스크톱 알림 ON (클릭하여 끄기)';
-  } else {
-    btn.style.background = '';
-    btn.style.color = '';
-    btn.title = '데스크톱 알림 OFF (클릭하여 켜기)';
-  }
-}
-
-async function toggleNotifPermission() {
-  if (!('Notification' in window)) {
-    showToast('이 브라우저는 알림을 지원하지 않습니다.');
-    return;
-  }
-  if (Notification.permission === 'granted' && _notifEnabled) {
-    _notifEnabled = false;
-    localStorage.setItem('notif_enabled', 'false');
-    showToast('데스크톱 알림을 끕니다.');
-  } else if (Notification.permission === 'denied') {
-    showToast('브라우저 설정에서 알림을 허용해주세요.', 5000);
-  } else {
-    const perm = await Notification.requestPermission();
-    if (perm === 'granted') {
-      _notifEnabled = true;
-      localStorage.setItem('notif_enabled', 'true');
-      showToast('데스크톱 알림이 활성화되었습니다!');
-      playNotifSound();
-    } else {
-      showToast('알림 권한이 거부되었습니다.');
-    }
-  }
-  updateNotifBtn();
-}
-
-function sendBrowserNotif(title, body, tag) {
-  if (!_notifEnabled || Notification.permission !== 'granted') return;
-  try {
-    const n = new Notification(title, {
-      body,
-      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🎮</text></svg>',
-      tag: tag || 'dashboard-' + Date.now(),
-      requireInteraction: true
-    });
-    n.onclick = () => { window.focus(); n.close(); };
-    playNotifSound();
-  } catch (e) { console.warn('Notification 실패:', e); }
-}
-
-function playNotifSound() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(880, ctx.currentTime);
-    osc.frequency.setValueAtTime(1047, ctx.currentTime + 0.1);
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.3);
-  } catch (e) { /* 소리 재생 실패 무시 */ }
-}
-
-/* ── 알림 패널 ── */
-
-let _notifItems = [];
-
-function toggleNotifPanel() {
-  document.getElementById('notif-panel').classList.toggle('open');
-}
-
-function addNotifItem(game, persona, detail) {
-  const ts = new Date().toLocaleTimeString('ko', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  const pName = PERSONA_KO[persona] || persona;
-  _notifItems.unshift({ game, persona: pName, detail, ts, id: Date.now() });
-  if (_notifItems.length > 50) _notifItems.pop();
-  renderNotifList();
-  updateNotifBadge();
-}
-
-function removeNotifItem(id) {
-  _notifItems = _notifItems.filter(n => n.id !== id);
-  renderNotifList();
-  updateNotifBadge();
-}
-
-function clearAllNotifs() {
-  _notifItems = [];
-  renderNotifList();
-  updateNotifBadge();
-}
-
-function renderNotifList() {
-  const list = document.getElementById('notif-list');
-  if (!_notifItems.length) {
-    list.innerHTML = '<div class="notif-empty">알림이 없습니다</div>';
-    return;
-  }
-  list.innerHTML = _notifItems.map(n =>
-    `<div class="notif-item">
-      <span class="notif-time">${n.ts}</span>
-      <span class="notif-msg"><b>${n.game}</b> / ${n.persona}<br>${n.detail}</span>
-      <button class="notif-dismiss" onclick="removeNotifItem(${n.id})" title="삭제">&times;</button>
-    </div>`
-  ).join('');
-}
-
-function updateNotifBadge() {
-  const badge = document.getElementById('notif-badge');
-  if (_notifItems.length > 0) {
-    badge.textContent = _notifItems.length;
-    badge.style.display = 'flex';
-  } else {
-    badge.style.display = 'none';
-  }
-}
-
 /* ── Realtime 구독 ── */
 
 let _realtimeChannel = null;
-let _lastServerLogNotif = {};
 let _rtRetryCount = 0;
 const RT_MAX_RETRIES = 5;
 
@@ -5025,7 +4463,7 @@ function subscribeRealtime() {
       { event: 'INSERT', schema: 'public', table: 'freeplay_runs' },
       async (payload) => {
         await refreshOverviewFromViews();
-        // 토스트/브라우저 알림은 server_logs 구독에서 통합 처리 (중복 방지)
+        showToast(`새 런 도착: ${payload.new.game_id} / ${payload.new.persona}`);
         if (_currentGameId === payload.new.game_id) {
           await refreshCurrentGameDetail();
         }
@@ -5047,35 +4485,8 @@ function subscribeRealtime() {
           _nruRuns = await fetchNruRuns();
           renderNruSummary(_nruRuns);
           const status = payload.new.ready ? 'PASS' : 'FAIL';
-          const nruMsg = `NRU 결과 도착: ${status} (Lv${payload.new.levels_cleared})`;
-          showToast(nruMsg);
-          sendBrowserNotif('🧪 NRU 테스트 완료', `${status} — Lv${payload.new.levels_cleared} 클리어`, 'nru-' + payload.new.id);
+          showToast(`NRU 결과 도착: ${status} (Lv${payload.new.levels_cleared})`);
         } catch (e) { console.warn('nru_runs 갱신 실패:', e.message); }
-      }
-    )
-    .on('postgres_changes',
-      { event: '*', schema: 'public', table: 'server_logs' },
-      async (payload) => {
-        const row = payload.new;
-        const dedupKey = `${row.game_id}_${row.persona}`;
-        const now = Date.now();
-        if (_lastServerLogNotif[dedupKey] && now - _lastServerLogNotif[dedupKey] < 60000) return;
-        _lastServerLogNotif[dedupKey] = now;
-        const pName = PERSONA_KO[row.persona] || row.persona;
-        const apiN = (row.summary || {}).api_total || 0;
-        const conN = (row.summary || {}).console_total || 0;
-        const buildStr = row.client_ver ? ` (빌드 ${row.client_ver})` : '';
-        const uidStr = row.uid ? ` [${row.uid}]` : '';
-        const detailMsg = `API ${apiN}건, 콘솔 ${conN}건${buildStr}${uidStr}`;
-        showToast(`${row.game_id} / ${pName} 완료 — ${detailMsg}`);
-        addNotifItem(row.game_id, row.persona, detailMsg);
-        sendBrowserNotif(
-          `${row.game_id} 오토플레이 완료`,
-          `${pName} — API ${apiN}건, 콘솔 ${conN}건${buildStr}${uidStr}`,
-          'serverlog-' + row.game_id + '-' + row.persona
-        );
-        // server_logs 캐시 갱신
-        fetchServerLogs().then(logs => { _serverLogs = logs; });
       }
     )
     .on('postgres_changes',
@@ -5133,10 +4544,8 @@ async function refreshOverviewFromViews() {
 async function refreshCurrentGameDetail() {
   if (!_currentGameId) return;
   try {
-    const [stages, gameRuns] = await Promise.all([
-      fetchStages(_currentGameId),
-      fetchGameRuns(_currentGameId)
-    ]);
+    const stages = await fetchStages(_currentGameId);
+    const gameRuns = _allRuns.filter(r => r.game_id === _currentGameId);
     _currentGameStages = stages;
     _currentGameRuns = gameRuns;
     _renderedCats = {};
@@ -5162,7 +4571,6 @@ async function init() {
   applyTheme(getTheme());
   document.documentElement.style.setProperty('--fs-scale', FS_STEPS[fsIdx]);
   restoreSidebar();
-  updateNotifBtn();
 
   try {
     loadingEl.style.display = 'flex';
@@ -5195,11 +4603,8 @@ async function init() {
     // Realtime 구독 시작
     subscribeRealtime();
 
-    // Background: server_logs fetch (최신 런 서버 로그)
-    _serverLogsPromise = fetchServerLogs().then(logs => { _serverLogs = logs; return logs; }).catch(e => { console.warn('server_logs fetch 실패:', e.message); return {}; });
-
     // Background: runs fetch (런 관리자 + 이슈 카운트 + 게임 상세 탭용)
-    _runsPromise = fetchRuns().then(runs => {
+    fetchRuns().then(runs => {
       _allRuns = runs;
       renderRunManager(runs);
       // 이슈 카운트 업데이트
@@ -5212,11 +4617,7 @@ async function init() {
         }
       }
       updateIssueSummary(_overviewGames);
-      return runs;
-    }).catch(e => {
-      console.warn('runs 백그라운드 fetch 실패:', e.message);
-      return [];
-    });
+    }).catch(e => console.warn('runs 백그라운드 fetch 실패:', e.message));
 
   } catch (e) {
     loadingEl.style.display = 'none';
@@ -5370,61 +4771,6 @@ function resetLayout() {
 /* ═══════════════════════════════════════════════════════
    사이드바
    ═══════════════════════════════════════════════════════ */
-
-/* ── 사이드바 순서 변경 (드래그 앤 드롭) ── */
-let _sidebarGamesSortable = null;
-let _sidebarSystemSortable = null;
-
-function initSidebarSortable() {
-  const sortOpts = {
-    animation: 150,
-    ghostClass: 'sidebar-sortable-ghost',
-    chosenClass: 'sidebar-sortable-chosen',
-    dragClass: 'sidebar-sortable-drag',
-    handle: '.drag-grip',
-    dataIdAttr: 'data-id',
-  };
-  const gamesEl = document.getElementById('sidebar-games');
-  if (gamesEl) {
-    if (_sidebarGamesSortable) _sidebarGamesSortable.destroy();
-    _sidebarGamesSortable = new Sortable(gamesEl, {
-      ...sortOpts,
-      onEnd() { saveSidebarOrder('games', gamesEl); }
-    });
-  }
-  const systemEl = document.getElementById('sidebar-system');
-  if (systemEl && !_sidebarSystemSortable) {
-    restoreSidebarOrder('system', systemEl);
-    _sidebarSystemSortable = new Sortable(systemEl, {
-      ...sortOpts,
-      onEnd() { saveSidebarOrder('system', systemEl); }
-    });
-  }
-}
-
-function saveSidebarOrder(section, container) {
-  const order = Array.from(container.children)
-    .map(el => el.dataset.id).filter(Boolean);
-  localStorage.setItem(`dash_sidebar_${section}_order`, JSON.stringify(order));
-}
-
-function restoreSidebarOrder(section, container) {
-  const saved = localStorage.getItem(`dash_sidebar_${section}_order`);
-  if (!saved) return;
-  try {
-    const order = JSON.parse(saved);
-    const map = {};
-    Array.from(container.children).forEach(el => {
-      if (el.dataset.id) map[el.dataset.id] = el;
-    });
-    // 저장된 순서대로 재배치
-    for (const id of order) {
-      if (map[id]) { container.appendChild(map[id]); delete map[id]; }
-    }
-    // 저장 안 된 새 항목은 뒤에 유지
-    for (const el of Object.values(map)) container.appendChild(el);
-  } catch(e) { /* ignore */ }
-}
 
 function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
