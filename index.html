@@ -4250,6 +4250,7 @@ function renderCatSecurity(gameId, runs) {
   const allChecks = [];
   let totalPass = 0, totalFail = 0, apiErrors = 0, apiTotal = 0;
   let critical = 0, warning = 0, info = 0;
+  let securityFail = 0; // balance 제외 보안 전용 fail
   const clientChecks = { xss: [], storage: [], https: [], authority: [] };
   const serverChecks = { headers: [], infoLeak: [], idor: [], apiErr: [] };
   const balanceChecks = { pass: 0, fail: 0, items: [] };
@@ -4264,8 +4265,11 @@ function renderCatSecurity(gameId, runs) {
         allChecks.push({ ...c, persona: r.persona, date: r.run_date });
         // 카테고리 분류
         const cat = (c.category || '').toLowerCase();
-        if (cat.includes('balance') || (c.name && c.name.includes('입장료'))) {
+        const isBalance = cat.includes('balance') || (c.name && c.name.includes('입장료'));
+        if (isBalance) {
           if (c.pass) balanceChecks.pass++; else { balanceChecks.fail++; balanceChecks.items.push(c); }
+        } else if (!c.pass) {
+          securityFail++;
         }
       }
     }
@@ -4300,9 +4304,9 @@ function renderCatSecurity(gameId, runs) {
   const totalAll = totalPass + totalFail + critical + warning + info;
   let gradeLabel, gradeColor;
   if (critical > 0) { gradeLabel = 'F'; gradeColor = '#ef4444'; }
-  else if (totalFail > 10 || warning > 5) { gradeLabel = 'D'; gradeColor = '#ef4444'; }
-  else if (totalFail > 3 || warning > 2) { gradeLabel = 'C'; gradeColor = '#f59e0b'; }
-  else if (totalFail > 0 || warning > 0) { gradeLabel = 'B'; gradeColor = '#f59e0b'; }
+  else if (securityFail > 10 || warning > 5) { gradeLabel = 'D'; gradeColor = '#ef4444'; }
+  else if (securityFail > 3 || warning > 2) { gradeLabel = 'C'; gradeColor = '#f59e0b'; }
+  else if (securityFail > 0 || warning > 0) { gradeLabel = 'B'; gradeColor = '#f59e0b'; }
   else { gradeLabel = 'A'; gradeColor = '#10b981'; }
 
   // ── 섹션 렌더 헬퍼 ──
@@ -4321,10 +4325,10 @@ function renderCatSecurity(gameId, runs) {
     <div style="display:flex;align-items:center;gap:16px;padding:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;margin-bottom:16px">
       <div style="font-size:48px;font-weight:800;color:${gradeColor};min-width:60px;text-align:center">${gradeLabel}</div>
       <div style="flex:1">
-        <div style="font-size:14px;font-weight:600;margin-bottom:6px">보안 종합 등급</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:6px">보안 종합 등급 <span style="font-size:11px;font-weight:400;color:var(--text-muted)">(최신 런 기준, 밸런스 별도)</span></div>
         <div style="display:flex;gap:16px;font-size:12px;flex-wrap:wrap">
           <span style="color:#ef4444">Critical ${critical}건</span>
-          <span style="color:#f59e0b">Warning ${warning + totalFail}건</span>
+          <span style="color:#f59e0b">Warning ${warning + securityFail}건</span>
           <span style="color:var(--status-ok)">Pass ${totalPass}건</span>
           <span style="color:var(--text-muted)">API 에러 ${apiErrors}건 / ${apiTotal.toLocaleString()}</span>
         </div>
