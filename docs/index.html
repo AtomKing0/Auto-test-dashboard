@@ -1959,8 +1959,8 @@ async function switchTab(id, _btn) {
 const NRU_TUTORIAL_ALL = [
   { key: 230001, content_id: 'content_ingame_intro', name: '인게임 소개', scene: 'ingame', trigger: 'tutorial_level', triggerVal: 1, type: 'floating' },
   { key: 230002, content_id: 'content_deck_draw', name: '덱 드로우 안내', scene: 'ingame', trigger: 'tutorial_level', triggerVal: 2, type: 'floating' },
-  { key: 230003, content_id: 'content_lobby_play', name: '로비 플레이 버튼', scene: 'lobby', trigger: 'level_clear', triggerVal: 1, type: 'focus', node: 'LOBBYPLAYBUTTON' },
-  { key: 230004, content_id: 'content_shop', name: '상점 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 3, type: 'focus', node: 'SHOPBUTTON' },
+  { key: 230003, content_id: 'content_lobby_play', name: '로비 플레이 버튼', scene: 'lobby', trigger: 'level_clear', triggerVal: 1, type: 'focus', node: 'LOBBYPLAYBUTTON', skip: 'specout' },
+  { key: 230004, content_id: 'content_shop', name: '상점 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 3, type: 'focus', node: 'SHOPBUTTON', skip: 'specout' },
   { key: 230005, content_id: 'content_pre_level_popup', name: '프리레벨 팝업', scene: 'pre_level', trigger: 'level_clear', triggerVal: 2, type: 'focus', node: 'PLAYBUTTON' },
   { key: 230006, content_id: 'content_idle_gold', name: '방치 골드 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 4, type: 'focus', node: 'IDLEGOLDBUTTON' },
   { key: 230007, content_id: 'gimmick_plus_card', name: '플러스 카드 기믹', scene: 'ingame', trigger: 'first_appear', triggerVal: 'plus_card', type: 'focus' },
@@ -1968,14 +1968,14 @@ const NRU_TUTORIAL_ALL = [
   { key: 230009, content_id: 'content_daily_task', name: '일일 과제 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 10, type: 'focus', node: 'DAILYTASK' },
   { key: 230010, content_id: 'content_streak', name: '스트릭 미터 안내', scene: 'ingame', trigger: 'first_appear', triggerVal: 'streak_meter', type: 'focus', node: 'INGAMESTREAK' },
   { key: 230011, content_id: 'content_leaderboard', name: '리더보드 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 5, type: 'focus', node: 'LEADERBOARDBUTTON' },
-  { key: 230012, content_id: 'content_collection', name: '컬렉션 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 6, type: 'focus', skip: 'notimpl' },
+  { key: 230012, content_id: 'content_collection', name: '컬렉션 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 6, type: 'focus', node: 'ALBUM' },
   { key: 230013, content_id: 'booster_wild_card', name: '와일드카드 부스터', scene: 'ingame', trigger: 'first_appear', triggerVal: 'wild_card', type: 'floating' },
   { key: 230014, content_id: 'booster_fireworks', name: '불꽃놀이 부스터', scene: 'pre_level', trigger: 'level_clear', triggerVal: 8, type: 'focus', node: 'BOOSTER1' },
   { key: 230015, content_id: 'booster_undo', name: '되돌리기 부스터', scene: 'ingame', trigger: 'first_appear', triggerVal: 'undo', type: 'floating' },
   { key: 230016, content_id: 'booster_extra_deck', name: '추가 덱 부스터', scene: 'ingame', trigger: 'condition', triggerVal: 'deck_exhausted', type: 'floating' },
   { key: 230017, content_id: 'content_city_deco_grad', name: '도시 꾸미기 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 8, type: 'focus', node: 'DECOBUTTON' },
   { key: 230018, content_id: 'content_betting_2', name: '베팅 x2 안내', scene: 'pre_level', trigger: 'level_clear', triggerVal: 9, type: 'focus', node: 'BETTINGBUTTON' },
-  { key: 230019, content_id: 'content_daily_wheel', name: '일일 룰렛 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 9, type: 'focus', skip: 'notimpl' },
+  { key: 230019, content_id: 'content_daily_wheel', name: '일일 룰렛 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 9, type: 'focus', node: 'daily_wheel' },
   { key: 230020, content_id: 'content_event_forced', name: '이벤트 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 12, type: 'focus', node: 'EVENTBUTTON' },
   { key: 230021, content_id: 'gimmick_runner_card', name: '러너 카드 기믹', scene: 'ingame', trigger: 'first_appear', triggerVal: 'runner_card', type: 'focus' },
   { key: 230022, content_id: 'content_betting_4', name: '베팅 x4 안내', scene: 'pre_level', trigger: 'level_clear', triggerVal: 17, type: 'focus', node: 'BETTINGBUTTON' },
@@ -2045,7 +2045,7 @@ function _renderNruTutorialSection(latestRun) {
   }
 
   // NRU Lv1-24 범위에서 발생 가능한 튜토리얼 필터 (level_clear ≤ 24, tutorial_level ≤ 24)
-  const SKIP_KR = { notimpl: '미구현', condition: '조건 미충족', touch: '터치 전용', repeat_tip: '반복 팁', no_check: '확인 불필요' };
+  const SKIP_KR = { notimpl: '미구현', specout: '스펙 제외', condition: '조건 미충족', touch: '터치 전용', repeat_tip: '반복 팁', no_check: '확인 불필요' };
   const expectedInNru = NRU_TUTORIAL_ALL.filter(d => {
     if (d.trigger === 'level_clear' && typeof d.triggerVal === 'number' && d.triggerVal <= 25) return true;
     if (d.trigger === 'tutorial_level' && typeof d.triggerVal === 'number' && d.triggerVal <= 25) return true;
@@ -4133,6 +4133,13 @@ function renderCatStages(gameId, stages) {
    카테고리: 보안 QA
    ══════════════════════════════════════════════ */
 function renderCatSecurity(gameId, runs) {
+  // ── 최신 런만 사용 (페르소나별 마지막 1건) ──
+  const latestByPersona = {};
+  for (const r of runs) {
+    if (!latestByPersona[r.persona]) latestByPersona[r.persona] = r;
+  }
+  const latestRuns = Object.values(latestByPersona);
+
   // ── 데이터 집계 ──
   const allChecks = [];
   let totalPass = 0, totalFail = 0, apiErrors = 0, apiTotal = 0;
@@ -4141,7 +4148,7 @@ function renderCatSecurity(gameId, runs) {
   const serverChecks = { headers: [], infoLeak: [], idor: [], apiErr: [] };
   const balanceChecks = { pass: 0, fail: 0, items: [] };
 
-  for (const r of runs) {
+  for (const r of latestRuns) {
     const m = r.metrics || {};
     const sec = m.security;
     if (sec) {
