@@ -3977,7 +3977,7 @@ function renderRuntimeScan(rt) {
     <div class="mini-card"><div class="stat-label">전체 노드</div><div class="stat-value">${total}</div></div>
     <div class="mini-card"><div class="stat-label">활성</div><div class="stat-value" style="color:var(--status-ok)">${active}</div></div>
     <div class="mini-card"><div class="stat-label">비활성</div><div class="stat-value" style="color:${ratioColor}">${inactive} <span style="font-size:11px">(${inactiveRatio}%)</span></div></div>
-    <div class="mini-card"><div class="stat-label">고아 노드</div><div class="stat-value" style="color:${orphans.length > 0 ? 'var(--status-err)' : 'var(--status-ok)'}">${orphans.length}</div></div>
+    <div class="mini-card"><div class="stat-label">미연결 노드</div><div class="stat-value" style="color:${orphans.length > 0 ? 'var(--status-err)' : 'var(--status-ok)'}">${orphans.length}</div></div>
     <div class="mini-card"><div class="stat-label">트리 깊이</div><div class="stat-value">${maxD}</div></div>
     <div class="mini-card"><div class="stat-label">JS Heap</div><div class="stat-value">${tex.js_heap_mb || '-'}MB</div></div>
   </div>`;
@@ -4002,9 +4002,9 @@ function renderRuntimeScan(rt) {
     ${inactiveN.slice(0,30).map(n => `<tr><td style="font-weight:600">${n.name}</td><td style="font-size:11px;word-break:break-all;color:var(--text-muted)">${n.path}</td><td style="font-size:11px">${(n.components||[]).join(', ')||'-'}</td><td>${n.child_count||0}</td><td>${n.descendant_count||0}</td></tr>`).join('')}
     </tbody></table></div></details>` : '';
 
-  // 고아 노드
+  // 미연결 노드
   const reasonKo = {active_under_inactive_parent:'비활성 부모 아래 활성', empty_leaf:'빈 리프 노드'};
-  const orphanHtml = orphans.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#fb923c;padding:6px 0">고아 노드 (${orphans.length}개)</summary>
+  const orphanHtml = orphans.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#fb923c;padding:6px 0">미연결 노드 (${orphans.length}개)</summary>
     <div class="tbl-wrap" style="margin-top:4px;max-height:200px;overflow-y:auto"><table><thead><tr><th>이름</th><th>경로</th><th>사유</th><th>컴포넌트</th></tr></thead><tbody>
     ${orphans.slice(0,20).map(n => `<tr><td style="font-weight:600">${n.name}</td><td style="font-size:11px;color:var(--text-muted)">${n.path}</td><td><span style="background:#7c2d12;color:#fb923c;padding:1px 6px;border-radius:4px;font-size:10px">${reasonKo[n.reason]||n.reason}</span></td><td style="font-size:11px">${(n.components||[]).join(', ')||'-'}</td></tr>`).join('')}
     </tbody></table></div></details>` : '';
@@ -4290,9 +4290,9 @@ function renderCombinedRuntimeScan(logs) {
     ${inactiveArr.slice(0,30).map(n => `<tr><td style="font-weight:600">${n.name}</td><td style="font-size:11px;word-break:break-all;color:var(--text-muted)">${n.path}</td><td style="font-size:11px">${(n.components||[]).join(', ')||'-'}</td><td>${n.child_count||0}</td><td>${n.descendant_count||0}</td></tr>`).join('')}
     </tbody></table></div></details>` : '';
 
-  // 고아 노드
+  // 미연결 노드
   const reasonKo = {active_under_inactive_parent:'비활성 부모 아래 활성', empty_leaf:'빈 리프 노드'};
-  const orphanHtml = orphanArr.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#fb923c;padding:6px 0">고아 노드 (${orphanArr.length}개)</summary>
+  const orphanHtml = orphanArr.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#fb923c;padding:6px 0">미연결 노드 (${orphanArr.length}개)</summary>
     <div class="tbl-wrap" style="margin-top:4px;max-height:200px;overflow-y:auto"><table><thead><tr><th>이름</th><th>경로</th><th>사유</th><th>컴포넌트</th></tr></thead><tbody>
     ${orphanArr.slice(0,20).map(n => `<tr><td style="font-weight:600">${n.name}</td><td style="font-size:11px;color:var(--text-muted)">${n.path}</td><td><span style="background:#7c2d12;color:#fb923c;padding:1px 6px;border-radius:4px;font-size:10px">${reasonKo[n.reason]||n.reason}</span></td><td style="font-size:11px">${(n.components||[]).join(', ')||'-'}</td></tr>`).join('')}
     </tbody></table></div></details>` : '';
