@@ -2081,6 +2081,7 @@ const CATEGORY_RENDERERS = {
   stages: (gid, stages, runs) => renderCatStages(gid, stages),
   security: (gid, stages, runs) => renderCatSecurity(gid, runs),
   logapi: (gid, stages, runs) => renderCatLogApi(gid, runs),
+  runtime: (gid, stages, runs) => renderCatRuntime(gid, runs),
   perf: (gid, stages, runs) => '<div class="state-msg"><div class="icon">⏳</div><div>성능 데이터 로딩 중...</div></div>',
   // SCJ 전용
   economy: (gid, stages, runs) => renderCatEconomy(gid, stages, runs),
@@ -3798,6 +3799,13 @@ function renderCatStages(gameId, stages) {
    카테고리: 보안 QA
    ══════════════════════════════════════════════ */
 function renderCatSecurity(gameId, runs) {
+  // ── 최신 런만 사용 (페르소나별 마지막 1건) ──
+  const latestByPersona = {};
+  for (const r of runs) {
+    if (!latestByPersona[r.persona]) latestByPersona[r.persona] = r;
+  }
+  const latestRuns = Object.values(latestByPersona);
+
   // ── 데이터 집계 ──
   const allChecks = [];
   let totalPass = 0, totalFail = 0, apiErrors = 0, apiTotal = 0;
@@ -3806,7 +3814,7 @@ function renderCatSecurity(gameId, runs) {
   const serverChecks = { headers: [], infoLeak: [], idor: [], apiErr: [] };
   const balanceChecks = { pass: 0, fail: 0, items: [] };
 
-  for (const r of runs) {
+  for (const r of latestRuns) {
     const m = r.metrics || {};
     const sec = m.security;
     if (sec) {
@@ -4226,7 +4234,6 @@ function renderCatLogApi(gameId, runs) {
     </div>
     <div class="persona-grid">${summaryCards}</div>
     ${personaDetails}
-    ${renderCombinedRuntimeScan(sorted)}
   `;
 }
 
@@ -4311,15 +4318,24 @@ function renderCombinedRuntimeScan(logs) {
     }).join('')}
     </tbody></table></div></details>` : '';
 
-  // HTTP 엔드포인트 (P95/P99 포함)
-  const httpHtml = httpArr.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#34d399;padding:6px 0">HTTP 통신 패턴 (${httpArr.length}개 엔드포인트)</summary>
-    <div class="tbl-wrap" style="margin-top:4px;max-height:250px;overflow-y:auto"><table><thead><tr><th>경로</th><th style="text-align:right">호출수</th><th style="text-align:right">P50</th><th style="text-align:right">평균</th><th style="text-align:right">P95</th><th style="text-align:right">P99</th><th style="text-align:right">최대</th></tr></thead><tbody>
-    ${httpArr.slice(0,20).map(ep => {
+  // HTTP 엔드포인트 (P95/P99 + 자사/외부 분류)
+  const internalHttp = httpArr.filter(ep => ep.source === 'internal');
+  const externalHttp = httpArr.filter(ep => ep.source !== 'internal');
+  function httpTable(eps, label, color) {
+    if (!eps.length) return '';
+    return `<div style="margin-top:6px"><div style="font-size:12px;font-weight:600;color:${color};margin-bottom:4px">${label} (${eps.length}개)</div>
+    <div class="tbl-wrap" style="max-height:250px;overflow-y:auto"><table><thead><tr><th>경로</th><th style="text-align:right">호출수</th><th style="text-align:right">P50</th><th style="text-align:right">평균</th><th style="text-align:right">P95</th><th style="text-align:right">P99</th><th style="text-align:right">최대</th></tr></thead><tbody>
+    ${eps.slice(0,20).map(ep => {
       const p95c = (ep.p95_ms||0) > 1000 ? 'var(--status-err)' : (ep.p95_ms||0) > 500 ? 'var(--status-warn)' : 'var(--status-ok)';
       const p99c = (ep.p99_ms||0) > 1000 ? 'var(--status-err)' : (ep.p99_ms||0) > 500 ? 'var(--status-warn)' : 'var(--text-muted)';
       return '<tr><td style="font-size:11px;word-break:break-all">'+(ep.path||ep.url)+'</td><td style="text-align:right;font-weight:600">'+ep.count+'</td><td style="text-align:right;color:var(--text-muted)">'+(ep.p50_ms||'-')+'ms</td><td style="text-align:right">'+ep.avg_duration_ms+'ms</td><td style="text-align:right;color:'+p95c+';font-weight:600">'+(ep.p95_ms||'-')+'ms</td><td style="text-align:right;color:'+p99c+'">'+(ep.p99_ms||'-')+'ms</td><td style="text-align:right;color:var(--text-muted)">'+ep.max_duration_ms+'ms</td></tr>';
     }).join('')}
-    </tbody></table></div></details>` : '';
+    </tbody></table></div></div>`;
+  }
+  const httpHtml = httpArr.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#34d399;padding:6px 0">HTTP 통신 패턴 (자사 ${internalHttp.length}개 / 외부 ${externalHttp.length}개)</summary>
+    ${httpTable(internalHttp, '자사 API', '#4ade80')}
+    ${httpTable(externalHttp, '외부 API', '#94a3b8')}
+  </details>` : '';
 
   // 이상 탐지 배너
   const allIssues = scans.flatMap(rt => rt.issues || []);
@@ -4360,6 +4376,36 @@ function renderCombinedRuntimeScan(logs) {
     ${issueHtml}
     ${mgrHtml}${inactiveHtml}${orphanHtml}${unusedHtml}${httpHtml}${texHtml}
   </div>`;
+}
+
+/* ══════════════════════════════════════════════
+   카테고리: 런타임 스캔
+   ══════════════════════════════════════════════ */
+function renderCatRuntime(gameId, runs) {
+  const gameLogs = (_serverLogs[gameId] || []);
+  if (!gameLogs.length) return '<div style="color:var(--text-muted);padding:20px">서버 로그 없음 — 프리플레이 실행 후 확인</div>';
+
+  const sorted = [...gameLogs].sort((a, b) =>
+    (PERSONA_ORDER.indexOf(a.persona)===-1?99:PERSONA_ORDER.indexOf(a.persona))
+    - (PERSONA_ORDER.indexOf(b.persona)===-1?99:PERSONA_ORDER.indexOf(b.persona))
+  );
+
+  const scans = sorted.map(l => l.runtime_scan).filter(Boolean).filter(rt => (rt.node_stats||{}).total > 0);
+  if (!scans.length) return '<div style="color:var(--text-muted);padding:20px">런타임 스캔 데이터 없음 — 최신 프리플레이 실행 후 확인</div>';
+
+  const latestDate = sorted[0].run_date || '-';
+  const updatedAt = sorted.reduce((latest, l) => l.updated_at > latest ? l.updated_at : latest, '');
+  const updatedStr = updatedAt ? new Date(updatedAt).toLocaleString('ko') : '';
+
+  return `
+    <div class="ov-summary" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+      <span style="font-weight:700;color:#a78bfa">런타임 심층 스캔</span>
+      <span><b>날짜:</b> ${latestDate}</span>
+      <span><b>페르소나:</b> ${scans.length}종</span>
+      <span style="color:var(--text-muted);font-size:11px;margin-left:auto">갱신: ${updatedStr}</span>
+    </div>
+    ${renderCombinedRuntimeScan(sorted)}
+  `;
 }
 
 /* ══════════════════════════════════════════════
