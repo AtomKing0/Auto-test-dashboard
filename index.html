@@ -159,6 +159,25 @@ tr:hover td { background: rgba(59,130,246,.05); }
 .metric-box .value { font-size: 22px; font-weight: 700; }
 .metric-box .sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 
+/* ── Gold Flow Card ── */
+.gold-flow { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.gold-flow-col {
+  flex: 1; min-width: 200px;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 16px;
+}
+.gold-flow-col.income { border-top: 3px solid var(--status-ok); }
+.gold-flow-col.expense { border-top: 3px solid var(--status-err); }
+.gold-flow-col.result { border-top: 3px solid #60a5fa; }
+.flow-header { font-size: 13px; font-weight: 700; color: var(--text-secondary); margin-bottom: 10px; letter-spacing: .5px; }
+.flow-item { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; color: var(--text-secondary); }
+.flow-item + .flow-item { border-top: 1px solid rgba(255,255,255,.04); }
+.flow-total { display: flex; justify-content: space-between; padding: 8px 0 0; margin-top: 6px; border-top: 2px solid rgba(255,255,255,.1); font-weight: 700; font-size: 15px; }
+.flow-total .ft-label { color: var(--text-secondary); }
+.fg { color: var(--status-ok); }
+.fr { color: var(--status-err); }
+.fy { color: #ffc107; }
+.fb { color: #60a5fa; }
+
 /* ── Security ── */
 .check-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; }
 .check-item {
@@ -529,6 +548,115 @@ body.edit-mode .merge-btn { display: inline-block; }
   border-top: 1px solid var(--border);
 }
 
+/* ── Guide Page ── */
+.guide-wrap { max-width: 900px; margin: 0 auto; }
+.guide-hero {
+  background: linear-gradient(135deg, rgba(59,130,246,.12), rgba(16,185,129,.08));
+  border: 1px solid var(--border); border-radius: 12px;
+  padding: 28px 32px; margin-bottom: 24px; text-align: center;
+}
+.guide-hero h2 { font-size: calc(22px * var(--fs-scale)); margin-bottom: 6px; }
+.guide-hero p { color: var(--text-muted); font-size: calc(13px * var(--fs-scale)); margin: 0; }
+.guide-toc {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 16px 20px; margin-bottom: 24px;
+}
+.guide-toc h4 { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; letter-spacing: .5px; }
+.guide-toc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px; }
+.guide-toc a {
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 8px;
+  color: var(--text-secondary); font-size: 13px; font-weight: 500;
+  transition: background .15s, color .15s;
+}
+.guide-toc a:hover { background: rgba(59,130,246,.08); color: var(--text-primary); }
+.guide-toc a .toc-icon { font-size: 16px; flex-shrink: 0; width: 22px; text-align: center; }
+.guide-section-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 20px 24px; margin-bottom: 16px;
+}
+.guide-section-card h3 {
+  font-size: calc(16px * var(--fs-scale)); margin-bottom: 14px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+.guide-section-card h3 .gs-icon { font-size: 20px; }
+.guide-section-card p, .guide-section-card li {
+  font-size: calc(13px * var(--fs-scale)); color: var(--text-secondary); line-height: 1.7;
+}
+.guide-section-card ul { padding-left: 20px; margin: 8px 0; }
+.guide-section-card li { margin-bottom: 4px; }
+.guide-section-card li b { color: var(--text-primary); }
+.guide-flow {
+  display: flex; align-items: center; justify-content: center; gap: 0;
+  flex-wrap: wrap; margin: 16px 0;
+}
+.guide-flow-step {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 12px 16px; min-width: 120px;
+  background: rgba(59,130,246,.06); border: 1px solid rgba(59,130,246,.2); border-radius: 10px;
+}
+.guide-flow-step .fs-icon { font-size: 24px; }
+.guide-flow-step .fs-label { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+.guide-flow-step .fs-sub { font-size: 10px; color: var(--text-muted); text-align: center; }
+.guide-flow-arrow { font-size: 20px; color: var(--text-muted); padding: 0 6px; }
+.guide-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+.guide-mini-card {
+  padding: 12px 14px; border-radius: 8px; border: 1px solid var(--border);
+  background: rgba(255,255,255,.02);
+}
+.guide-mini-card h5 { font-size: 13px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.guide-mini-card p { font-size: 12px; color: var(--text-muted); margin: 0; line-height: 1.6; }
+.guide-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 10px;
+  font-size: 10px; font-weight: 600;
+}
+.guide-table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 10px 0; }
+.guide-table th {
+  text-align: left; padding: 8px 10px; border-bottom: 2px solid var(--border);
+  color: var(--text-muted); font-weight: 600; font-size: 11px;
+}
+.guide-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); color: var(--text-secondary); }
+.guide-table tr:hover td { background: rgba(59,130,246,.04); }
+.guide-table tr:nth-child(even) td { background: rgba(255,255,255,.015); }
+.guide-cat-group { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 12px; }
+.guide-cat-header {
+  display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+  font-size: 14px; font-weight: 700; border-bottom: 1px solid var(--border);
+}
+.guide-cat-header .gch-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.guide-cat-header .gch-sub { font-size: 11px; font-weight: 400; color: var(--text-muted); margin-left: auto; }
+.guide-cat-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0; }
+.guide-cat-item {
+  display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.04); border-right: 1px solid rgba(255,255,255,.04);
+}
+.guide-cat-item:hover { background: rgba(59,130,246,.04); }
+.guide-cat-item .ci-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+.guide-cat-item .ci-body { flex: 1; }
+.guide-cat-item .ci-name { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+.guide-cat-item .ci-desc { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+.guide-hc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; margin-top: 12px; }
+.guide-hc-card { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: rgba(255,255,255,.02); }
+.guide-hc-card .hc-top { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.guide-hc-card .hc-name { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+.guide-hc-card .hc-desc { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+.guide-sev-row {
+  display: flex; align-items: center; gap: 14px; padding: 14px 16px;
+  border-radius: 10px; margin-bottom: 8px;
+}
+.guide-sev-row .sev-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+.guide-sev-row .sev-body { flex: 1; }
+.guide-sev-row .sev-label { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+.guide-sev-row .sev-desc { font-size: 12px; color: var(--text-secondary); }
+.guide-sev-row .sev-ex { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+@media (max-width: 640px) {
+  .guide-grid-2 { grid-template-columns: 1fr; }
+  .guide-flow { gap: 8px; }
+  .guide-flow-arrow { transform: rotate(90deg); padding: 4px 0; }
+  .guide-cat-items { grid-template-columns: 1fr; }
+  .guide-hc-grid { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 768px) {
   .sidebar { width: 52px; }
   .sidebar-logo, .sidebar-item-text, .sidebar-badge, .sidebar-section-label { opacity: 0 !important; pointer-events: none; }
@@ -565,6 +693,11 @@ body.edit-mode .merge-btn { display: inline-block; }
         <div class="sidebar-item" data-id="runs" onclick="sidebarSystemNav('runs')" id="sidebar-runs" title="런 관리">
           <span class="sidebar-item-icon">🗂</span>
           <span class="sidebar-item-text">런 관리</span>
+          <span class="drag-grip">⋮⋮</span>
+        </div>
+        <div class="sidebar-item" data-id="guide" onclick="sidebarSystemNav('guide')" id="sidebar-guide" title="가이드">
+          <span class="sidebar-item-icon">📖</span>
+          <span class="sidebar-item-text">가이드</span>
           <span class="drag-grip">⋮⋮</span>
         </div>
       </div>
@@ -924,6 +1057,276 @@ function _renderIssueSummaryContent(games) {
       </div>
     </div>`;
   }).join('');
+}
+
+/* ── 렌더링: 가이드 ── */
+
+function renderGuide() {
+  return `<div class="guide-wrap">
+  <!-- Hero -->
+  <div class="guide-hero">
+    <h2>프리플레이 통합 대시보드 가이드</h2>
+    <p>자동화 테스트(프리플레이) 결과를 실시간으로 집계하고 시각화하는 QA 대시보드입니다.</p>
+  </div>
+
+  <!-- TOC -->
+  <div class="guide-toc">
+    <h4>목차</h4>
+    <div class="guide-toc-grid">
+      <a href="javascript:void(0)" onclick="document.getElementById('g-flow').scrollIntoView({behavior:'smooth',block:'start'})">
+        <span class="toc-icon">🔄</span> 데이터 흐름</a>
+      <a href="javascript:void(0)" onclick="document.getElementById('g-overview').scrollIntoView({behavior:'smooth',block:'start'})">
+        <span class="toc-icon">📊</span> 종합 현황</a>
+      <a href="javascript:void(0)" onclick="document.getElementById('g-persona').scrollIntoView({behavior:'smooth',block:'start'})">
+        <span class="toc-icon">🎭</span> 페르소나</a>
+      <a href="javascript:void(0)" onclick="document.getElementById('g-game-cat').scrollIntoView({behavior:'smooth',block:'start'})">
+        <span class="toc-icon">🎮</span> 게임별 탭</a>
+      <a href="javascript:void(0)" onclick="document.getElementById('g-system').scrollIntoView({behavior:'smooth',block:'start'})">
+        <span class="toc-icon">🛠</span> 시스템 섹션</a>
+      <a href="javascript:void(0)" onclick="document.getElementById('g-issues').scrollIntoView({behavior:'smooth',block:'start'})">
+        <span class="toc-icon">⚠️</span> 이슈 심각도</a>
+      <a href="javascript:void(0)" onclick="document.getElementById('g-features').scrollIntoView({behavior:'smooth',block:'start'})">
+        <span class="toc-icon">⚙️</span> 기능 안내</a>
+    </div>
+  </div>
+
+  <!-- 1. 데이터 흐름 -->
+  <div class="guide-section-card" id="g-flow">
+    <h3><span class="gs-icon">🔄</span> 데이터 흐름</h3>
+    <p>프리플레이 자동화가 실행되면 결과가 자동으로 대시보드에 반영됩니다.</p>
+    <div class="guide-flow">
+      <div class="guide-flow-step">
+        <span class="fs-icon">🤖</span>
+        <span class="fs-label">프리플레이 실행</span>
+        <span class="fs-sub">페르소나별 자동 플레이</span>
+      </div>
+      <span class="guide-flow-arrow">→</span>
+      <div class="guide-flow-step">
+        <span class="fs-icon">📄</span>
+        <span class="fs-label">JSON 결과 생성</span>
+        <span class="fs-sub">스테이지별 상세 데이터</span>
+      </div>
+      <span class="guide-flow-arrow">→</span>
+      <div class="guide-flow-step">
+        <span class="fs-icon">🗄️</span>
+        <span class="fs-label">Supabase 적재</span>
+        <span class="fs-sub">runs + stages + logs</span>
+      </div>
+      <span class="guide-flow-arrow">→</span>
+      <div class="guide-flow-step">
+        <span class="fs-icon">📊</span>
+        <span class="fs-label">대시보드 반영</span>
+        <span class="fs-sub">실시간 자동 업데이트</span>
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:4px">크론 스케줄 또는 수동 실행 모두 동일한 파이프라인을 통해 적재됩니다.</p>
+  </div>
+
+  <!-- 2. 종합 현황 -->
+  <div class="guide-section-card" id="g-overview">
+    <h3><span class="gs-icon">📊</span> 종합 현황 페이지</h3>
+    <p>사이드바에서 <b>"종합"</b>을 선택하면 표시되는 메인 페이지입니다. 모든 게임의 테스트 현황을 한눈에 파악할 수 있습니다.</p>
+    <table class="guide-table">
+      <thead><tr><th>영역</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td><b>전체 현황 바</b></td><td>등록 게임 수, 총 런 수, 총 플레이 판 수, 총 소요 시간을 요약 표시</td></tr>
+        <tr><td><b>게임별 카드</b></td><td>게임별 런 수, 판 수, 클리어율, 평균 시간 등 핵심 지표를 카드 형태로 표시</td></tr>
+        <tr><td><b>차트 (2종)</b></td><td>게임별 판당 평균 시간 (바 차트) / 일별 런 수 추이 (라인 차트)</td></tr>
+        <tr><td><b>이슈 요약</b></td><td>전 게임의 이슈를 심각도별(심각·주의·관찰)로 분류하여 표시. 게임별 접기/펼치기 지원</td></tr>
+        <tr><td><b>테스트 커버리지</b></td><td>게임별 페르소나 런 수 분포 + 최근 테스트 날짜 표시</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 3. 페르소나 -->
+  <div class="guide-section-card" id="g-persona">
+    <h3><span class="gs-icon">🎭</span> 페르소나 4종</h3>
+    <p>프리플레이는 4종의 가상 유저 페르소나로 자동 실행되며, 각각 다른 플레이 성향을 시뮬레이션합니다.</p>
+    <div class="guide-grid-2">
+      <div class="guide-mini-card">
+        <h5><span style="color:#3b82f6">●</span> 고수 (hardcore)</h5>
+        <p>최적의 전략으로 플레이. 최소 턴·최대 보상 추구. 아이템 사용 최소화.</p>
+      </div>
+      <div class="guide-mini-card">
+        <h5><span style="color:#10b981">●</span> 중수 (average)</h5>
+        <p>적절한 전략 + 간헐적 실수. 일반적인 유저의 플레이 패턴을 대표.</p>
+      </div>
+      <div class="guide-mini-card">
+        <h5><span style="color:#f59e0b">●</span> 하수 (casual)</h5>
+        <p>느린 의사결정, 비효율적 카드 선택. 아이템에 의존하는 경향.</p>
+      </div>
+      <div class="guide-mini-card">
+        <h5><span style="color:#ef4444">●</span> 초보 (struggling)</h5>
+        <p>최초 경험 유저 시뮬레이션. 실패율 높음, 튜토리얼·팝업 반응 포함.</p>
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin-top:8px">페르소나 미지정 시 4종 전체가 순차 실행됩니다. 레이더 차트에서 페르소나 간 비교가 가능합니다.</p>
+  </div>
+
+  <!-- 4. 게임별 카테고리 탭 -->
+  <div class="guide-section-card" id="g-game-cat">
+    <h3><span class="gs-icon">🎮</span> 게임별 카테고리 탭</h3>
+    <p>사이드바에서 게임을 선택하면 해당 게임의 상세 분석 페이지로 이동합니다. 상단 탭으로 카테고리를 전환할 수 있습니다.</p>
+
+    <!-- 공통 탭 -->
+    <div class="guide-cat-group" style="margin-top:16px">
+      <div class="guide-cat-header" style="background:rgba(148,163,184,.06)">
+        <span class="gch-dot" style="background:#94a3b8"></span> 공통 탭
+        <span class="gch-sub">모든 게임에 포함</span>
+      </div>
+      <div class="guide-cat-items">
+        <div class="guide-cat-item"><span class="ci-icon">📊</span><div class="ci-body"><div class="ci-name">요약</div><div class="ci-desc">핵심 메트릭 + 페르소나별 비교 카드 + 일별 추이 + 레이더 차트</div></div></div>
+        <div class="guide-cat-item"><span class="ci-icon">📋</span><div class="ci-body"><div class="ci-name">스테이지</div><div class="ci-desc">레벨별 상세 테이블 — 클리어 여부, 턴 수, 보상, 난이도, 기믹</div></div></div>
+        <div class="guide-cat-item"><span class="ci-icon">🔒</span><div class="ci-body"><div class="ci-name">보안 QA</div><div class="ci-desc">보안 스캔 결과 (localStorage/XSS/CSP), 등급 A~F, 위반 항목</div></div></div>
+        <div class="guide-cat-item"><span class="ci-icon">📡</span><div class="ci-body"><div class="ci-name">로그&API</div><div class="ci-desc">서버 API 호출 로그 + 콘솔 에러/경고, 최신 런 데이터</div></div></div>
+        <div class="guide-cat-item"><span class="ci-icon">⚡</span><div class="ci-body"><div class="ci-name">성능</div><div class="ci-desc">힙 메모리, DOM 노드, FPS 추이, 메모리 누수 감지</div></div></div>
+      </div>
+    </div>
+
+    <!-- SCJ 전용 -->
+    <div class="guide-cat-group">
+      <div class="guide-cat-header" style="background:rgba(59,130,246,.06)">
+        <span class="gch-dot" style="background:#3b82f6"></span> 🃏 SCJ — Solitaire City
+        <span class="gch-sub">카드 솔리테어</span>
+      </div>
+      <div class="guide-cat-items">
+        <div class="guide-cat-item"><span class="ci-icon">💰</span><div class="ci-body"><div class="ci-name">경제</div><div class="ci-desc">골드 수입/지출 흐름, 판당 손익, 외부 골드, 해머 변동 추이</div></div></div>
+        <div class="guide-cat-item"><span class="ci-icon">⚖️</span><div class="ci-body"><div class="ci-name">밸런스</div><div class="ci-desc">서버 밸런스시트 대비 실제 비교, 보상 편차율, 난이도별 클리어율</div></div></div>
+        <div class="guide-cat-item"><span class="ci-icon">🧩</span><div class="ci-body"><div class="ci-name">기믹</div><div class="ci-desc">기믹 등장 빈도 (키&자물쇠, 얼음, 러너, 플러스카드), 난이도 기여도</div></div></div>
+        <div class="guide-cat-item"><span class="ci-icon">🎓</span><div class="ci-body"><div class="ci-name">NRU</div><div class="ci-desc">신규 유저 튜토리얼 자동화. 레벨별 클리어, 재시도, 소요 시간</div></div></div>
+      </div>
+    </div>
+
+    <!-- CTZ / MJG 전용 -->
+    <div class="guide-cat-group">
+      <div class="guide-cat-header" style="background:rgba(16,185,129,.06)">
+        <span class="gch-dot" style="background:#10b981"></span> 🧩 CTZ / MJG — Cozy Tiles · Mahjong
+        <span class="gch-sub">타일 매칭 · 마작</span>
+      </div>
+      <div class="guide-cat-items">
+        <div class="guide-cat-item"><span class="ci-icon">🔲</span><div class="ci-body"><div class="ci-name">타일</div><div class="ci-desc">타일 매칭 현황, 슬롯 사용 패턴, 종류별 분포</div></div></div>
+        <div class="guide-cat-item"><span class="ci-icon">🎒</span><div class="ci-body"><div class="ci-name">아이템</div><div class="ci-desc">아이템 사용 빈도 — 셔플/힌트/되돌리기 등 패턴 분석</div></div></div>
+        <div class="guide-cat-item"><span class="ci-icon">⏱</span><div class="ci-body"><div class="ci-name">소요시간</div><div class="ci-desc">판별 소요시간 분포, 페르소나별 비교, 구간별 히스토그램</div></div></div>
+      </div>
+    </div>
+
+    <!-- PBM 전용 -->
+    <div class="guide-cat-group">
+      <div class="guide-cat-header" style="background:rgba(245,158,11,.06)">
+        <span class="gch-dot" style="background:#f59e0b"></span> 🧱 PBM — Block Blast
+        <span class="gch-sub">블록 퍼즐</span>
+      </div>
+      <div class="guide-cat-items">
+        <div class="guide-cat-item"><span class="ci-icon">🎯</span><div class="ci-body"><div class="ci-name">라운드</div><div class="ci-desc">라운드별 점수 분포, 평균 수(moves), 페르소나별 요약</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. 시스템 섹션 -->
+  <div class="guide-section-card" id="g-system">
+    <h3><span class="gs-icon">🛠</span> 시스템 섹션</h3>
+    <p>사이드바 하단 <b>System</b> 영역의 항목들입니다.</p>
+    <div class="guide-grid-2" style="margin-top:12px">
+      <div class="guide-mini-card">
+        <h5>🏥 Health Check</h5>
+        <p>프리플레이 실행 후 자동 생성되는 품질 검사 결과. 게임별·날짜별 확인 가능</p>
+      </div>
+      <div class="guide-mini-card">
+        <h5>⏰ 크론 이력</h5>
+        <p>자동 크론 스케줄 실행 이력. 날짜, 시작/종료 시간, 대상 게임, 소요 시간</p>
+      </div>
+      <div class="guide-mini-card">
+        <h5>🗂 런 관리</h5>
+        <p>전체 런을 날짜별로 조회·관리. 개별 런 선택 삭제 기능 포함</p>
+      </div>
+      <div class="guide-mini-card">
+        <h5>📦 DB 사용량</h5>
+        <p>Supabase 데이터베이스 용량 현황. 사용량 바 + 잔여 용량 표시</p>
+      </div>
+    </div>
+
+    <h4 style="font-size:13px;color:var(--text-muted);margin:20px 0 8px;letter-spacing:.5px">Health Check 검사 항목 (10종)</h4>
+    <div class="guide-hc-grid">
+      <div class="guide-hc-card"><div class="hc-top"><span class="guide-badge" style="background:rgba(220,38,38,.15);color:#dc2626">필수</span><span class="hc-name">게임 루프</span></div><div class="hc-desc">레벨이 정상적으로 플레이되는지 확인</div></div>
+      <div class="guide-hc-card"><div class="hc-top"><span class="guide-badge" style="background:rgba(220,38,38,.15);color:#dc2626">필수</span><span class="hc-name">골드 정합성</span></div><div class="hc-desc">시작 골드 + 스테이지 합산 = 종료 골드</div></div>
+      <div class="guide-hc-card"><div class="hc-top"><span class="guide-badge" style="background:rgba(220,38,38,.15);color:#dc2626">필수</span><span class="hc-name">3매치 유효</span></div><div class="hc-desc">매치율 0% 스테이지 감지</div></div>
+      <div class="guide-hc-card"><div class="hc-top"><span class="guide-badge" style="background:rgba(217,119,6,.15);color:#d97706">중요</span><span class="hc-name">베팅 해금</span></div><div class="hc-desc">해금 레벨 이전 사용 여부 (x2=Lv10, x3=Lv25, x5=Lv50)</div></div>
+      <div class="guide-hc-card"><div class="hc-top"><span class="guide-badge" style="background:rgba(217,119,6,.15);color:#d97706">중요</span><span class="hc-name">타임아웃</span></div><div class="hc-desc">스테이지 300초 초과 여부</div></div>
+      <div class="guide-hc-card"><div class="hc-top"><span class="guide-badge" style="background:rgba(217,119,6,.15);color:#d97706">중요</span><span class="hc-name">보안 등급</span></div><div class="hc-desc">보안 스캔 결과 (F=치명적)</div></div>
+      <div class="guide-hc-card"><div class="hc-top"><span class="guide-badge" style="background:rgba(13,148,136,.15);color:#0d9488">관찰</span><span class="hc-name">API 에러</span></div><div class="hc-desc">콘솔 에러/경고 발생 여부</div></div>
+      <div class="guide-hc-card"><div class="hc-top"><span class="guide-badge" style="background:rgba(99,102,241,.15);color:#6366f1">참고</span><span class="hc-name">메모리(힙)</span></div><div class="hc-desc">힙 사용량 500MB 초과 여부</div></div>
+      <div class="guide-hc-card"><div class="hc-top"><span class="guide-badge" style="background:rgba(99,102,241,.15);color:#6366f1">참고</span><span class="hc-name">DOM 노드</span></div><div class="hc-desc">DOM 노드 10,000개 초과 여부</div></div>
+      <div class="guide-hc-card"><div class="hc-top"><span class="guide-badge" style="background:rgba(99,102,241,.15);color:#6366f1">참고</span><span class="hc-name">슬롯풀</span></div><div class="hc-desc">슬롯풀 카운트 정상 여부</div></div>
+    </div>
+  </div>
+
+  <!-- 6. 이슈 심각도 -->
+  <div class="guide-section-card" id="g-issues">
+    <h3><span class="gs-icon">⚠️</span> 이슈 심각도 기준</h3>
+    <p>프리플레이 중 감지된 이슈는 3단계 심각도로 분류됩니다.</p>
+    <div style="margin-top:12px">
+      <div class="guide-sev-row" style="background:rgba(239,68,68,.06);border-color:rgba(239,68,68,.2)">
+        <span class="sev-dot" style="background:#ef4444"></span>
+        <div class="sev-body">
+          <div class="sev-label" style="color:#ef4444">심각 (high)</div>
+          <div class="sev-desc">게임 플레이에 직접 영향을 미치는 문제. 즉시 확인이 필요합니다.</div>
+          <div class="sev-ex">예: 골드 흐름 불일치, 보상 0, 턴 0 클리어</div>
+        </div>
+      </div>
+      <div class="guide-sev-row" style="background:rgba(245,158,11,.06);border-color:rgba(245,158,11,.2)">
+        <span class="sev-dot" style="background:#f59e0b"></span>
+        <div class="sev-body">
+          <div class="sev-label" style="color:#f59e0b">주의 (medium)</div>
+          <div class="sev-desc">잠재적 문제가 될 수 있는 항목. 지속 모니터링을 권장합니다.</div>
+          <div class="sev-ex">예: 비정상 빠른 클리어, 기믹 잔상</div>
+        </div>
+      </div>
+      <div class="guide-sev-row" style="background:rgba(148,163,184,.06);border-color:rgba(148,163,184,.2)">
+        <span class="sev-dot" style="background:#94a3b8"></span>
+        <div class="sev-body">
+          <div class="sev-label" style="color:#94a3b8">관찰 (low)</div>
+          <div class="sev-desc">경미한 이상 징후. 추세를 관찰하며 패턴이 반복되면 확인합니다.</div>
+          <div class="sev-ex">예: 난이도 없음, 입장료 0, 스테이지ID 없음</div>
+        </div>
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin-top:10px">종합 현황의 이슈 요약에서 게임별로 접기/펼치기하여 상세 내역을 확인할 수 있습니다.</p>
+  </div>
+
+  <!-- 7. 기능 안내 -->
+  <div class="guide-section-card" id="g-features">
+    <h3><span class="gs-icon">⚙️</span> 기능 안내</h3>
+    <p>상단 바의 버튼으로 다양한 기능을 사용할 수 있습니다.</p>
+    <div class="guide-grid-2">
+      <div class="guide-mini-card">
+        <h5>☀ 테마 전환</h5>
+        <p>다크 모드 / 라이트 모드 전환. 설정은 브라우저에 저장됩니다.</p>
+      </div>
+      <div class="guide-mini-card">
+        <h5>A- A+ 글자 크기</h5>
+        <p>대시보드 전체 글자 크기를 축소/확대합니다.</p>
+      </div>
+      <div class="guide-mini-card">
+        <h5>CSV 다운로드</h5>
+        <p>현재 표시 중인 데이터를 CSV 파일로 내보냅니다.</p>
+      </div>
+      <div class="guide-mini-card">
+        <h5>Edit 레이아웃 편집</h5>
+        <p>섹션 드래그로 순서 변경, 표시/숨기기, 열 수 조절, 섹션 합치기가 가능합니다.</p>
+      </div>
+      <div class="guide-mini-card">
+        <h5>🔔 데스크톱 알림</h5>
+        <p>새 런 데이터가 실시간으로 도착하면 데스크톱 알림을 전송합니다.</p>
+      </div>
+      <div class="guide-mini-card">
+        <h5>📋 알림 내역</h5>
+        <p>수신된 알림 목록을 확인하고 관리할 수 있습니다.</p>
+      </div>
+    </div>
+    <p style="margin-top:12px;font-size:12px;color:var(--text-muted)">사이드바 하단에는 <b>실시간 연결 상태</b>(초록=연결, 빨강=끊김)와 <b>DB 사용량</b> 미니바가 표시됩니다. 사이드바 접기(«) 버튼으로 공간을 넓힐 수 있습니다.</p>
+  </div>
+
+</div>`;
 }
 
 /* ── 렌더링: 종합 탭 ── */
@@ -1595,6 +1998,13 @@ let _currentGameId = '';
 let _renderedCats = {};
 
 async function switchTab(id, _btn) {
+  // 가이드 숨기기 + 시스템 사이드바 active 해제
+  const guideEl = document.getElementById('guide-section');
+  if (guideEl) guideEl.style.display = 'none';
+  ['sidebar-health','sidebar-cron','sidebar-runs','sidebar-guide'].forEach(sid => {
+    document.getElementById(sid)?.classList.remove('active');
+  });
+
   // 사이드바 active 동기화
   document.querySelectorAll('#sidebar-games .sidebar-item').forEach(b => b.classList.remove('active'));
   const activeItem = document.getElementById(`sidebar-tab-${id}`);
@@ -1655,8 +2065,8 @@ async function switchTab(id, _btn) {
 const NRU_TUTORIAL_ALL = [
   { key: 230001, content_id: 'content_ingame_intro', name: '인게임 소개', scene: 'ingame', trigger: 'tutorial_level', triggerVal: 1, type: 'floating' },
   { key: 230002, content_id: 'content_deck_draw', name: '덱 드로우 안내', scene: 'ingame', trigger: 'tutorial_level', triggerVal: 2, type: 'floating' },
-  { key: 230003, content_id: 'content_lobby_play', name: '로비 플레이 버튼', scene: 'lobby', trigger: 'level_clear', triggerVal: 1, type: 'focus', node: 'LOBBYPLAYBUTTON' },
-  { key: 230004, content_id: 'content_shop', name: '상점 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 3, type: 'focus', node: 'SHOPBUTTON' },
+  { key: 230003, content_id: 'content_lobby_play', name: '로비 플레이 버튼', scene: 'lobby', trigger: 'level_clear', triggerVal: 1, type: 'focus', node: 'LOBBYPLAYBUTTON', skip: 'specout' },
+  { key: 230004, content_id: 'content_shop', name: '상점 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 3, type: 'focus', node: 'SHOPBUTTON', skip: 'specout' },
   { key: 230005, content_id: 'content_pre_level_popup', name: '프리레벨 팝업', scene: 'pre_level', trigger: 'level_clear', triggerVal: 2, type: 'focus', node: 'PLAYBUTTON' },
   { key: 230006, content_id: 'content_idle_gold', name: '방치 골드 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 4, type: 'focus', node: 'IDLEGOLDBUTTON' },
   { key: 230007, content_id: 'gimmick_plus_card', name: '플러스 카드 기믹', scene: 'ingame', trigger: 'first_appear', triggerVal: 'plus_card', type: 'focus' },
@@ -1664,14 +2074,14 @@ const NRU_TUTORIAL_ALL = [
   { key: 230009, content_id: 'content_daily_task', name: '일일 과제 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 10, type: 'focus', node: 'DAILYTASK' },
   { key: 230010, content_id: 'content_streak', name: '스트릭 미터 안내', scene: 'ingame', trigger: 'first_appear', triggerVal: 'streak_meter', type: 'focus', node: 'INGAMESTREAK' },
   { key: 230011, content_id: 'content_leaderboard', name: '리더보드 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 5, type: 'focus', node: 'LEADERBOARDBUTTON' },
-  { key: 230012, content_id: 'content_collection', name: '컬렉션 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 6, type: 'focus', skip: 'notimpl' },
+  { key: 230012, content_id: 'content_collection', name: '컬렉션 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 6, type: 'focus', node: 'ALBUM' },
   { key: 230013, content_id: 'booster_wild_card', name: '와일드카드 부스터', scene: 'ingame', trigger: 'first_appear', triggerVal: 'wild_card', type: 'floating' },
   { key: 230014, content_id: 'booster_fireworks', name: '불꽃놀이 부스터', scene: 'pre_level', trigger: 'level_clear', triggerVal: 8, type: 'focus', node: 'BOOSTER1' },
   { key: 230015, content_id: 'booster_undo', name: '되돌리기 부스터', scene: 'ingame', trigger: 'first_appear', triggerVal: 'undo', type: 'floating' },
   { key: 230016, content_id: 'booster_extra_deck', name: '추가 덱 부스터', scene: 'ingame', trigger: 'condition', triggerVal: 'deck_exhausted', type: 'floating' },
   { key: 230017, content_id: 'content_city_deco_grad', name: '도시 꾸미기 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 8, type: 'focus', node: 'DECOBUTTON' },
   { key: 230018, content_id: 'content_betting_2', name: '베팅 x2 안내', scene: 'pre_level', trigger: 'level_clear', triggerVal: 9, type: 'focus', node: 'BETTINGBUTTON' },
-  { key: 230019, content_id: 'content_daily_wheel', name: '일일 룰렛 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 9, type: 'focus', skip: 'notimpl' },
+  { key: 230019, content_id: 'content_daily_wheel', name: '일일 룰렛 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 9, type: 'focus', node: 'daily_wheel' },
   { key: 230020, content_id: 'content_event_forced', name: '이벤트 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 12, type: 'focus', node: 'EVENTBUTTON' },
   { key: 230021, content_id: 'gimmick_runner_card', name: '러너 카드 기믹', scene: 'ingame', trigger: 'first_appear', triggerVal: 'runner_card', type: 'focus' },
   { key: 230022, content_id: 'content_betting_4', name: '베팅 x4 안내', scene: 'pre_level', trigger: 'level_clear', triggerVal: 17, type: 'focus', node: 'BETTINGBUTTON' },
@@ -1741,7 +2151,7 @@ function _renderNruTutorialSection(latestRun) {
   }
 
   // NRU Lv1-24 범위에서 발생 가능한 튜토리얼 필터 (level_clear ≤ 24, tutorial_level ≤ 24)
-  const SKIP_KR = { notimpl: '미구현', condition: '조건 미충족', touch: '터치 전용', repeat_tip: '반복 팁', no_check: '확인 불필요' };
+  const SKIP_KR = { notimpl: '미구현', specout: '스펙 제외', condition: '조건 미충족', touch: '터치 전용', repeat_tip: '반복 팁', no_check: '확인 불필요' };
   const expectedInNru = NRU_TUTORIAL_ALL.filter(d => {
     if (d.trigger === 'level_clear' && typeof d.triggerVal === 'number' && d.triggerVal <= 25) return true;
     if (d.trigger === 'tutorial_level' && typeof d.triggerVal === 'number' && d.triggerVal <= 25) return true;
@@ -2114,7 +2524,7 @@ const CATEGORY_RENDERERS = {
   logapi: (gid, stages, runs) => renderCatLogApi(gid, runs),
   perf: (gid, stages, runs) => '<div class="state-msg"><div class="icon">⏳</div><div>성능 데이터 로딩 중...</div></div>',
   // SCJ 전용
-  economy: (gid, stages, runs) => renderCatEconomy(gid, runs),
+  economy: (gid, stages, runs) => renderCatEconomy(gid, stages, runs),
   balance: (gid, stages, runs) => renderCatBalance(gid, stages, runs),
   gimmick: (gid, stages, runs) => renderCatGimmick(gid, stages, runs),
   // CTZ / MJG
@@ -2257,19 +2667,21 @@ function _aggregatePersonaStages(stages) {
 function renderCatSummary(gameId, stages, runs) {
   const personas = {};
   let totalGoldPnl = 0, totalHammerDelta = 0, totalTurns = 0, turnCount = 0;
-  let totalScore = 0, totalContinues = 0;
+  let totalScore = 0, totalContinues = 0, totalExternal = 0;
   for (const r of runs) {
     const m = r.metrics || {};
-    if (!personas[r.persona]) personas[r.persona] = { played: 0, runs: 0, time: 0, goldPnl: 0, hammer: 0, turns: 0, turnLevels: 0, score: 0, continues: 0 };
+    if (!personas[r.persona]) personas[r.persona] = { played: 0, runs: 0, time: 0, goldPnl: 0, goldExternal: 0, hammer: 0, turns: 0, turnLevels: 0, score: 0, continues: 0 };
     const p = personas[r.persona];
     p.played += r.levels_played || 0;
     p.runs++;
     p.time += r.total_time_sec || 0;
     p.goldPnl += m.gold_pnl || 0;
+    p.goldExternal += m.gold_external || 0;
     p.hammer += m.hammer_delta || 0;
     p.score += m.total_score || 0;
     p.continues += m.continues || 0;
     totalGoldPnl += m.gold_pnl || 0;
+    totalExternal += m.gold_external || 0;
     totalHammerDelta += m.hammer_delta || 0;
     totalScore += m.total_score || 0;
     totalContinues += m.continues || 0;
@@ -2327,8 +2739,9 @@ function renderCatSummary(gameId, stages, runs) {
   } else {
     const goldPerGame = totalPlayed ? Math.round(totalGoldPnl / totalPlayed).toLocaleString() : '-';
     const goldColor = totalGoldPnl >= 0 ? 'var(--status-ok)' : 'var(--status-err)';
+    const extNote = totalExternal ? `<div class="label" style="font-size:.7em;color:#ffc107;margin-top:2px">외부 +${totalExternal.toLocaleString()} 별도</div>` : '';
     topMetrics = `
-      <div class="metric-box"><div class="label">골드 손익/판</div><div class="value" style="color:${goldColor}">${goldPerGame}</div></div>
+      <div class="metric-box"><div class="label">골드 손익/판</div><div class="value" style="color:${goldColor}">${goldPerGame}</div>${extNote}</div>
       <div class="metric-box"><div class="label">평균 턴수</div><div class="value">${avgTurns}</div></div>
       <div class="metric-box"><div class="label">해머 변동</div><div class="value">${totalHammerDelta >= 0 ? '+' : ''}${totalHammerDelta}</div></div>
       <div class="metric-box"><div class="label">총 플레이</div><div class="value">${totalPlayed.toLocaleString()}판</div></div>
@@ -2363,9 +2776,11 @@ function renderCatSummary(gameId, stages, runs) {
       const pGoldColor = d.goldPnl >= 0 ? 'var(--status-ok)' : 'var(--status-err)';
       const pTurns = d.turnLevels ? (d.turns / d.turnLevels).toFixed(1) : '-';
       const pHammer = d.hammer >= 0 ? `+${d.hammer}` : d.hammer;
+      const pExt = d.goldExternal ? `<div class="stat"><span class="stat-label">외부 골드</span><span class="stat-value" style="color:#ffc107">+${d.goldExternal.toLocaleString()}</span></div>` : '';
       statsHtml = `
         <div class="stat"><span class="stat-label">판 수</span><span class="stat-value">${d.played}판 (${d.runs}런)</span></div>
         <div class="stat"><span class="stat-label">골드 손익/판</span><span class="stat-value" style="color:${pGoldColor}">${pGold}</span></div>
+        ${pExt}
         <div class="stat"><span class="stat-label">평균 턴수</span><span class="stat-value">${pTurns}</span></div>
         <div class="stat"><span class="stat-label">평균 시간</span><span class="stat-value">${avgTime}초</span></div>
         <div class="stat"><span class="stat-label">해머 변동</span><span class="stat-value">${pHammer}</span></div>`;
@@ -2499,41 +2914,101 @@ function renderRadarChart(gameId, stages, runs) {
 /* ══════════════════════════════════════════════
    카테고리: 경제
    ══════════════════════════════════════════════ */
-function renderCatEconomy(gameId, runs) {
-  let totalGoldPnl = 0, totalHammerDelta = 0;
+function renderCatEconomy(gameId, stages, runs) {
+  /* ── Run-level 집계 ── */
+  let totalGoldPnl = 0, totalHammerDelta = 0, totalExternal = 0, totalActual = 0;
   const rows = runs.map(r => {
     const m = r.metrics || {};
-    totalGoldPnl += m.gold_pnl || 0;
+    const pnl = m.gold_pnl || 0;
+    const ext = m.gold_external || 0;
+    const actual = m.gold_actual_change || ((m.gold_end || 0) - (m.gold_start || 0));
+    totalGoldPnl += pnl;
     totalHammerDelta += m.hammer_delta || 0;
-    const goldColor = (m.gold_pnl || 0) >= 0 ? 'var(--status-ok)' : 'var(--status-err)';
-    return `<tr>
+    totalExternal += ext;
+    totalActual += actual;
+    const goldColor = pnl >= 0 ? 'var(--status-ok)' : 'var(--status-err)';
+    const extStyle = ext !== 0 ? ' style="background:rgba(255,193,7,.12)"' : '';
+    const extCell = ext !== 0 ? `<span class="fy">+${ext.toLocaleString()}</span>` : '-';
+    return `<tr${extStyle}>
       <td>${r.run_date}</td><td>${PERSONA_KO[r.persona] || r.persona}</td>
-      <td style="color:${goldColor}">${(m.gold_pnl || 0).toLocaleString()}</td>
+      <td style="color:${goldColor}">${pnl.toLocaleString()}</td>
+      <td>${extCell}</td>
       <td>${(m.hammer_delta || 0).toLocaleString()}</td>
       <td>${(m.gold_start || 0).toLocaleString()}</td><td>${(m.gold_end || 0).toLocaleString()}</td>
     </tr>`;
   }).join('');
 
-  const goldColor = totalGoldPnl >= 0 ? 'var(--status-ok)' : 'var(--status-err)';
+  /* ── Stage-level 수입/지출 집계 ── */
+  let totalReward = 0, totalEntryFee = 0, totalItemCost = 0, totalStreakGold = 0;
+  for (const s of stages) {
+    const d = s.details || {};
+    totalReward += d.level_reward || 0;
+    totalEntryFee += d.entry_fee || 0;
+    totalItemCost += d.item_cost || 0;
+    totalStreakGold += (d.streak_gold || 0);
+  }
+  const n = stages.length || 1;
+  const avgReward = Math.round(totalReward / n);
+  const avgEntryFee = Math.round(totalEntryFee / n);
+  const avgItemCost = Math.round(totalItemCost / n);
+  const avgStreak = Math.round(totalStreakGold / n);
+  const avgIncome = avgReward + avgStreak;
+  const avgExpense = avgEntryFee + avgItemCost;
+  const avgPnl = stages.length ? Math.round(totalGoldPnl / runs.length) : 0;
+
+  /* ── 골드 흐름 카드 (판당 평균) ── */
+  const _sub = (total) => `<span style="font-size:10px;color:var(--text-muted);margin-left:4px">(총 ${total >= 0 ? '+' : ''}${total.toLocaleString()})</span>`;
+  const extIncomeRow = totalExternal > 0
+    ? `<div class="flow-item"><span>외부 지급 (어드민)</span><span class="fy">+${totalExternal.toLocaleString()}</span></div>` : '';
+  const extResultRow = totalExternal !== 0
+    ? `<div class="flow-item"><span>외부 골드</span><span class="fy">+${totalExternal.toLocaleString()}</span></div>` : '';
+  const hammerRow = totalHammerDelta !== 0
+    ? `<div class="metric-row" style="margin-top:0">
+        <div class="metric-box"><div class="label">해머 변동</div><div class="value">${totalHammerDelta >= 0 ? '+' : ''}${totalHammerDelta.toLocaleString()}</div>
+        <div class="sub">${n.toLocaleString()}판 기준</div></div>
+      </div>` : '';
+
+  const flowHtml = `
+    <div class="gold-flow">
+      <div class="gold-flow-col income">
+        <div class="flow-header">수입 (판당 평균)</div>
+        <div class="flow-item"><span>레벨 보상</span><span class="fg">+${avgReward.toLocaleString()} ${_sub(totalReward)}</span></div>
+        <div class="flow-item"><span>스트릭 보너스</span><span class="fg">+${avgStreak.toLocaleString()} ${_sub(totalStreakGold)}</span></div>
+        ${extIncomeRow}
+        <div class="flow-total"><span class="ft-label">합계</span><span class="fg">+${avgIncome.toLocaleString()}/판</span></div>
+      </div>
+      <div class="gold-flow-col expense">
+        <div class="flow-header">지출 (판당 평균)</div>
+        <div class="flow-item"><span>입장료</span><span class="fr">-${avgEntryFee.toLocaleString()} ${_sub(-totalEntryFee)}</span></div>
+        <div class="flow-item"><span>와일드카드 구매</span><span class="fr">-${avgItemCost.toLocaleString()} ${_sub(-totalItemCost)}</span></div>
+        <div class="flow-total"><span class="ft-label">합계</span><span class="fr">-${avgExpense.toLocaleString()}/판</span></div>
+      </div>
+      <div class="gold-flow-col result">
+        <div class="flow-header">결과 (${n.toLocaleString()}판)</div>
+        <div class="flow-item"><span>게임 손익/런</span><span class="${avgPnl >= 0 ? 'fg' : 'fr'}">${avgPnl >= 0 ? '+' : ''}${avgPnl.toLocaleString()}</span></div>
+        <div class="flow-item"><span>게임 손익 합계</span><span class="${totalGoldPnl >= 0 ? 'fg' : 'fr'}">${totalGoldPnl >= 0 ? '+' : ''}${totalGoldPnl.toLocaleString()}</span></div>
+        ${extResultRow}
+        <div class="flow-total"><span class="ft-label">실제 변동</span><span class="${totalActual >= 0 ? 'fb' : 'fr'}">${totalActual >= 0 ? '+' : ''}${totalActual.toLocaleString()}</span></div>
+      </div>
+    </div>
+    ${hammerRow}`;
+
   return `
-    <div class="metric-row">
-      <div class="metric-box"><div class="label">총 골드 수익</div><div class="value" style="color:${goldColor}">${totalGoldPnl.toLocaleString()}</div></div>
-      <div class="metric-box"><div class="label">총 해머 변동</div><div class="value">${totalHammerDelta.toLocaleString()}</div></div>
+    ${flowHtml}
+    <div class="chart-grid">
+      <div class="chart-box"><h4>골드 수입/지출 구성</h4><canvas id="chart-flow-${gameId}"></canvas></div>
+      <div class="chart-box"><h4>골드 회수율 (%)</h4><canvas id="chart-eff-${gameId}"></canvas></div>
     </div>
     <div class="chart-grid">
-      <div class="chart-box"><h4>골드 회수율 (%)</h4><canvas id="chart-eff-${gameId}"></canvas></div>
       <div class="chart-box"><h4>골드 손익 /판</h4><canvas id="chart-gpnl-${gameId}"></canvas></div>
+      <div class="chart-box"><h4>페르소나별 골드 잔액 추이</h4><canvas id="chart-goldbal-${gameId}"></canvas></div>
     </div>
     <div class="chart-grid">
       <div class="chart-box"><h4>배팅 배수별 골드 손익 /판</h4><canvas id="chart-bet-${gameId}"></canvas></div>
-      <div class="chart-box"><h4>페르소나별 골드 잔액 추이</h4><canvas id="chart-goldbal-${gameId}"></canvas></div>
-    </div>
-    <div class="chart-grid" style="grid-template-columns:1fr 1fr">
-      <div class="chart-box"><h4>와일드 비용 /판</h4><canvas id="chart-wild-${gameId}"></canvas></div>
-      <div class="chart-box"><h4>스트릭 보너스 /판</h4><canvas id="chart-streak-${gameId}"></canvas></div>
+      <div class="chart-box"><h4>와일드 비용 vs 스트릭 보너스 /판</h4><canvas id="chart-wildstreak-${gameId}"></canvas></div>
     </div>
     <div class="tbl-wrap"><h4>런별 경제 상세</h4>
-      <table><thead><tr><th>날짜</th><th>페르소나</th><th>골드 PnL</th><th>해머</th><th>골드 시작</th><th>골드 종료</th></tr></thead>
+      <table><thead><tr><th>날짜</th><th>페르소나</th><th>게임 PnL</th><th>외부 골드</th><th>해머</th><th>골드 시작</th><th>골드 종료</th></tr></thead>
       <tbody>${rows}</tbody></table></div>
   `;
 }
@@ -2582,9 +3057,48 @@ function renderEconomyCharts(gameId, stages, runs) {
     });
   }
 
-  // 와일드 비용/판, 스트릭 보너스/판
-  _chartBar(gameId, 'wild', labels, colors, pKeys.map(p => pAgg[p].played ? Math.round(pAgg[p].wildCost / pAgg[p].played) : 0), '', '와일드비용/판');
-  _chartBar(gameId, 'streak', labels, colors, pKeys.map(p => pAgg[p].played ? Math.round(pAgg[p].streakGold / pAgg[p].played) : 0), '', '스트릭/판');
+  // 골드 수입/지출 구성 차트 (스택 바)
+  const flowKey = `flow-${gameId}`;
+  if (_charts[flowKey]) _charts[flowKey].destroy();
+  const flowCanvas = document.getElementById(`chart-flow-${gameId}`);
+  if (flowCanvas) {
+    const rewardData = pKeys.map(p => pAgg[p].played ? Math.round(pAgg[p].reward / pAgg[p].played) : 0);
+    const streakIncData = pKeys.map(p => pAgg[p].played ? Math.round(pAgg[p].streakGold / pAgg[p].played) : 0);
+    const entryData = pKeys.map(p => pAgg[p].played ? -Math.round((pAgg[p].cost - pAgg[p].wildCost) / pAgg[p].played) : 0);
+    const wildExpData = pKeys.map(p => pAgg[p].played ? -Math.round(pAgg[p].wildCost / pAgg[p].played) : 0);
+    _charts[flowKey] = new Chart(flowCanvas, {
+      type: 'bar',
+      data: { labels, datasets: [
+        { label: '레벨 보상', data: rewardData, backgroundColor: '#4ade80cc', borderRadius: 3, stack: 'income' },
+        { label: '스트릭', data: streakIncData, backgroundColor: '#22d3eecc', borderRadius: 3, stack: 'income' },
+        { label: '입장료', data: entryData, backgroundColor: '#f87171cc', borderRadius: 3, stack: 'expense' },
+        { label: '와일드', data: wildExpData, backgroundColor: '#fb923ccc', borderRadius: 3, stack: 'expense' },
+      ]},
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } },
+          tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.raw >= 0 ? '+' : ''}${c.raw.toLocaleString()}` } } },
+        scales: { x: { stacked: true }, y: { stacked: true, ticks: { callback: v => v.toLocaleString() } } },
+      },
+    });
+  }
+
+  // 와일드 비용 vs 스트릭 보너스 /판 (그룹 바)
+  const wsKey = `wildstreak-${gameId}`;
+  if (_charts[wsKey]) _charts[wsKey].destroy();
+  const wsCanvas = document.getElementById(`chart-wildstreak-${gameId}`);
+  if (wsCanvas) {
+    _charts[wsKey] = new Chart(wsCanvas, {
+      type: 'bar',
+      data: { labels, datasets: [
+        { label: '스트릭 보너스', data: pKeys.map(p => pAgg[p].played ? Math.round(pAgg[p].streakGold / pAgg[p].played) : 0),
+          backgroundColor: '#4ade80aa', borderColor: '#4ade80', borderWidth: 1.5, borderRadius: 4 },
+        { label: '와일드 비용', data: pKeys.map(p => pAgg[p].played ? Math.round(pAgg[p].wildCost / pAgg[p].played) : 0),
+          backgroundColor: '#fb923caa', borderColor: '#fb923c', borderWidth: 1.5, borderRadius: 4 },
+      ]},
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#94a3b8' } } } },
+    });
+  }
 
   // 골드 잔액 추이 (페르소나별)
   const sortedRuns = [...runs].sort((a, b) => {
@@ -3725,15 +4239,17 @@ function renderCatStages(gameId, stages) {
    카테고리: 보안 QA
    ══════════════════════════════════════════════ */
 function renderCatSecurity(gameId, runs) {
-  // ── 최신 날짜 런만 필터 (등급 산정용) ──
-  const latestDate = runs.reduce((max, r) => r.run_date > max ? r.run_date : max, '');
-  const latestRuns = runs.filter(r => r.run_date === latestDate);
+  // ── 최신 런만 사용 (페르소나별 마지막 1건) ──
+  const latestByPersona = {};
+  for (const r of runs) {
+    if (!latestByPersona[r.persona]) latestByPersona[r.persona] = r;
+  }
+  const latestRuns = Object.values(latestByPersona);
 
-  // ── 데이터 집계 (최신 런 기준) ──
+  // ── 데이터 집계 ──
   const allChecks = [];
   let totalPass = 0, totalFail = 0, apiErrors = 0, apiTotal = 0;
   let critical = 0, warning = 0, info = 0;
-  let securityFail = 0; // balance 제외 보안 전용 fail
   const clientChecks = { xss: [], storage: [], https: [], authority: [] };
   const serverChecks = { headers: [], infoLeak: [], idor: [], apiErr: [] };
   const balanceChecks = { pass: 0, fail: 0, items: [] };
@@ -3748,11 +4264,8 @@ function renderCatSecurity(gameId, runs) {
         allChecks.push({ ...c, persona: r.persona, date: r.run_date });
         // 카테고리 분류
         const cat = (c.category || '').toLowerCase();
-        const isBalance = cat.includes('balance') || (c.name && c.name.includes('입장료'));
-        if (isBalance) {
+        if (cat.includes('balance') || (c.name && c.name.includes('입장료'))) {
           if (c.pass) balanceChecks.pass++; else { balanceChecks.fail++; balanceChecks.items.push(c); }
-        } else if (!c.pass) {
-          securityFail++;
         }
       }
     }
@@ -3783,13 +4296,13 @@ function renderCatSecurity(gameId, runs) {
     }
   }
 
-  // 등급 계산 (최신 런 + balance 제외)
+  // 전체 등급 계산
   const totalAll = totalPass + totalFail + critical + warning + info;
   let gradeLabel, gradeColor;
   if (critical > 0) { gradeLabel = 'F'; gradeColor = '#ef4444'; }
-  else if (securityFail > 10 || warning > 5) { gradeLabel = 'D'; gradeColor = '#ef4444'; }
-  else if (securityFail > 3 || warning > 2) { gradeLabel = 'C'; gradeColor = '#f59e0b'; }
-  else if (securityFail > 0 || warning > 0) { gradeLabel = 'B'; gradeColor = '#f59e0b'; }
+  else if (totalFail > 10 || warning > 5) { gradeLabel = 'D'; gradeColor = '#ef4444'; }
+  else if (totalFail > 3 || warning > 2) { gradeLabel = 'C'; gradeColor = '#f59e0b'; }
+  else if (totalFail > 0 || warning > 0) { gradeLabel = 'B'; gradeColor = '#f59e0b'; }
   else { gradeLabel = 'A'; gradeColor = '#10b981'; }
 
   // ── 섹션 렌더 헬퍼 ──
@@ -3808,10 +4321,10 @@ function renderCatSecurity(gameId, runs) {
     <div style="display:flex;align-items:center;gap:16px;padding:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;margin-bottom:16px">
       <div style="font-size:48px;font-weight:800;color:${gradeColor};min-width:60px;text-align:center">${gradeLabel}</div>
       <div style="flex:1">
-        <div style="font-size:14px;font-weight:600;margin-bottom:6px">보안 종합 등급 <span style="font-size:11px;font-weight:400;color:var(--text-muted)">(${latestDate} 기준)</span></div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:6px">보안 종합 등급</div>
         <div style="display:flex;gap:16px;font-size:12px;flex-wrap:wrap">
           <span style="color:#ef4444">Critical ${critical}건</span>
-          <span style="color:#f59e0b">Warning ${warning + securityFail}건</span>
+          <span style="color:#f59e0b">Warning ${warning + totalFail}건</span>
           <span style="color:var(--status-ok)">Pass ${totalPass}건</span>
           <span style="color:var(--text-muted)">API 에러 ${apiErrors}건 / ${apiTotal.toLocaleString()}</span>
         </div>
@@ -4952,7 +5465,6 @@ async function _saveCapture(canvas, suffix) {
   }
 }
 
-// A. 뷰포트(현재 화면) 캡처
 async function captureViewport() {
   const btn = document.getElementById('captureBtn');
   const orig = btn.textContent; btn.textContent = '⏳'; btn.disabled = true;
@@ -4970,13 +5482,11 @@ async function captureViewport() {
   finally { btn.textContent = orig; btn.disabled = false; }
 }
 
-// B. 섹션 선택 캡처
 function openSectionPicker() {
   const content = document.querySelector('.content');
   const activePanel = content.querySelector('.game-detail.active') || content;
   const activeCat = activePanel.querySelector('.cat-panel.active');
   const scanRoot = activeCat || activePanel;
-  // 캡처 가능한 섹션 수집
   const sections = [];
   scanRoot.querySelectorAll('.metric-row, .persona-grid, .chart-grid, .tbl-wrap, .gold-flow, .check-grid, .perf-gauge, .ov-summary, .cards').forEach((el, i) => {
     const h4 = el.querySelector('h4');
@@ -5015,7 +5525,6 @@ async function execSectionCapture(overlay) {
   const orig = btn.textContent; btn.textContent = '⏳'; btn.disabled = true;
   try {
     const bgColor = getComputedStyle(document.body).getPropertyValue('background-color');
-    // 임시 컨테이너에 선택된 섹션 클론
     const tmp = document.createElement('div');
     tmp.style.cssText = `position:absolute;left:-9999px;top:0;width:${document.querySelector('.content').offsetWidth}px;background:${bgColor};padding:16px;`;
     document.body.appendChild(tmp);
@@ -5621,15 +6130,41 @@ function restoreSidebar() {
 }
 
 function sidebarSystemNav(target) {
-  const SYSTEM_TITLES = { health: 'Health Check', cron: '크론 이력', runs: '런 관리' };
-  const sectionMap = { health: 'health-check-section', cron: 'cron-section', runs: 'run-manager' };
+  const SYSTEM_TITLES = { health: 'Health Check', cron: '크론 이력', runs: '런 관리', guide: '가이드' };
+  const sectionMap = { health: 'health-check-section', cron: 'cron-section', runs: 'run-manager', guide: 'guide-section' };
 
   // 모든 사이드바 active 초기화 (게임 + 시스템)
   document.querySelectorAll('#sidebar-games .sidebar-item').forEach(b => b.classList.remove('active'));
-  ['sidebar-health','sidebar-cron','sidebar-runs'].forEach(id => {
+  ['sidebar-health','sidebar-cron','sidebar-runs','sidebar-guide'].forEach(id => {
     document.getElementById(id)?.classList.remove('active');
   });
   document.getElementById(`sidebar-${target}`)?.classList.add('active');
+
+  // 가이드 페이지는 별도 렌더링
+  if (target === 'guide') {
+    const overview = document.getElementById('overview-panel');
+    const panels = document.getElementById('game-panels');
+    overview.style.display = 'none';
+    if (panels) panels.innerHTML = '';
+    _currentGameId = '';
+    _renderedCats = {};
+    const titleEl = document.getElementById('page-title');
+    if (titleEl) titleEl.textContent = '가이드';
+    const content = document.querySelector('.content');
+    let guideEl = document.getElementById('guide-section');
+    if (!guideEl) {
+      guideEl = document.createElement('div');
+      guideEl.id = 'guide-section';
+      content.appendChild(guideEl);
+    }
+    guideEl.style.display = 'block';
+    guideEl.innerHTML = renderGuide();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+  // 가이드 숨기기
+  const guideEl = document.getElementById('guide-section');
+  if (guideEl) guideEl.style.display = 'none';
 
   // 페이지 제목
   const titleEl = document.getElementById('page-title');
