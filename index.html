@@ -3957,6 +3957,123 @@ function renderCatSecurity(gameId, runs) {
 /* ══════════════════════════════════════════════
    카테고리: 서버 로그 (최신 런)
    ══════════════════════════════════════════════ */
+function renderRuntimeScan(rt) {
+  if (!rt) return '';
+  const ns = rt.node_stats || {};
+  const total = ns.total || 0, active = ns.active || 0, inactive = ns.inactive || 0;
+  const maxD = ns.max_depth || 0;
+  const orphans = rt.orphan_nodes || [];
+  const unusedComps = rt.unused_components || [];
+  const httpEps = rt.http_endpoints || [];
+  const wsList = rt.websockets || [];
+  const inactiveN = rt.inactive_nodes || [];
+  const managers = rt.managers || [];
+  const tex = rt.texture_stats || {};
+  const inactiveRatio = total > 0 ? (inactive / total * 100).toFixed(1) : '0';
+  const ratioColor = inactive/total > 0.3 ? 'var(--status-err)' : inactive/total > 0.15 ? 'var(--status-warn)' : 'var(--status-ok)';
+
+  // 노드 통계
+  const statsHtml = `<div class="chart-grid" style="grid-template-columns:repeat(6,1fr)">
+    <div class="mini-card"><div class="stat-label">전체 노드</div><div class="stat-value">${total}</div></div>
+    <div class="mini-card"><div class="stat-label">활성</div><div class="stat-value" style="color:var(--status-ok)">${active}</div></div>
+    <div class="mini-card"><div class="stat-label">비활성</div><div class="stat-value" style="color:${ratioColor}">${inactive} <span style="font-size:11px">(${inactiveRatio}%)</span></div></div>
+    <div class="mini-card"><div class="stat-label">고아 노드</div><div class="stat-value" style="color:${orphans.length > 0 ? 'var(--status-err)' : 'var(--status-ok)'}">${orphans.length}</div></div>
+    <div class="mini-card"><div class="stat-label">트리 깊이</div><div class="stat-value">${maxD}</div></div>
+    <div class="mini-card"><div class="stat-label">JS Heap</div><div class="stat-value">${tex.js_heap_mb || '-'}MB</div></div>
+  </div>`;
+
+  // 깊이 분포
+  const dd = rt.depth_distribution || {};
+  const ddKeys = Object.keys(dd).sort((a,b) => +a - +b);
+  const ddMax = Math.max(...ddKeys.map(k => dd[k]), 1);
+  const depthHtml = ddKeys.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:var(--text-secondary);padding:6px 0">씬 트리 깊이 분포</summary>
+    <div style="padding:8px 12px;background:var(--card-bg);border-radius:6px;margin-top:4px">
+    ${ddKeys.map(d => `<div style="display:flex;align-items:center;gap:6px;margin:2px 0">
+      <span style="color:var(--text-muted);font-size:11px;min-width:20px;text-align:right">d${d}</span>
+      <div style="background:var(--border);border-radius:3px;flex:1;height:14px;overflow:hidden">
+        <div style="background:#3b82f6;height:100%;width:${(dd[d]/ddMax*100).toFixed(0)}%;border-radius:3px"></div></div>
+      <span style="color:var(--text-muted);font-size:11px;min-width:28px">${dd[d]}</span>
+    </div>`).join('')}
+    </div></details>` : '';
+
+  // 비활성 노드
+  const inactiveHtml = inactiveN.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#f87171;padding:6px 0">비활성 노드 (${inactiveN.length}개)</summary>
+    <div class="tbl-wrap" style="margin-top:4px;max-height:250px;overflow-y:auto"><table><thead><tr><th>이름</th><th>경로</th><th>컴포넌트</th><th>자식</th><th>하위</th></tr></thead><tbody>
+    ${inactiveN.slice(0,30).map(n => `<tr><td style="font-weight:600">${n.name}</td><td style="font-size:11px;word-break:break-all;color:var(--text-muted)">${n.path}</td><td style="font-size:11px">${(n.components||[]).join(', ')||'-'}</td><td>${n.child_count||0}</td><td>${n.descendant_count||0}</td></tr>`).join('')}
+    </tbody></table></div></details>` : '';
+
+  // 고아 노드
+  const reasonKo = {active_under_inactive_parent:'비활성 부모 아래 활성', empty_leaf:'빈 리프 노드'};
+  const orphanHtml = orphans.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#fb923c;padding:6px 0">고아 노드 (${orphans.length}개)</summary>
+    <div class="tbl-wrap" style="margin-top:4px;max-height:200px;overflow-y:auto"><table><thead><tr><th>이름</th><th>경로</th><th>사유</th><th>컴포넌트</th></tr></thead><tbody>
+    ${orphans.slice(0,20).map(n => `<tr><td style="font-weight:600">${n.name}</td><td style="font-size:11px;color:var(--text-muted)">${n.path}</td><td><span style="background:#7c2d12;color:#fb923c;padding:1px 6px;border-radius:4px;font-size:10px">${reasonKo[n.reason]||n.reason}</span></td><td style="font-size:11px">${(n.components||[]).join(', ')||'-'}</td></tr>`).join('')}
+    </tbody></table></div></details>` : '';
+
+  // 미사용 컴포넌트
+  const unusedHtml = unusedComps.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#facc15;padding:6px 0">미사용/비활성 컴포넌트 (${unusedComps.length}개)</summary>
+    <div class="tbl-wrap" style="margin-top:4px;max-height:250px;overflow-y:auto"><table><thead><tr><th>컴포넌트</th><th>경로</th><th>이슈</th></tr></thead><tbody>
+    ${unusedComps.slice(0,30).map(c => {
+      const badges = (c.issues||[]).map(i => {
+        if (i === 'disabled') return '<span style="background:#7f1d1d;color:#f87171;padding:1px 5px;border-radius:3px;font-size:10px;margin-right:3px">disabled</span>';
+        if (i === 'node_inactive') return '<span style="background:#713f12;color:#facc15;padding:1px 5px;border-radius:3px;font-size:10px;margin-right:3px">node inactive</span>';
+        if (i.startsWith('null_fields:')) return `<span style="background:#1e3a5f;color:#93c5fd;padding:1px 5px;border-radius:3px;font-size:10px">null: ${i.split(':')[1]}</span>`;
+        return i;
+      }).join('');
+      return `<tr><td style="font-weight:600">${c.component}</td><td style="font-size:11px;color:var(--text-muted)">${c.path}</td><td>${badges}</td></tr>`;
+    }).join('')}
+    </tbody></table></div></details>` : '';
+
+  // HTTP 엔드포인트
+  const httpHtml = httpEps.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#34d399;padding:6px 0">HTTP 통신 패턴 (${httpEps.length}개 엔드포인트)</summary>
+    <div class="tbl-wrap" style="margin-top:4px;max-height:250px;overflow-y:auto"><table><thead><tr><th>경로</th><th style="text-align:right">호출수</th><th style="text-align:right">평균</th><th style="text-align:right">범위</th><th>유형</th></tr></thead><tbody>
+    ${httpEps.slice(0,20).map(ep => {
+      const dc = ep.avg_duration_ms > 1000 ? 'var(--status-err)' : ep.avg_duration_ms > 500 ? 'var(--status-warn)' : 'var(--status-ok)';
+      return `<tr><td style="font-size:11px;word-break:break-all">${ep.path||ep.url}</td><td style="text-align:right;font-weight:600">${ep.count}</td><td style="text-align:right;color:${dc}">${ep.avg_duration_ms}ms</td><td style="text-align:right;color:var(--text-muted);font-size:11px">${ep.min_duration_ms}~${ep.max_duration_ms}ms</td><td style="font-size:11px">${ep.type||''}</td></tr>`;
+    }).join('')}
+    </tbody></table></div></details>` : '';
+
+  // WebSocket
+  const wsStates = {0:'CONNECTING',1:'OPEN',2:'CLOSING',3:'CLOSED'};
+  const wsHtml = wsList.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#a78bfa;padding:6px 0">WebSocket (${wsList.length}개)</summary>
+    <div class="tbl-wrap" style="margin-top:4px"><table><thead><tr><th>URL</th><th>상태</th><th>프로토콜</th><th>소유</th></tr></thead><tbody>
+    ${wsList.map(ws => {
+      const st = wsStates[ws.readyState] || 'UNKNOWN';
+      const sc = st === 'OPEN' ? 'var(--status-ok)' : st === 'CONNECTING' ? 'var(--status-warn)' : 'var(--status-err)';
+      return `<tr><td style="word-break:break-all">${ws.url}</td><td style="color:${sc};font-weight:600">${st}</td><td>${ws.protocol||'-'}</td><td style="font-size:11px">${ws.holder||''}</td></tr>`;
+    }).join('')}
+    </tbody></table></div></details>` : '';
+
+  // 텍스처
+  const texMB = (tex.textures_total_kb || 0) / 1024;
+  const topTex = tex.top_textures || [];
+  const texHtml = (tex.textures_loaded || tex.cached_assets) ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#f472b6;padding:6px 0">텍스처 & 에셋</summary>
+    <div class="chart-grid" style="grid-template-columns:repeat(4,1fr);margin-top:4px">
+      <div class="mini-card"><div class="stat-label">텍스처</div><div class="stat-value">${tex.textures_loaded||0}</div></div>
+      <div class="mini-card"><div class="stat-label">텍스처 메모리</div><div class="stat-value">${texMB.toFixed(1)}MB</div></div>
+      <div class="mini-card"><div class="stat-label">캐시 에셋</div><div class="stat-value">${tex.cached_assets||0}</div></div>
+      <div class="mini-card"><div class="stat-label">SpriteFrame</div><div class="stat-value">${tex.sprite_frames||0}</div></div>
+    </div>
+    ${topTex.length ? `<div class="tbl-wrap" style="margin-top:4px;max-height:200px;overflow-y:auto"><table><thead><tr><th>텍스처</th><th style="text-align:right">크기</th><th style="text-align:right">메모리</th></tr></thead><tbody>
+    ${topTex.map(t => `<tr><td>${t.name}</td><td style="text-align:right">${t.w}x${t.h}</td><td style="text-align:right;font-weight:600">${(t.kb||0).toLocaleString()}KB</td></tr>`).join('')}
+    </tbody></table></div>` : ''}
+    </details>` : '';
+
+  // 매니저
+  const mgrHtml = managers.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#60a5fa;padding:6px 0">매니저/컨트롤러 (${managers.length}개)</summary>
+    <div class="tbl-wrap" style="margin-top:4px;max-height:200px;overflow-y:auto"><table><thead><tr><th>컴포넌트</th><th>경로</th><th>상태</th><th>속성</th></tr></thead><tbody>
+    ${managers.slice(0,20).map(m => {
+      const st = m.active ? '<span style="color:var(--status-ok)">Active</span>' : '<span style="color:var(--status-err)">Inactive</span>';
+      const props = Object.entries(m.properties||{}).slice(0,5).map(([k,v])=>`${k}=${v}`).join(', ')||'-';
+      return `<tr><td style="color:#93c5fd;font-weight:600">${m.name}</td><td style="font-size:11px;color:var(--text-muted)">${m.path}</td><td>${st}</td><td style="font-size:11px">${props}</td></tr>`;
+    }).join('')}
+    </tbody></table></div></details>` : '';
+
+  return `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+    <h4 style="color:#a78bfa;margin-bottom:8px">런타임 심층 스캔 <span style="font-size:11px;font-weight:400;color:var(--text-muted)">(Scene: ${rt.scene || '-'}, ${rt.scan_time_ms || 0}ms)</span></h4>
+    ${statsHtml}${depthHtml}${mgrHtml}${inactiveHtml}${orphanHtml}${unusedHtml}${httpHtml}${wsHtml}${texHtml}
+  </div>`;
+}
+
 function renderCatLogApi(gameId, runs) {
   const logs = _serverLogs[gameId];
   if (!logs || !logs.length) {
@@ -4094,6 +4211,7 @@ function renderCatLogApi(gameId, runs) {
         ${urlRows ? `<div class="tbl-wrap"><h4>상위 API URL</h4><table><thead><tr><th>URL</th><th>건수</th></tr></thead><tbody>${urlRows}</tbody></table></div>` : ''}
         ${apiRows ? `<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12px;color:var(--text-secondary);padding:6px 0">API 호출 상세 (${Math.min(apiCalls.length,100)}/${totalApi}건)</summary><div class="tbl-wrap" style="margin-top:6px;max-height:350px;overflow-y:auto"><table><thead><tr><th>시간</th><th>메서드</th><th>상태</th><th>URL / 이벤트</th></tr></thead><tbody>${apiRows}</tbody></table></div></details>` : ''}
         ${conRows ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:var(--text-secondary);padding:6px 0">콘솔 로그 상세 (${Math.min(consoleLogs.length,100)}/${totalConsole}건)</summary><div class="tbl-wrap" style="margin-top:6px;max-height:350px;overflow-y:auto"><table><thead><tr><th>시간</th><th>레벨</th><th>메시지</th></tr></thead><tbody>${conRows}</tbody></table></div></details>` : ''}
+        ${renderRuntimeScan(log.runtime_scan)}
       </div>
     </details>`;
   }).join('');
