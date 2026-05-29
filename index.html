@@ -9,6 +9,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
 :root {
   --bg-body: #0b1120;
@@ -555,6 +556,7 @@ body.edit-mode .merge-btn { display: inline-block; }
         <button class="ctrl-btn" id="editBtn" onclick="toggleEditMode()" title="레이아웃 편집">Edit</button>
         <button class="ctrl-btn" id="notifBtn" onclick="toggleNotifPermission()" title="데스크톱 알림">🔔</button>
         <button class="ctrl-btn" style="position:relative" onclick="toggleNotifPanel()" title="알림 내역">📋<span class="notif-badge" id="notif-badge" style="display:none">0</span></button>
+        <button class="ctrl-btn" id="captureBtn" onclick="captureDashboard()" title="화면 캡처 (PNG 저장 + 클립보드 복사)">📷</button>
         <span class="ts" id="update-time"></span>
       </div>
     </div>
@@ -1605,8 +1607,8 @@ async function switchTab(id, _btn) {
 const NRU_TUTORIAL_ALL = [
   { key: 230001, content_id: 'content_ingame_intro', name: '인게임 소개', scene: 'ingame', trigger: 'tutorial_level', triggerVal: 1, type: 'floating' },
   { key: 230002, content_id: 'content_deck_draw', name: '덱 드로우 안내', scene: 'ingame', trigger: 'tutorial_level', triggerVal: 2, type: 'floating' },
-  { key: 230003, content_id: 'content_lobby_play', name: '로비 플레이 버튼', scene: 'lobby', trigger: 'level_clear', triggerVal: 1, type: 'focus', node: 'LOBBYPLAYBUTTON', skip: 'specout' },
-  { key: 230004, content_id: 'content_shop', name: '상점 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 3, type: 'focus', node: 'SHOPBUTTON', skip: 'specout' },
+  { key: 230003, content_id: 'content_lobby_play', name: '로비 플레이 버튼', scene: 'lobby', trigger: 'level_clear', triggerVal: 1, type: 'focus', node: 'LOBBYPLAYBUTTON' },
+  { key: 230004, content_id: 'content_shop', name: '상점 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 3, type: 'focus', node: 'SHOPBUTTON' },
   { key: 230005, content_id: 'content_pre_level_popup', name: '프리레벨 팝업', scene: 'pre_level', trigger: 'level_clear', triggerVal: 2, type: 'focus', node: 'PLAYBUTTON' },
   { key: 230006, content_id: 'content_idle_gold', name: '방치 골드 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 4, type: 'focus', node: 'IDLEGOLDBUTTON' },
   { key: 230007, content_id: 'gimmick_plus_card', name: '플러스 카드 기믹', scene: 'ingame', trigger: 'first_appear', triggerVal: 'plus_card', type: 'focus' },
@@ -1614,14 +1616,14 @@ const NRU_TUTORIAL_ALL = [
   { key: 230009, content_id: 'content_daily_task', name: '일일 과제 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 10, type: 'focus', node: 'DAILYTASK' },
   { key: 230010, content_id: 'content_streak', name: '스트릭 미터 안내', scene: 'ingame', trigger: 'first_appear', triggerVal: 'streak_meter', type: 'focus', node: 'INGAMESTREAK' },
   { key: 230011, content_id: 'content_leaderboard', name: '리더보드 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 5, type: 'focus', node: 'LEADERBOARDBUTTON' },
-  { key: 230012, content_id: 'content_collection', name: '컬렉션 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 6, type: 'focus', node: 'ALBUM' },
+  { key: 230012, content_id: 'content_collection', name: '컬렉션 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 6, type: 'focus', skip: 'notimpl' },
   { key: 230013, content_id: 'booster_wild_card', name: '와일드카드 부스터', scene: 'ingame', trigger: 'first_appear', triggerVal: 'wild_card', type: 'floating' },
   { key: 230014, content_id: 'booster_fireworks', name: '불꽃놀이 부스터', scene: 'pre_level', trigger: 'level_clear', triggerVal: 8, type: 'focus', node: 'BOOSTER1' },
   { key: 230015, content_id: 'booster_undo', name: '되돌리기 부스터', scene: 'ingame', trigger: 'first_appear', triggerVal: 'undo', type: 'floating' },
   { key: 230016, content_id: 'booster_extra_deck', name: '추가 덱 부스터', scene: 'ingame', trigger: 'condition', triggerVal: 'deck_exhausted', type: 'floating' },
   { key: 230017, content_id: 'content_city_deco_grad', name: '도시 꾸미기 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 8, type: 'focus', node: 'DECOBUTTON' },
   { key: 230018, content_id: 'content_betting_2', name: '베팅 x2 안내', scene: 'pre_level', trigger: 'level_clear', triggerVal: 9, type: 'focus', node: 'BETTINGBUTTON' },
-  { key: 230019, content_id: 'content_daily_wheel', name: '일일 룰렛 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 9, type: 'focus', node: 'daily_wheel' },
+  { key: 230019, content_id: 'content_daily_wheel', name: '일일 룰렛 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 9, type: 'focus', skip: 'notimpl' },
   { key: 230020, content_id: 'content_event_forced', name: '이벤트 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 12, type: 'focus', node: 'EVENTBUTTON' },
   { key: 230021, content_id: 'gimmick_runner_card', name: '러너 카드 기믹', scene: 'ingame', trigger: 'first_appear', triggerVal: 'runner_card', type: 'focus' },
   { key: 230022, content_id: 'content_betting_4', name: '베팅 x4 안내', scene: 'pre_level', trigger: 'level_clear', triggerVal: 17, type: 'focus', node: 'BETTINGBUTTON' },
@@ -1691,7 +1693,7 @@ function _renderNruTutorialSection(latestRun) {
   }
 
   // NRU Lv1-24 범위에서 발생 가능한 튜토리얼 필터 (level_clear ≤ 24, tutorial_level ≤ 24)
-  const SKIP_KR = { notimpl: '미구현', specout: '스펙 제외', condition: '조건 미충족', touch: '터치 전용', repeat_tip: '반복 팁', no_check: '확인 불필요' };
+  const SKIP_KR = { notimpl: '미구현', condition: '조건 미충족', touch: '터치 전용', repeat_tip: '반복 팁', no_check: '확인 불필요' };
   const expectedInNru = NRU_TUTORIAL_ALL.filter(d => {
     if (d.trigger === 'level_clear' && typeof d.triggerVal === 'number' && d.triggerVal <= 25) return true;
     if (d.trigger === 'tutorial_level' && typeof d.triggerVal === 'number' && d.triggerVal <= 25) return true;
@@ -3675,15 +3677,20 @@ function renderCatStages(gameId, stages) {
    카테고리: 보안 QA
    ══════════════════════════════════════════════ */
 function renderCatSecurity(gameId, runs) {
-  // ── 데이터 집계 ──
+  // ── 최신 날짜 런만 필터 (등급 산정용) ──
+  const latestDate = runs.reduce((max, r) => r.run_date > max ? r.run_date : max, '');
+  const latestRuns = runs.filter(r => r.run_date === latestDate);
+
+  // ── 데이터 집계 (최신 런 기준) ──
   const allChecks = [];
   let totalPass = 0, totalFail = 0, apiErrors = 0, apiTotal = 0;
   let critical = 0, warning = 0, info = 0;
+  let securityFail = 0; // balance 제외 보안 전용 fail
   const clientChecks = { xss: [], storage: [], https: [], authority: [] };
   const serverChecks = { headers: [], infoLeak: [], idor: [], apiErr: [] };
   const balanceChecks = { pass: 0, fail: 0, items: [] };
 
-  for (const r of runs) {
+  for (const r of latestRuns) {
     const m = r.metrics || {};
     const sec = m.security;
     if (sec) {
@@ -3693,8 +3700,11 @@ function renderCatSecurity(gameId, runs) {
         allChecks.push({ ...c, persona: r.persona, date: r.run_date });
         // 카테고리 분류
         const cat = (c.category || '').toLowerCase();
-        if (cat.includes('balance') || (c.name && c.name.includes('입장료'))) {
+        const isBalance = cat.includes('balance') || (c.name && c.name.includes('입장료'));
+        if (isBalance) {
           if (c.pass) balanceChecks.pass++; else { balanceChecks.fail++; balanceChecks.items.push(c); }
+        } else if (!c.pass) {
+          securityFail++;
         }
       }
     }
@@ -3725,13 +3735,13 @@ function renderCatSecurity(gameId, runs) {
     }
   }
 
-  // 전체 등급 계산
+  // 등급 계산 (최신 런 + balance 제외)
   const totalAll = totalPass + totalFail + critical + warning + info;
   let gradeLabel, gradeColor;
   if (critical > 0) { gradeLabel = 'F'; gradeColor = '#ef4444'; }
-  else if (totalFail > 10 || warning > 5) { gradeLabel = 'D'; gradeColor = '#ef4444'; }
-  else if (totalFail > 3 || warning > 2) { gradeLabel = 'C'; gradeColor = '#f59e0b'; }
-  else if (totalFail > 0 || warning > 0) { gradeLabel = 'B'; gradeColor = '#f59e0b'; }
+  else if (securityFail > 10 || warning > 5) { gradeLabel = 'D'; gradeColor = '#ef4444'; }
+  else if (securityFail > 3 || warning > 2) { gradeLabel = 'C'; gradeColor = '#f59e0b'; }
+  else if (securityFail > 0 || warning > 0) { gradeLabel = 'B'; gradeColor = '#f59e0b'; }
   else { gradeLabel = 'A'; gradeColor = '#10b981'; }
 
   // ── 섹션 렌더 헬퍼 ──
@@ -3750,10 +3760,10 @@ function renderCatSecurity(gameId, runs) {
     <div style="display:flex;align-items:center;gap:16px;padding:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;margin-bottom:16px">
       <div style="font-size:48px;font-weight:800;color:${gradeColor};min-width:60px;text-align:center">${gradeLabel}</div>
       <div style="flex:1">
-        <div style="font-size:14px;font-weight:600;margin-bottom:6px">보안 종합 등급</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:6px">보안 종합 등급 <span style="font-size:11px;font-weight:400;color:var(--text-muted)">(${latestDate} 기준)</span></div>
         <div style="display:flex;gap:16px;font-size:12px;flex-wrap:wrap">
           <span style="color:#ef4444">Critical ${critical}건</span>
-          <span style="color:#f59e0b">Warning ${warning + totalFail}건</span>
+          <span style="color:#f59e0b">Warning ${warning + securityFail}건</span>
           <span style="color:var(--status-ok)">Pass ${totalPass}건</span>
           <span style="color:var(--text-muted)">API 에러 ${apiErrors}건 / ${apiTotal.toLocaleString()}</span>
         </div>
@@ -4862,6 +4872,45 @@ function showToast(msg, duration = 3000) {
     el.classList.add('fade-out');
     setTimeout(() => el.remove(), 300);
   }, duration);
+}
+
+/* ── 화면 캡처 ── */
+
+async function captureDashboard() {
+  const btn = document.getElementById('captureBtn');
+  if (!btn) return;
+  const orig = btn.textContent;
+  btn.textContent = '⏳';
+  btn.disabled = true;
+  try {
+    const target = document.querySelector('.content');
+    const canvas = await html2canvas(target, {
+      backgroundColor: getComputedStyle(document.body).getPropertyValue('background-color'),
+      scale: 2,
+      useCORS: true,
+      logging: false,
+    });
+    const link = document.createElement('a');
+    const gameLabel = document.querySelector('.gtab.active')?.textContent?.trim() || 'dashboard';
+    const ts = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '');
+    link.download = `dashboard_${gameLabel}_${ts}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    canvas.toBlob(async (blob) => {
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        showToast('캡처 완료 — 클립보드에 복사됨');
+      } catch {
+        showToast('캡처 저장 완료 (클립보드 복사는 HTTPS 환경 필요)');
+      }
+    }, 'image/png');
+  } catch (e) {
+    console.error('capture error', e);
+    showToast('캡처 실패: ' + e.message);
+  } finally {
+    btn.textContent = orig;
+    btn.disabled = false;
+  }
 }
 
 /* ── 브라우저 데스크톱 알림 ── */
