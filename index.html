@@ -158,25 +158,6 @@ tr:hover td { background: rgba(59,130,246,.05); }
 .metric-box .value { font-size: 22px; font-weight: 700; }
 .metric-box .sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 
-/* ── Gold Flow Card ── */
-.gold-flow { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
-.gold-flow-col {
-  flex: 1; min-width: 200px;
-  background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 16px;
-}
-.gold-flow-col.income { border-top: 3px solid var(--status-ok); }
-.gold-flow-col.expense { border-top: 3px solid var(--status-err); }
-.gold-flow-col.result { border-top: 3px solid #60a5fa; }
-.flow-header { font-size: 13px; font-weight: 700; color: var(--text-secondary); margin-bottom: 10px; letter-spacing: .5px; }
-.flow-item { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; color: var(--text-secondary); }
-.flow-item + .flow-item { border-top: 1px solid rgba(255,255,255,.04); }
-.flow-total { display: flex; justify-content: space-between; padding: 8px 0 0; margin-top: 6px; border-top: 2px solid rgba(255,255,255,.1); font-weight: 700; font-size: 15px; }
-.flow-total .ft-label { color: var(--text-secondary); }
-.fg { color: var(--status-ok); }
-.fr { color: var(--status-err); }
-.fy { color: #ffc107; }
-.fb { color: #60a5fa; }
-
 /* ── Security ── */
 .check-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; }
 .check-item {
@@ -1624,8 +1605,8 @@ async function switchTab(id, _btn) {
 const NRU_TUTORIAL_ALL = [
   { key: 230001, content_id: 'content_ingame_intro', name: '인게임 소개', scene: 'ingame', trigger: 'tutorial_level', triggerVal: 1, type: 'floating' },
   { key: 230002, content_id: 'content_deck_draw', name: '덱 드로우 안내', scene: 'ingame', trigger: 'tutorial_level', triggerVal: 2, type: 'floating' },
-  { key: 230003, content_id: 'content_lobby_play', name: '로비 플레이 버튼', scene: 'lobby', trigger: 'level_clear', triggerVal: 1, type: 'focus', node: 'LOBBYPLAYBUTTON' },
-  { key: 230004, content_id: 'content_shop', name: '상점 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 3, type: 'focus', node: 'SHOPBUTTON' },
+  { key: 230003, content_id: 'content_lobby_play', name: '로비 플레이 버튼', scene: 'lobby', trigger: 'level_clear', triggerVal: 1, type: 'focus', node: 'LOBBYPLAYBUTTON', skip: 'specout' },
+  { key: 230004, content_id: 'content_shop', name: '상점 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 3, type: 'focus', node: 'SHOPBUTTON', skip: 'specout' },
   { key: 230005, content_id: 'content_pre_level_popup', name: '프리레벨 팝업', scene: 'pre_level', trigger: 'level_clear', triggerVal: 2, type: 'focus', node: 'PLAYBUTTON' },
   { key: 230006, content_id: 'content_idle_gold', name: '방치 골드 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 4, type: 'focus', node: 'IDLEGOLDBUTTON' },
   { key: 230007, content_id: 'gimmick_plus_card', name: '플러스 카드 기믹', scene: 'ingame', trigger: 'first_appear', triggerVal: 'plus_card', type: 'focus' },
@@ -1633,14 +1614,14 @@ const NRU_TUTORIAL_ALL = [
   { key: 230009, content_id: 'content_daily_task', name: '일일 과제 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 10, type: 'focus', node: 'DAILYTASK' },
   { key: 230010, content_id: 'content_streak', name: '스트릭 미터 안내', scene: 'ingame', trigger: 'first_appear', triggerVal: 'streak_meter', type: 'focus', node: 'INGAMESTREAK' },
   { key: 230011, content_id: 'content_leaderboard', name: '리더보드 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 5, type: 'focus', node: 'LEADERBOARDBUTTON' },
-  { key: 230012, content_id: 'content_collection', name: '컬렉션 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 6, type: 'focus', skip: 'notimpl' },
+  { key: 230012, content_id: 'content_collection', name: '컬렉션 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 6, type: 'focus', node: 'ALBUM' },
   { key: 230013, content_id: 'booster_wild_card', name: '와일드카드 부스터', scene: 'ingame', trigger: 'first_appear', triggerVal: 'wild_card', type: 'floating' },
   { key: 230014, content_id: 'booster_fireworks', name: '불꽃놀이 부스터', scene: 'pre_level', trigger: 'level_clear', triggerVal: 8, type: 'focus', node: 'BOOSTER1' },
   { key: 230015, content_id: 'booster_undo', name: '되돌리기 부스터', scene: 'ingame', trigger: 'first_appear', triggerVal: 'undo', type: 'floating' },
   { key: 230016, content_id: 'booster_extra_deck', name: '추가 덱 부스터', scene: 'ingame', trigger: 'condition', triggerVal: 'deck_exhausted', type: 'floating' },
   { key: 230017, content_id: 'content_city_deco_grad', name: '도시 꾸미기 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 8, type: 'focus', node: 'DECOBUTTON' },
   { key: 230018, content_id: 'content_betting_2', name: '베팅 x2 안내', scene: 'pre_level', trigger: 'level_clear', triggerVal: 9, type: 'focus', node: 'BETTINGBUTTON' },
-  { key: 230019, content_id: 'content_daily_wheel', name: '일일 룰렛 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 9, type: 'focus', skip: 'notimpl' },
+  { key: 230019, content_id: 'content_daily_wheel', name: '일일 룰렛 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 9, type: 'focus', node: 'daily_wheel' },
   { key: 230020, content_id: 'content_event_forced', name: '이벤트 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 12, type: 'focus', node: 'EVENTBUTTON' },
   { key: 230021, content_id: 'gimmick_runner_card', name: '러너 카드 기믹', scene: 'ingame', trigger: 'first_appear', triggerVal: 'runner_card', type: 'focus' },
   { key: 230022, content_id: 'content_betting_4', name: '베팅 x4 안내', scene: 'pre_level', trigger: 'level_clear', triggerVal: 17, type: 'focus', node: 'BETTINGBUTTON' },
@@ -1710,7 +1691,7 @@ function _renderNruTutorialSection(latestRun) {
   }
 
   // NRU Lv1-24 범위에서 발생 가능한 튜토리얼 필터 (level_clear ≤ 24, tutorial_level ≤ 24)
-  const SKIP_KR = { notimpl: '미구현', condition: '조건 미충족', touch: '터치 전용', repeat_tip: '반복 팁', no_check: '확인 불필요' };
+  const SKIP_KR = { notimpl: '미구현', specout: '스펙 제외', condition: '조건 미충족', touch: '터치 전용', repeat_tip: '반복 팁', no_check: '확인 불필요' };
   const expectedInNru = NRU_TUTORIAL_ALL.filter(d => {
     if (d.trigger === 'level_clear' && typeof d.triggerVal === 'number' && d.triggerVal <= 25) return true;
     if (d.trigger === 'tutorial_level' && typeof d.triggerVal === 'number' && d.triggerVal <= 25) return true;
@@ -2081,10 +2062,9 @@ const CATEGORY_RENDERERS = {
   stages: (gid, stages, runs) => renderCatStages(gid, stages),
   security: (gid, stages, runs) => renderCatSecurity(gid, runs),
   logapi: (gid, stages, runs) => renderCatLogApi(gid, runs),
-  runtime: (gid, stages, runs) => renderCatRuntime(gid, runs),
   perf: (gid, stages, runs) => '<div class="state-msg"><div class="icon">⏳</div><div>성능 데이터 로딩 중...</div></div>',
   // SCJ 전용
-  economy: (gid, stages, runs) => renderCatEconomy(gid, stages, runs),
+  economy: (gid, stages, runs) => renderCatEconomy(gid, runs),
   balance: (gid, stages, runs) => renderCatBalance(gid, stages, runs),
   gimmick: (gid, stages, runs) => renderCatGimmick(gid, stages, runs),
   // CTZ / MJG
@@ -2227,21 +2207,19 @@ function _aggregatePersonaStages(stages) {
 function renderCatSummary(gameId, stages, runs) {
   const personas = {};
   let totalGoldPnl = 0, totalHammerDelta = 0, totalTurns = 0, turnCount = 0;
-  let totalScore = 0, totalContinues = 0, totalExternal = 0;
+  let totalScore = 0, totalContinues = 0;
   for (const r of runs) {
     const m = r.metrics || {};
-    if (!personas[r.persona]) personas[r.persona] = { played: 0, runs: 0, time: 0, goldPnl: 0, goldExternal: 0, hammer: 0, turns: 0, turnLevels: 0, score: 0, continues: 0 };
+    if (!personas[r.persona]) personas[r.persona] = { played: 0, runs: 0, time: 0, goldPnl: 0, hammer: 0, turns: 0, turnLevels: 0, score: 0, continues: 0 };
     const p = personas[r.persona];
     p.played += r.levels_played || 0;
     p.runs++;
     p.time += r.total_time_sec || 0;
     p.goldPnl += m.gold_pnl || 0;
-    p.goldExternal += m.gold_external || 0;
     p.hammer += m.hammer_delta || 0;
     p.score += m.total_score || 0;
     p.continues += m.continues || 0;
     totalGoldPnl += m.gold_pnl || 0;
-    totalExternal += m.gold_external || 0;
     totalHammerDelta += m.hammer_delta || 0;
     totalScore += m.total_score || 0;
     totalContinues += m.continues || 0;
@@ -2299,9 +2277,8 @@ function renderCatSummary(gameId, stages, runs) {
   } else {
     const goldPerGame = totalPlayed ? Math.round(totalGoldPnl / totalPlayed).toLocaleString() : '-';
     const goldColor = totalGoldPnl >= 0 ? 'var(--status-ok)' : 'var(--status-err)';
-    const extNote = totalExternal ? `<div class="label" style="font-size:.7em;color:#ffc107;margin-top:2px">외부 +${totalExternal.toLocaleString()} 별도</div>` : '';
     topMetrics = `
-      <div class="metric-box"><div class="label">골드 손익/판</div><div class="value" style="color:${goldColor}">${goldPerGame}</div>${extNote}</div>
+      <div class="metric-box"><div class="label">골드 손익/판</div><div class="value" style="color:${goldColor}">${goldPerGame}</div></div>
       <div class="metric-box"><div class="label">평균 턴수</div><div class="value">${avgTurns}</div></div>
       <div class="metric-box"><div class="label">해머 변동</div><div class="value">${totalHammerDelta >= 0 ? '+' : ''}${totalHammerDelta}</div></div>
       <div class="metric-box"><div class="label">총 플레이</div><div class="value">${totalPlayed.toLocaleString()}판</div></div>
@@ -2336,11 +2313,9 @@ function renderCatSummary(gameId, stages, runs) {
       const pGoldColor = d.goldPnl >= 0 ? 'var(--status-ok)' : 'var(--status-err)';
       const pTurns = d.turnLevels ? (d.turns / d.turnLevels).toFixed(1) : '-';
       const pHammer = d.hammer >= 0 ? `+${d.hammer}` : d.hammer;
-      const pExt = d.goldExternal ? `<div class="stat"><span class="stat-label">외부 골드</span><span class="stat-value" style="color:#ffc107">+${d.goldExternal.toLocaleString()}</span></div>` : '';
       statsHtml = `
         <div class="stat"><span class="stat-label">판 수</span><span class="stat-value">${d.played}판 (${d.runs}런)</span></div>
         <div class="stat"><span class="stat-label">골드 손익/판</span><span class="stat-value" style="color:${pGoldColor}">${pGold}</span></div>
-        ${pExt}
         <div class="stat"><span class="stat-label">평균 턴수</span><span class="stat-value">${pTurns}</span></div>
         <div class="stat"><span class="stat-label">평균 시간</span><span class="stat-value">${avgTime}초</span></div>
         <div class="stat"><span class="stat-label">해머 변동</span><span class="stat-value">${pHammer}</span></div>`;
@@ -2474,101 +2449,41 @@ function renderRadarChart(gameId, stages, runs) {
 /* ══════════════════════════════════════════════
    카테고리: 경제
    ══════════════════════════════════════════════ */
-function renderCatEconomy(gameId, stages, runs) {
-  /* ── Run-level 집계 ── */
-  let totalGoldPnl = 0, totalHammerDelta = 0, totalExternal = 0, totalActual = 0;
+function renderCatEconomy(gameId, runs) {
+  let totalGoldPnl = 0, totalHammerDelta = 0;
   const rows = runs.map(r => {
     const m = r.metrics || {};
-    const pnl = m.gold_pnl || 0;
-    const ext = m.gold_external || 0;
-    const actual = m.gold_actual_change || ((m.gold_end || 0) - (m.gold_start || 0));
-    totalGoldPnl += pnl;
+    totalGoldPnl += m.gold_pnl || 0;
     totalHammerDelta += m.hammer_delta || 0;
-    totalExternal += ext;
-    totalActual += actual;
-    const goldColor = pnl >= 0 ? 'var(--status-ok)' : 'var(--status-err)';
-    const extStyle = ext !== 0 ? ' style="background:rgba(255,193,7,.12)"' : '';
-    const extCell = ext !== 0 ? `<span class="fy">+${ext.toLocaleString()}</span>` : '-';
-    return `<tr${extStyle}>
+    const goldColor = (m.gold_pnl || 0) >= 0 ? 'var(--status-ok)' : 'var(--status-err)';
+    return `<tr>
       <td>${r.run_date}</td><td>${PERSONA_KO[r.persona] || r.persona}</td>
-      <td style="color:${goldColor}">${pnl.toLocaleString()}</td>
-      <td>${extCell}</td>
+      <td style="color:${goldColor}">${(m.gold_pnl || 0).toLocaleString()}</td>
       <td>${(m.hammer_delta || 0).toLocaleString()}</td>
       <td>${(m.gold_start || 0).toLocaleString()}</td><td>${(m.gold_end || 0).toLocaleString()}</td>
     </tr>`;
   }).join('');
 
-  /* ── Stage-level 수입/지출 집계 ── */
-  let totalReward = 0, totalEntryFee = 0, totalItemCost = 0, totalStreakGold = 0;
-  for (const s of stages) {
-    const d = s.details || {};
-    totalReward += d.level_reward || 0;
-    totalEntryFee += d.entry_fee || 0;
-    totalItemCost += d.item_cost || 0;
-    totalStreakGold += (d.streak_gold || 0);
-  }
-  const n = stages.length || 1;
-  const avgReward = Math.round(totalReward / n);
-  const avgEntryFee = Math.round(totalEntryFee / n);
-  const avgItemCost = Math.round(totalItemCost / n);
-  const avgStreak = Math.round(totalStreakGold / n);
-  const avgIncome = avgReward + avgStreak;
-  const avgExpense = avgEntryFee + avgItemCost;
-  const avgPnl = stages.length ? Math.round(totalGoldPnl / runs.length) : 0;
-
-  /* ── 골드 흐름 카드 (판당 평균) ── */
-  const _sub = (total) => `<span style="font-size:10px;color:var(--text-muted);margin-left:4px">(총 ${total >= 0 ? '+' : ''}${total.toLocaleString()})</span>`;
-  const extIncomeRow = totalExternal > 0
-    ? `<div class="flow-item"><span>외부 지급 (어드민)</span><span class="fy">+${totalExternal.toLocaleString()}</span></div>` : '';
-  const extResultRow = totalExternal !== 0
-    ? `<div class="flow-item"><span>외부 골드</span><span class="fy">+${totalExternal.toLocaleString()}</span></div>` : '';
-  const hammerRow = totalHammerDelta !== 0
-    ? `<div class="metric-row" style="margin-top:0">
-        <div class="metric-box"><div class="label">해머 변동</div><div class="value">${totalHammerDelta >= 0 ? '+' : ''}${totalHammerDelta.toLocaleString()}</div>
-        <div class="sub">${n.toLocaleString()}판 기준</div></div>
-      </div>` : '';
-
-  const flowHtml = `
-    <div class="gold-flow">
-      <div class="gold-flow-col income">
-        <div class="flow-header">수입 (판당 평균)</div>
-        <div class="flow-item"><span>레벨 보상</span><span class="fg">+${avgReward.toLocaleString()} ${_sub(totalReward)}</span></div>
-        <div class="flow-item"><span>스트릭 보너스</span><span class="fg">+${avgStreak.toLocaleString()} ${_sub(totalStreakGold)}</span></div>
-        ${extIncomeRow}
-        <div class="flow-total"><span class="ft-label">합계</span><span class="fg">+${avgIncome.toLocaleString()}/판</span></div>
-      </div>
-      <div class="gold-flow-col expense">
-        <div class="flow-header">지출 (판당 평균)</div>
-        <div class="flow-item"><span>입장료</span><span class="fr">-${avgEntryFee.toLocaleString()} ${_sub(-totalEntryFee)}</span></div>
-        <div class="flow-item"><span>와일드카드 구매</span><span class="fr">-${avgItemCost.toLocaleString()} ${_sub(-totalItemCost)}</span></div>
-        <div class="flow-total"><span class="ft-label">합계</span><span class="fr">-${avgExpense.toLocaleString()}/판</span></div>
-      </div>
-      <div class="gold-flow-col result">
-        <div class="flow-header">결과 (${n.toLocaleString()}판)</div>
-        <div class="flow-item"><span>게임 손익/런</span><span class="${avgPnl >= 0 ? 'fg' : 'fr'}">${avgPnl >= 0 ? '+' : ''}${avgPnl.toLocaleString()}</span></div>
-        <div class="flow-item"><span>게임 손익 합계</span><span class="${totalGoldPnl >= 0 ? 'fg' : 'fr'}">${totalGoldPnl >= 0 ? '+' : ''}${totalGoldPnl.toLocaleString()}</span></div>
-        ${extResultRow}
-        <div class="flow-total"><span class="ft-label">실제 변동</span><span class="${totalActual >= 0 ? 'fb' : 'fr'}">${totalActual >= 0 ? '+' : ''}${totalActual.toLocaleString()}</span></div>
-      </div>
-    </div>
-    ${hammerRow}`;
-
+  const goldColor = totalGoldPnl >= 0 ? 'var(--status-ok)' : 'var(--status-err)';
   return `
-    ${flowHtml}
-    <div class="chart-grid">
-      <div class="chart-box"><h4>골드 수입/지출 구성</h4><canvas id="chart-flow-${gameId}"></canvas></div>
-      <div class="chart-box"><h4>골드 회수율 (%)</h4><canvas id="chart-eff-${gameId}"></canvas></div>
+    <div class="metric-row">
+      <div class="metric-box"><div class="label">총 골드 수익</div><div class="value" style="color:${goldColor}">${totalGoldPnl.toLocaleString()}</div></div>
+      <div class="metric-box"><div class="label">총 해머 변동</div><div class="value">${totalHammerDelta.toLocaleString()}</div></div>
     </div>
     <div class="chart-grid">
+      <div class="chart-box"><h4>골드 회수율 (%)</h4><canvas id="chart-eff-${gameId}"></canvas></div>
       <div class="chart-box"><h4>골드 손익 /판</h4><canvas id="chart-gpnl-${gameId}"></canvas></div>
-      <div class="chart-box"><h4>페르소나별 골드 잔액 추이</h4><canvas id="chart-goldbal-${gameId}"></canvas></div>
     </div>
     <div class="chart-grid">
       <div class="chart-box"><h4>배팅 배수별 골드 손익 /판</h4><canvas id="chart-bet-${gameId}"></canvas></div>
-      <div class="chart-box"><h4>와일드 비용 vs 스트릭 보너스 /판</h4><canvas id="chart-wildstreak-${gameId}"></canvas></div>
+      <div class="chart-box"><h4>페르소나별 골드 잔액 추이</h4><canvas id="chart-goldbal-${gameId}"></canvas></div>
+    </div>
+    <div class="chart-grid" style="grid-template-columns:1fr 1fr">
+      <div class="chart-box"><h4>와일드 비용 /판</h4><canvas id="chart-wild-${gameId}"></canvas></div>
+      <div class="chart-box"><h4>스트릭 보너스 /판</h4><canvas id="chart-streak-${gameId}"></canvas></div>
     </div>
     <div class="tbl-wrap"><h4>런별 경제 상세</h4>
-      <table><thead><tr><th>날짜</th><th>페르소나</th><th>게임 PnL</th><th>외부 골드</th><th>해머</th><th>골드 시작</th><th>골드 종료</th></tr></thead>
+      <table><thead><tr><th>날짜</th><th>페르소나</th><th>골드 PnL</th><th>해머</th><th>골드 시작</th><th>골드 종료</th></tr></thead>
       <tbody>${rows}</tbody></table></div>
   `;
 }
@@ -2617,48 +2532,9 @@ function renderEconomyCharts(gameId, stages, runs) {
     });
   }
 
-  // 골드 수입/지출 구성 차트 (스택 바)
-  const flowKey = `flow-${gameId}`;
-  if (_charts[flowKey]) _charts[flowKey].destroy();
-  const flowCanvas = document.getElementById(`chart-flow-${gameId}`);
-  if (flowCanvas) {
-    const rewardData = pKeys.map(p => pAgg[p].played ? Math.round(pAgg[p].reward / pAgg[p].played) : 0);
-    const streakIncData = pKeys.map(p => pAgg[p].played ? Math.round(pAgg[p].streakGold / pAgg[p].played) : 0);
-    const entryData = pKeys.map(p => pAgg[p].played ? -Math.round((pAgg[p].cost - pAgg[p].wildCost) / pAgg[p].played) : 0);
-    const wildExpData = pKeys.map(p => pAgg[p].played ? -Math.round(pAgg[p].wildCost / pAgg[p].played) : 0);
-    _charts[flowKey] = new Chart(flowCanvas, {
-      type: 'bar',
-      data: { labels, datasets: [
-        { label: '레벨 보상', data: rewardData, backgroundColor: '#4ade80cc', borderRadius: 3, stack: 'income' },
-        { label: '스트릭', data: streakIncData, backgroundColor: '#22d3eecc', borderRadius: 3, stack: 'income' },
-        { label: '입장료', data: entryData, backgroundColor: '#f87171cc', borderRadius: 3, stack: 'expense' },
-        { label: '와일드', data: wildExpData, backgroundColor: '#fb923ccc', borderRadius: 3, stack: 'expense' },
-      ]},
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } },
-          tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.raw >= 0 ? '+' : ''}${c.raw.toLocaleString()}` } } },
-        scales: { x: { stacked: true }, y: { stacked: true, ticks: { callback: v => v.toLocaleString() } } },
-      },
-    });
-  }
-
-  // 와일드 비용 vs 스트릭 보너스 /판 (그룹 바)
-  const wsKey = `wildstreak-${gameId}`;
-  if (_charts[wsKey]) _charts[wsKey].destroy();
-  const wsCanvas = document.getElementById(`chart-wildstreak-${gameId}`);
-  if (wsCanvas) {
-    _charts[wsKey] = new Chart(wsCanvas, {
-      type: 'bar',
-      data: { labels, datasets: [
-        { label: '스트릭 보너스', data: pKeys.map(p => pAgg[p].played ? Math.round(pAgg[p].streakGold / pAgg[p].played) : 0),
-          backgroundColor: '#4ade80aa', borderColor: '#4ade80', borderWidth: 1.5, borderRadius: 4 },
-        { label: '와일드 비용', data: pKeys.map(p => pAgg[p].played ? Math.round(pAgg[p].wildCost / pAgg[p].played) : 0),
-          backgroundColor: '#fb923caa', borderColor: '#fb923c', borderWidth: 1.5, borderRadius: 4 },
-      ]},
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#94a3b8' } } } },
-    });
-  }
+  // 와일드 비용/판, 스트릭 보너스/판
+  _chartBar(gameId, 'wild', labels, colors, pKeys.map(p => pAgg[p].played ? Math.round(pAgg[p].wildCost / pAgg[p].played) : 0), '', '와일드비용/판');
+  _chartBar(gameId, 'streak', labels, colors, pKeys.map(p => pAgg[p].played ? Math.round(pAgg[p].streakGold / pAgg[p].played) : 0), '', '스트릭/판');
 
   // 골드 잔액 추이 (페르소나별)
   const sortedRuns = [...runs].sort((a, b) => {
@@ -3799,13 +3675,6 @@ function renderCatStages(gameId, stages) {
    카테고리: 보안 QA
    ══════════════════════════════════════════════ */
 function renderCatSecurity(gameId, runs) {
-  // ── 최신 런만 사용 (페르소나별 마지막 1건) ──
-  const latestByPersona = {};
-  for (const r of runs) {
-    if (!latestByPersona[r.persona]) latestByPersona[r.persona] = r;
-  }
-  const latestRuns = Object.values(latestByPersona);
-
   // ── 데이터 집계 ──
   const allChecks = [];
   let totalPass = 0, totalFail = 0, apiErrors = 0, apiTotal = 0;
@@ -3814,7 +3683,7 @@ function renderCatSecurity(gameId, runs) {
   const serverChecks = { headers: [], infoLeak: [], idor: [], apiErr: [] };
   const balanceChecks = { pass: 0, fail: 0, items: [] };
 
-  for (const r of latestRuns) {
+  for (const r of runs) {
     const m = r.metrics || {};
     const sec = m.security;
     if (sec) {
@@ -3965,123 +3834,6 @@ function renderCatSecurity(gameId, runs) {
 /* ══════════════════════════════════════════════
    카테고리: 서버 로그 (최신 런)
    ══════════════════════════════════════════════ */
-function renderRuntimeScan(rt) {
-  if (!rt) return '';
-  const ns = rt.node_stats || {};
-  const total = ns.total || 0, active = ns.active || 0, inactive = ns.inactive || 0;
-  const maxD = ns.max_depth || 0;
-  const orphans = rt.orphan_nodes || [];
-  const unusedComps = rt.unused_components || [];
-  const httpEps = rt.http_endpoints || [];
-  const wsList = rt.websockets || [];
-  const inactiveN = rt.inactive_nodes || [];
-  const managers = rt.managers || [];
-  const tex = rt.texture_stats || {};
-  const inactiveRatio = total > 0 ? (inactive / total * 100).toFixed(1) : '0';
-  const ratioColor = inactive/total > 0.3 ? 'var(--status-err)' : inactive/total > 0.15 ? 'var(--status-warn)' : 'var(--status-ok)';
-
-  // 노드 통계
-  const statsHtml = `<div class="chart-grid" style="grid-template-columns:repeat(6,1fr)">
-    <div class="mini-card"><div class="stat-label">전체 노드</div><div class="stat-value">${total}</div></div>
-    <div class="mini-card"><div class="stat-label">활성</div><div class="stat-value" style="color:var(--status-ok)">${active}</div></div>
-    <div class="mini-card"><div class="stat-label">비활성</div><div class="stat-value" style="color:${ratioColor}">${inactive} <span style="font-size:11px">(${inactiveRatio}%)</span></div></div>
-    <div class="mini-card"><div class="stat-label">미연결 노드</div><div class="stat-value" style="color:${orphans.length > 0 ? 'var(--status-err)' : 'var(--status-ok)'}">${orphans.length}</div></div>
-    <div class="mini-card"><div class="stat-label">트리 깊이</div><div class="stat-value">${maxD}</div></div>
-    <div class="mini-card"><div class="stat-label">JS Heap</div><div class="stat-value">${tex.js_heap_mb || '-'}MB</div></div>
-  </div>`;
-
-  // 깊이 분포
-  const dd = rt.depth_distribution || {};
-  const ddKeys = Object.keys(dd).sort((a,b) => +a - +b);
-  const ddMax = Math.max(...ddKeys.map(k => dd[k]), 1);
-  const depthHtml = ddKeys.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:var(--text-secondary);padding:6px 0">씬 트리 깊이 분포</summary>
-    <div style="padding:8px 12px;background:var(--card-bg);border-radius:6px;margin-top:4px">
-    ${ddKeys.map(d => `<div style="display:flex;align-items:center;gap:6px;margin:2px 0">
-      <span style="color:var(--text-muted);font-size:11px;min-width:20px;text-align:right">d${d}</span>
-      <div style="background:var(--border);border-radius:3px;flex:1;height:14px;overflow:hidden">
-        <div style="background:#3b82f6;height:100%;width:${(dd[d]/ddMax*100).toFixed(0)}%;border-radius:3px"></div></div>
-      <span style="color:var(--text-muted);font-size:11px;min-width:28px">${dd[d]}</span>
-    </div>`).join('')}
-    </div></details>` : '';
-
-  // 비활성 노드
-  const inactiveHtml = inactiveN.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#f87171;padding:6px 0">비활성 노드 (${inactiveN.length}개)</summary>
-    <div class="tbl-wrap" style="margin-top:4px;max-height:250px;overflow-y:auto"><table><thead><tr><th>이름</th><th>경로</th><th>컴포넌트</th><th>자식</th><th>하위</th></tr></thead><tbody>
-    ${inactiveN.slice(0,30).map(n => `<tr><td style="font-weight:600">${n.name}</td><td style="font-size:11px;word-break:break-all;color:var(--text-muted)">${n.path}</td><td style="font-size:11px">${(n.components||[]).join(', ')||'-'}</td><td>${n.child_count||0}</td><td>${n.descendant_count||0}</td></tr>`).join('')}
-    </tbody></table></div></details>` : '';
-
-  // 미연결 노드
-  const reasonKo = {active_under_inactive_parent:'비활성 부모 아래 활성', empty_leaf:'빈 리프 노드'};
-  const orphanHtml = orphans.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#fb923c;padding:6px 0">미연결 노드 (${orphans.length}개)</summary>
-    <div class="tbl-wrap" style="margin-top:4px;max-height:200px;overflow-y:auto"><table><thead><tr><th>이름</th><th>경로</th><th>사유</th><th>컴포넌트</th></tr></thead><tbody>
-    ${orphans.slice(0,20).map(n => `<tr><td style="font-weight:600">${n.name}</td><td style="font-size:11px;color:var(--text-muted)">${n.path}</td><td><span style="background:#7c2d12;color:#fb923c;padding:1px 6px;border-radius:4px;font-size:10px">${reasonKo[n.reason]||n.reason}</span></td><td style="font-size:11px">${(n.components||[]).join(', ')||'-'}</td></tr>`).join('')}
-    </tbody></table></div></details>` : '';
-
-  // 미사용 컴포넌트
-  const unusedHtml = unusedComps.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#facc15;padding:6px 0">미사용/비활성 컴포넌트 (${unusedComps.length}개)</summary>
-    <div class="tbl-wrap" style="margin-top:4px;max-height:250px;overflow-y:auto"><table><thead><tr><th>컴포넌트</th><th>경로</th><th>이슈</th></tr></thead><tbody>
-    ${unusedComps.slice(0,30).map(c => {
-      const badges = (c.issues||[]).map(i => {
-        if (i === 'disabled') return '<span style="background:#7f1d1d;color:#f87171;padding:1px 5px;border-radius:3px;font-size:10px;margin-right:3px">disabled</span>';
-        if (i === 'node_inactive') return '<span style="background:#713f12;color:#facc15;padding:1px 5px;border-radius:3px;font-size:10px;margin-right:3px">node inactive</span>';
-        if (i.startsWith('null_fields:')) return `<span style="background:#1e3a5f;color:#93c5fd;padding:1px 5px;border-radius:3px;font-size:10px">null: ${i.split(':')[1]}</span>`;
-        return i;
-      }).join('');
-      return `<tr><td style="font-weight:600">${c.component}</td><td style="font-size:11px;color:var(--text-muted)">${c.path}</td><td>${badges}</td></tr>`;
-    }).join('')}
-    </tbody></table></div></details>` : '';
-
-  // HTTP 엔드포인트
-  const httpHtml = httpEps.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#34d399;padding:6px 0">HTTP 통신 패턴 (${httpEps.length}개 엔드포인트)</summary>
-    <div class="tbl-wrap" style="margin-top:4px;max-height:250px;overflow-y:auto"><table><thead><tr><th>경로</th><th style="text-align:right">호출수</th><th style="text-align:right">평균</th><th style="text-align:right">범위</th><th>유형</th></tr></thead><tbody>
-    ${httpEps.slice(0,20).map(ep => {
-      const dc = ep.avg_duration_ms > 1000 ? 'var(--status-err)' : ep.avg_duration_ms > 500 ? 'var(--status-warn)' : 'var(--status-ok)';
-      return `<tr><td style="font-size:11px;word-break:break-all">${ep.path||ep.url}</td><td style="text-align:right;font-weight:600">${ep.count}</td><td style="text-align:right;color:${dc}">${ep.avg_duration_ms}ms</td><td style="text-align:right;color:var(--text-muted);font-size:11px">${ep.min_duration_ms}~${ep.max_duration_ms}ms</td><td style="font-size:11px">${ep.type||''}</td></tr>`;
-    }).join('')}
-    </tbody></table></div></details>` : '';
-
-  // WebSocket
-  const wsStates = {0:'CONNECTING',1:'OPEN',2:'CLOSING',3:'CLOSED'};
-  const wsHtml = wsList.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#a78bfa;padding:6px 0">WebSocket (${wsList.length}개)</summary>
-    <div class="tbl-wrap" style="margin-top:4px"><table><thead><tr><th>URL</th><th>상태</th><th>프로토콜</th><th>소유</th></tr></thead><tbody>
-    ${wsList.map(ws => {
-      const st = wsStates[ws.readyState] || 'UNKNOWN';
-      const sc = st === 'OPEN' ? 'var(--status-ok)' : st === 'CONNECTING' ? 'var(--status-warn)' : 'var(--status-err)';
-      return `<tr><td style="word-break:break-all">${ws.url}</td><td style="color:${sc};font-weight:600">${st}</td><td>${ws.protocol||'-'}</td><td style="font-size:11px">${ws.holder||''}</td></tr>`;
-    }).join('')}
-    </tbody></table></div></details>` : '';
-
-  // 텍스처
-  const texMB = (tex.textures_total_kb || 0) / 1024;
-  const topTex = tex.top_textures || [];
-  const texHtml = (tex.textures_loaded || tex.cached_assets) ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#f472b6;padding:6px 0">텍스처 & 에셋</summary>
-    <div class="chart-grid" style="grid-template-columns:repeat(4,1fr);margin-top:4px">
-      <div class="mini-card"><div class="stat-label">텍스처</div><div class="stat-value">${tex.textures_loaded||0}</div></div>
-      <div class="mini-card"><div class="stat-label">텍스처 메모리</div><div class="stat-value">${texMB.toFixed(1)}MB</div></div>
-      <div class="mini-card"><div class="stat-label">캐시 에셋</div><div class="stat-value">${tex.cached_assets||0}</div></div>
-      <div class="mini-card"><div class="stat-label">SpriteFrame</div><div class="stat-value">${tex.sprite_frames||0}</div></div>
-    </div>
-    ${topTex.length ? `<div class="tbl-wrap" style="margin-top:4px;max-height:200px;overflow-y:auto"><table><thead><tr><th>텍스처</th><th style="text-align:right">크기</th><th style="text-align:right">메모리</th></tr></thead><tbody>
-    ${topTex.map(t => `<tr><td>${t.name}</td><td style="text-align:right">${t.w}x${t.h}</td><td style="text-align:right;font-weight:600">${(t.kb||0).toLocaleString()}KB</td></tr>`).join('')}
-    </tbody></table></div>` : ''}
-    </details>` : '';
-
-  // 매니저
-  const mgrHtml = managers.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#60a5fa;padding:6px 0">매니저/컨트롤러 (${managers.length}개)</summary>
-    <div class="tbl-wrap" style="margin-top:4px;max-height:200px;overflow-y:auto"><table><thead><tr><th>컴포넌트</th><th>경로</th><th>상태</th><th>속성</th></tr></thead><tbody>
-    ${managers.slice(0,20).map(m => {
-      const st = m.active ? '<span style="color:var(--status-ok)">Active</span>' : '<span style="color:var(--status-err)">Inactive</span>';
-      const props = Object.entries(m.properties||{}).slice(0,5).map(([k,v])=>`${k}=${v}`).join(', ')||'-';
-      return `<tr><td style="color:#93c5fd;font-weight:600">${m.name}</td><td style="font-size:11px;color:var(--text-muted)">${m.path}</td><td>${st}</td><td style="font-size:11px">${props}</td></tr>`;
-    }).join('')}
-    </tbody></table></div></details>` : '';
-
-  return `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-    <h4 style="color:#a78bfa;margin-bottom:8px">런타임 심층 스캔 <span style="font-size:11px;font-weight:400;color:var(--text-muted)">(Scene: ${rt.scene || '-'}, ${rt.scan_time_ms || 0}ms)</span></h4>
-    ${statsHtml}${depthHtml}${mgrHtml}${inactiveHtml}${orphanHtml}${unusedHtml}${httpHtml}${wsHtml}${texHtml}
-  </div>`;
-}
-
 function renderCatLogApi(gameId, runs) {
   const logs = _serverLogs[gameId];
   if (!logs || !logs.length) {
@@ -4234,177 +3986,6 @@ function renderCatLogApi(gameId, runs) {
     </div>
     <div class="persona-grid">${summaryCards}</div>
     ${personaDetails}
-  `;
-}
-
-function renderCombinedRuntimeScan(logs) {
-  const scans = logs.map(l => l.runtime_scan).filter(Boolean).filter(rt => (rt.node_stats||{}).total > 0);
-  if (!scans.length) return '';
-
-  const PERSONA_KO_LOCAL = {hardcore:'하드코어',average:'보통',casual:'캐주얼',struggling:'초보'};
-
-  // 페르소나별 비교 테이블
-  const compareRows = logs.filter(l => l.runtime_scan && (l.runtime_scan.node_stats||{}).total > 0).map(l => {
-    const rt = l.runtime_scan;
-    const ns = rt.node_stats || {};
-    const pName = PERSONA_KO_LOCAL[l.persona] || l.persona;
-    const ratio = ns.total > 0 ? (ns.inactive / ns.total * 100).toFixed(1) : '0';
-    const ratioColor = ns.inactive/ns.total > 0.3 ? 'var(--status-err)' : ns.inactive/ns.total > 0.15 ? 'var(--status-warn)' : 'var(--status-ok)';
-    const tex = rt.texture_stats || {};
-    return `<tr>
-      <td style="font-weight:600">${pName}</td>
-      <td style="text-align:right">${(ns.total||0).toLocaleString()}</td>
-      <td style="text-align:right;color:var(--status-ok)">${(ns.active||0).toLocaleString()}</td>
-      <td style="text-align:right;color:${ratioColor}">${ns.inactive||0} <span style="font-size:10px">(${ratio}%)</span></td>
-      <td style="text-align:right;color:${(rt.orphan_nodes||[]).length > 0 ? 'var(--status-err)' : 'var(--status-ok)'}">${(rt.orphan_nodes||[]).length}</td>
-      <td style="text-align:right">${(rt.unused_components||[]).length}</td>
-      <td style="text-align:right">${ns.max_depth||0}</td>
-      <td style="text-align:right">${tex.js_heap_mb||'-'}MB</td>
-      <td style="text-align:right;color:var(--text-muted)">${rt.scan_time_ms||0}ms</td>
-    </tr>`;
-  }).join('');
-
-  // 종합 통계 (마지막 페르소나 기준 + 병합)
-  const allInactive = new Map();
-  const allOrphans = new Map();
-  const allUnused = new Map();
-  const allHttp = new Map();
-  const allManagers = new Map();
-  let lastTex = {};
-
-  for (const rt of scans) {
-    for (const n of (rt.inactive_nodes || [])) allInactive.set(n.path, n);
-    for (const n of (rt.orphan_nodes || [])) allOrphans.set(n.path, n);
-    for (const n of (rt.unused_components || [])) allUnused.set(n.path + '/' + n.component, n);
-    for (const ep of (rt.http_endpoints || [])) {
-      const key = ep.path || ep.url;
-      const existing = allHttp.get(key);
-      if (existing) { existing.count += ep.count; } else { allHttp.set(key, {...ep}); }
-    }
-    for (const m of (rt.managers || [])) allManagers.set(m.path + '/' + m.name, m);
-    if (rt.texture_stats && rt.texture_stats.textures_loaded > 0) lastTex = rt.texture_stats;
-  }
-
-  const inactiveArr = [...allInactive.values()];
-  const orphanArr = [...allOrphans.values()];
-  const unusedArr = [...allUnused.values()];
-  const httpArr = [...allHttp.values()].sort((a,b) => b.count - a.count);
-  const mgrArr = [...allManagers.values()];
-
-  // 비활성 노드
-  const inactiveHtml = inactiveArr.length ? `<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12px;color:#f87171;padding:6px 0">비활성 노드 (${inactiveArr.length}개)</summary>
-    <div class="tbl-wrap" style="margin-top:4px;max-height:250px;overflow-y:auto"><table><thead><tr><th>이름</th><th>경로</th><th>컴포넌트</th><th>자식</th><th>하위</th></tr></thead><tbody>
-    ${inactiveArr.slice(0,30).map(n => `<tr><td style="font-weight:600">${n.name}</td><td style="font-size:11px;word-break:break-all;color:var(--text-muted)">${n.path}</td><td style="font-size:11px">${(n.components||[]).join(', ')||'-'}</td><td>${n.child_count||0}</td><td>${n.descendant_count||0}</td></tr>`).join('')}
-    </tbody></table></div></details>` : '';
-
-  // 미연결 노드
-  const reasonKo = {active_under_inactive_parent:'비활성 부모 아래 활성', empty_leaf:'빈 리프 노드'};
-  const orphanHtml = orphanArr.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#fb923c;padding:6px 0">미연결 노드 (${orphanArr.length}개)</summary>
-    <div class="tbl-wrap" style="margin-top:4px;max-height:200px;overflow-y:auto"><table><thead><tr><th>이름</th><th>경로</th><th>사유</th><th>컴포넌트</th></tr></thead><tbody>
-    ${orphanArr.slice(0,20).map(n => `<tr><td style="font-weight:600">${n.name}</td><td style="font-size:11px;color:var(--text-muted)">${n.path}</td><td><span style="background:#7c2d12;color:#fb923c;padding:1px 6px;border-radius:4px;font-size:10px">${reasonKo[n.reason]||n.reason}</span></td><td style="font-size:11px">${(n.components||[]).join(', ')||'-'}</td></tr>`).join('')}
-    </tbody></table></div></details>` : '';
-
-  // 미사용 컴포넌트
-  const unusedHtml = unusedArr.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#facc15;padding:6px 0">미사용/비활성 컴포넌트 (${unusedArr.length}개)</summary>
-    <div class="tbl-wrap" style="margin-top:4px;max-height:250px;overflow-y:auto"><table><thead><tr><th>컴포넌트</th><th>경로</th><th>이슈</th></tr></thead><tbody>
-    ${unusedArr.slice(0,30).map(c => {
-      const badges = (c.issues||[]).map(i => {
-        if (i === 'disabled') return '<span style="background:#7f1d1d;color:#f87171;padding:1px 5px;border-radius:3px;font-size:10px;margin-right:3px">disabled</span>';
-        if (i === 'node_inactive') return '<span style="background:#713f12;color:#facc15;padding:1px 5px;border-radius:3px;font-size:10px;margin-right:3px">node inactive</span>';
-        if (i.startsWith('null_fields:')) return '<span style="background:#1e3a5f;color:#93c5fd;padding:1px 5px;border-radius:3px;font-size:10px">null: '+i.split(':')[1]+'</span>';
-        return i;
-      }).join('');
-      return '<tr><td style="font-weight:600">'+c.component+'</td><td style="font-size:11px;color:var(--text-muted)">'+c.path+'</td><td>'+badges+'</td></tr>';
-    }).join('')}
-    </tbody></table></div></details>` : '';
-
-  // HTTP 엔드포인트 (P95/P99 + 자사/외부 분류)
-  const internalHttp = httpArr.filter(ep => ep.source === 'internal');
-  const externalHttp = httpArr.filter(ep => ep.source !== 'internal');
-  function httpTable(eps, label, color) {
-    if (!eps.length) return '';
-    return `<div style="margin-top:6px"><div style="font-size:12px;font-weight:600;color:${color};margin-bottom:4px">${label} (${eps.length}개)</div>
-    <div class="tbl-wrap" style="max-height:250px;overflow-y:auto"><table><thead><tr><th>경로</th><th style="text-align:right">호출수</th><th style="text-align:right">P50</th><th style="text-align:right">평균</th><th style="text-align:right">P95</th><th style="text-align:right">P99</th><th style="text-align:right">최대</th></tr></thead><tbody>
-    ${eps.slice(0,20).map(ep => {
-      const p95c = (ep.p95_ms||0) > 1000 ? 'var(--status-err)' : (ep.p95_ms||0) > 500 ? 'var(--status-warn)' : 'var(--status-ok)';
-      const p99c = (ep.p99_ms||0) > 1000 ? 'var(--status-err)' : (ep.p99_ms||0) > 500 ? 'var(--status-warn)' : 'var(--text-muted)';
-      return '<tr><td style="font-size:11px;word-break:break-all">'+(ep.path||ep.url)+'</td><td style="text-align:right;font-weight:600">'+ep.count+'</td><td style="text-align:right;color:var(--text-muted)">'+(ep.p50_ms||'-')+'ms</td><td style="text-align:right">'+ep.avg_duration_ms+'ms</td><td style="text-align:right;color:'+p95c+';font-weight:600">'+(ep.p95_ms||'-')+'ms</td><td style="text-align:right;color:'+p99c+'">'+(ep.p99_ms||'-')+'ms</td><td style="text-align:right;color:var(--text-muted)">'+ep.max_duration_ms+'ms</td></tr>';
-    }).join('')}
-    </tbody></table></div></div>`;
-  }
-  const httpHtml = httpArr.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#34d399;padding:6px 0">HTTP 통신 패턴 (자사 ${internalHttp.length}개 / 외부 ${externalHttp.length}개)</summary>
-    ${httpTable(internalHttp, '자사 API', '#4ade80')}
-    ${httpTable(externalHttp, '외부 API', '#94a3b8')}
-  </details>` : '';
-
-  // 이상 탐지 배너
-  const allIssues = scans.flatMap(rt => rt.issues || []);
-  const issueHtml = allIssues.length ? `<div style="margin-top:8px;padding:10px 14px;border-radius:6px;border:1px solid ${allIssues.some(i => i.severity==='error') ? '#ef4444' : '#f59e0b'};background:${allIssues.some(i => i.severity==='error') ? '#7f1d1d22' : '#713f1222'}">
-    <div style="font-weight:700;margin-bottom:6px;color:${allIssues.some(i => i.severity==='error') ? 'var(--status-err)' : 'var(--status-warn)'}">이상 탐지 ${allIssues.length}건</div>
-    ${allIssues.map(i => {
-      const ic = i.severity === 'error' ? 'var(--status-err)' : 'var(--status-warn)';
-      const badge = i.severity === 'error' ? 'ERROR' : 'WARN';
-      return '<div style="font-size:12px;margin:3px 0"><span style="color:'+ic+';font-weight:600;margin-right:6px">['+badge+']</span><span style="color:var(--text-muted);margin-right:4px">['+i.category+']</span>'+i.message+'</div>';
-    }).join('')}
-  </div>` : '';
-
-  // 매니저
-  const mgrHtml = mgrArr.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#60a5fa;padding:6px 0">매니저/컨트롤러 (${mgrArr.length}개)</summary>
-    <div class="tbl-wrap" style="margin-top:4px;max-height:200px;overflow-y:auto"><table><thead><tr><th>컴포넌트</th><th>경로</th><th>상태</th></tr></thead><tbody>
-    ${mgrArr.slice(0,20).map(m => {
-      const st = m.active ? '<span style="color:var(--status-ok)">Active</span>' : '<span style="color:var(--status-err)">Inactive</span>';
-      return '<tr><td style="color:#93c5fd;font-weight:600">'+m.name+'</td><td style="font-size:11px;color:var(--text-muted)">'+m.path+'</td><td>'+st+'</td></tr>';
-    }).join('')}
-    </tbody></table></div></details>` : '';
-
-  // 텍스처
-  const texMB = ((lastTex.textures_total_kb||0)/1024).toFixed(1);
-  const topTex = lastTex.top_textures || [];
-  const texHtml = (lastTex.textures_loaded || lastTex.cached_assets) ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#f472b6;padding:6px 0">텍스처 & 에셋 (텍스처 ${lastTex.textures_loaded||0}개, ${texMB}MB / 캐시 ${lastTex.cached_assets||0}개)</summary>
-    ${topTex.length ? '<div class="tbl-wrap" style="margin-top:4px;max-height:200px;overflow-y:auto"><table><thead><tr><th>텍스처</th><th style="text-align:right">크기</th><th style="text-align:right">메모리</th></tr></thead><tbody>'+topTex.map(t => '<tr><td>'+t.name+'</td><td style="text-align:right">'+t.w+'x'+t.h+'</td><td style="text-align:right;font-weight:600">'+(t.kb||0).toLocaleString()+'KB</td></tr>').join('')+'</tbody></table></div>' : ''}
-    </details>` : '';
-
-  const scene = scans[scans.length - 1].scene || '-';
-
-  return `
-  <div style="margin-top:16px;padding:16px;border:1px solid var(--border);border-radius:8px;border-left:3px solid #a78bfa">
-    <h4 style="color:#a78bfa;margin-bottom:12px;font-size:15px">런타임 심층 스캔 <span style="font-size:11px;font-weight:400;color:var(--text-muted)">(Scene: ${scene} / ${scans.length}개 페르소나 종합)</span></h4>
-    <div class="tbl-wrap" style="margin-bottom:12px">
-      <table><thead><tr><th>페르소나</th><th style="text-align:right">전체 노드</th><th style="text-align:right">활성</th><th style="text-align:right">비활성</th><th style="text-align:right">고아</th><th style="text-align:right">미사용 컴포넌트</th><th style="text-align:right">깊이</th><th style="text-align:right">JS Heap</th><th style="text-align:right">스캔</th></tr></thead>
-      <tbody>${compareRows}</tbody></table>
-    </div>
-    ${issueHtml}
-    ${mgrHtml}${inactiveHtml}${orphanHtml}${unusedHtml}${httpHtml}${texHtml}
-  </div>`;
-}
-
-/* ══════════════════════════════════════════════
-   카테고리: 런타임 스캔
-   ══════════════════════════════════════════════ */
-function renderCatRuntime(gameId, runs) {
-  const gameLogs = (_serverLogs[gameId] || []);
-  if (!gameLogs.length) return '<div style="color:var(--text-muted);padding:20px">서버 로그 없음 — 프리플레이 실행 후 확인</div>';
-
-  const sorted = [...gameLogs].sort((a, b) =>
-    (PERSONA_ORDER.indexOf(a.persona)===-1?99:PERSONA_ORDER.indexOf(a.persona))
-    - (PERSONA_ORDER.indexOf(b.persona)===-1?99:PERSONA_ORDER.indexOf(b.persona))
-  );
-
-  const scans = sorted.map(l => l.runtime_scan).filter(Boolean).filter(rt => (rt.node_stats||{}).total > 0);
-  if (!scans.length) return '<div style="color:var(--text-muted);padding:20px">런타임 스캔 데이터 없음 — 최신 프리플레이 실행 후 확인</div>';
-
-  const latestDate = sorted[0].run_date || '-';
-  const updatedAt = sorted.reduce((latest, l) => l.updated_at > latest ? l.updated_at : latest, '');
-  const updatedStr = updatedAt ? new Date(updatedAt).toLocaleString('ko') : '';
-
-  return `
-    <div class="ov-summary" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:12px">
-      <span style="font-weight:700;color:#a78bfa">런타임 심층 스캔</span>
-      <span><b>날짜:</b> ${latestDate}</span>
-      <span><b>페르소나:</b> ${scans.length}종</span>
-      <span style="color:var(--text-muted);font-size:11px;margin-left:auto">갱신: ${updatedStr}</span>
-    </div>
-    ${renderCombinedRuntimeScan(sorted)}
   `;
 }
 
