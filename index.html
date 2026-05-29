@@ -562,7 +562,7 @@ body.edit-mode .merge-btn { display: inline-block; }
   padding: 16px 20px; margin-bottom: 24px;
 }
 .guide-toc h4 { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; letter-spacing: .5px; }
-.guide-toc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px; }
+.guide-toc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
 .guide-toc a {
   display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 8px;
   color: var(--text-secondary); font-size: 13px; font-weight: 500;
@@ -572,16 +572,16 @@ body.edit-mode .merge-btn { display: inline-block; }
 .guide-toc a .toc-icon { font-size: 16px; flex-shrink: 0; width: 22px; text-align: center; }
 .guide-section-card {
   background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
-  padding: 20px 24px; margin-bottom: 16px;
+  padding: 24px 28px; margin-bottom: 24px;
 }
 .guide-section-card h3 {
-  font-size: calc(16px * var(--fs-scale)); margin-bottom: 14px;
-  padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  font-size: calc(16px * var(--fs-scale)); margin-bottom: 16px;
+  padding-bottom: 10px; border-bottom: 1px solid var(--border);
   display: flex; align-items: center; gap: 10px;
 }
 .guide-section-card h3 .gs-icon { font-size: 20px; }
 .guide-section-card p, .guide-section-card li {
-  font-size: calc(13px * var(--fs-scale)); color: var(--text-secondary); line-height: 1.7;
+  font-size: calc(13px * var(--fs-scale)); color: var(--text-secondary); line-height: 1.8;
 }
 .guide-section-card ul { padding-left: 20px; margin: 8px 0; }
 .guide-section-card li { margin-bottom: 4px; }
@@ -599,7 +599,7 @@ body.edit-mode .merge-btn { display: inline-block; }
 .guide-flow-step .fs-label { font-size: 12px; font-weight: 600; color: var(--text-primary); }
 .guide-flow-step .fs-sub { font-size: 10px; color: var(--text-muted); text-align: center; }
 .guide-flow-arrow { font-size: 20px; color: var(--text-muted); padding: 0 6px; }
-.guide-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+.guide-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; }
 .guide-mini-card {
   padding: 12px 14px; border-radius: 8px; border: 1px solid var(--border);
   background: rgba(255,255,255,.02);
@@ -618,7 +618,7 @@ body.edit-mode .merge-btn { display: inline-block; }
 .guide-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); color: var(--text-secondary); }
 .guide-table tr:hover td { background: rgba(59,130,246,.04); }
 .guide-table tr:nth-child(even) td { background: rgba(255,255,255,.015); }
-.guide-cat-group { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 12px; }
+.guide-cat-group { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 16px; }
 .guide-cat-header {
   display: flex; align-items: center; gap: 10px; padding: 12px 16px;
   font-size: 14px; font-weight: 700; border-bottom: 1px solid var(--border);
@@ -635,7 +635,7 @@ body.edit-mode .merge-btn { display: inline-block; }
 .guide-cat-item .ci-body { flex: 1; }
 .guide-cat-item .ci-name { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
 .guide-cat-item .ci-desc { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
-.guide-hc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; margin-top: 12px; }
+.guide-hc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-top: 14px; }
 .guide-hc-card { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: rgba(255,255,255,.02); }
 .guide-hc-card .hc-top { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
 .guide-hc-card .hc-name { font-size: 12px; font-weight: 600; color: var(--text-primary); }
@@ -1225,7 +1225,7 @@ function renderGuide() {
   <!-- 5. 시스템 섹션 -->
   <div class="guide-section-card" id="g-system">
     <h3><span class="gs-icon">🛠</span> 시스템 섹션</h3>
-    <p>사이드바 하단 <b>System</b> 영역의 항목들입니다.</p>
+    <p>사이드바 하단 <b>System</b> 영역의 항목들입니다. 사이드바 맨 아래에는 <b>실시간 연결 상태</b>와 <b>DB 사용량</b> 미니바도 함께 표시됩니다.</p>
     <div class="guide-grid-2" style="margin-top:12px">
       <div class="guide-mini-card">
         <h5>🏥 Health Check</h5>
@@ -1240,8 +1240,8 @@ function renderGuide() {
         <p>전체 런을 날짜별로 조회·관리. 개별 런 선택 삭제 기능 포함</p>
       </div>
       <div class="guide-mini-card">
-        <h5>📦 DB 사용량</h5>
-        <p>Supabase 데이터베이스 용량 현황. 사용량 바 + 잔여 용량 표시</p>
+        <h5>📖 가이드</h5>
+        <p>대시보드 사용법과 각 섹션의 기능을 안내하는 페이지 (현재 페이지)</p>
       </div>
     </div>
 
@@ -1321,6 +1321,14 @@ function renderGuide() {
       <div class="guide-mini-card">
         <h5>📋 알림 내역</h5>
         <p>수신된 알림 목록을 확인하고 관리할 수 있습니다.</p>
+      </div>
+      <div class="guide-mini-card">
+        <h5>📷 화면 캡처</h5>
+        <p>현재 화면 전체를 PNG로 저장하고 클립보드에 복사합니다.</p>
+      </div>
+      <div class="guide-mini-card">
+        <h5>☑ 섹션 선택 캡처</h5>
+        <p>캡처할 섹션을 직접 골라서 원하는 영역만 캡처할 수 있습니다.</p>
       </div>
     </div>
     <p style="margin-top:12px;font-size:12px;color:var(--text-muted)">사이드바 하단에는 <b>실시간 연결 상태</b>(초록=연결, 빨강=끊김)와 <b>DB 사용량</b> 미니바가 표시됩니다. 사이드바 접기(«) 버튼으로 공간을 넓힐 수 있습니다.</p>
@@ -4488,7 +4496,8 @@ function renderCatLogApi(gameId, runs) {
         const ev = e.event ? `<span style="background:#1e3a5f;color:#93c5fd;padding:1px 6px;border-radius:4px;font-size:10px;margin-left:4px">${e.event}</span>` : '';
         const shortUrl = (e.url || '').length > 60 ? e.url.slice(0, 57) + '...' : (e.url || '');
         const sc = e.status >= 500 ? '#ef4444' : e.status >= 400 ? '#f97316' : e.status === 0 ? '#f59e0b' : '#64748b';
-        return `<tr><td style="white-space:nowrap;font-size:11px;color:var(--text-muted)">${e.ts || ''}</td><td style="font-weight:600">${e.method || ''}</td><td style="color:${sc};font-weight:700">${e.status}</td><td style="font-size:11px">${e.category}</td><td style="font-size:11px;word-break:break-all">${shortUrl}${ev}</td></tr>`;
+        const errDetail = e.error_text ? `<span style="color:var(--text-muted);font-size:10px;margin-left:4px">(${e.error_text})</span>` : '';
+        return `<tr><td style="white-space:nowrap;font-size:11px;color:var(--text-muted)">${e.ts || ''}</td><td style="font-weight:600">${e.method || ''}</td><td style="color:${sc};font-weight:700">${e.status}</td><td style="font-size:11px">${e.category}${errDetail}</td><td style="font-size:11px;word-break:break-all">${shortUrl}${ev}</td></tr>`;
       }).join('');
 
       let banners = '';
