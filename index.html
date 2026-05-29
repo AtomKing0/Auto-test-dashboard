@@ -4311,14 +4311,26 @@ function renderCombinedRuntimeScan(logs) {
     }).join('')}
     </tbody></table></div></details>` : '';
 
-  // HTTP 엔드포인트
+  // HTTP 엔드포인트 (P95/P99 포함)
   const httpHtml = httpArr.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#34d399;padding:6px 0">HTTP 통신 패턴 (${httpArr.length}개 엔드포인트)</summary>
-    <div class="tbl-wrap" style="margin-top:4px;max-height:250px;overflow-y:auto"><table><thead><tr><th>경로</th><th style="text-align:right">호출수</th><th style="text-align:right">평균</th><th style="text-align:right">범위</th><th>유형</th></tr></thead><tbody>
+    <div class="tbl-wrap" style="margin-top:4px;max-height:250px;overflow-y:auto"><table><thead><tr><th>경로</th><th style="text-align:right">호출수</th><th style="text-align:right">P50</th><th style="text-align:right">평균</th><th style="text-align:right">P95</th><th style="text-align:right">P99</th><th style="text-align:right">최대</th></tr></thead><tbody>
     ${httpArr.slice(0,20).map(ep => {
-      const dc = ep.avg_duration_ms > 1000 ? 'var(--status-err)' : ep.avg_duration_ms > 500 ? 'var(--status-warn)' : 'var(--status-ok)';
-      return '<tr><td style="font-size:11px;word-break:break-all">'+(ep.path||ep.url)+'</td><td style="text-align:right;font-weight:600">'+ep.count+'</td><td style="text-align:right;color:'+dc+'">'+ep.avg_duration_ms+'ms</td><td style="text-align:right;color:var(--text-muted);font-size:11px">'+ep.min_duration_ms+'~'+ep.max_duration_ms+'ms</td><td style="font-size:11px">'+(ep.type||'')+'</td></tr>';
+      const p95c = (ep.p95_ms||0) > 1000 ? 'var(--status-err)' : (ep.p95_ms||0) > 500 ? 'var(--status-warn)' : 'var(--status-ok)';
+      const p99c = (ep.p99_ms||0) > 1000 ? 'var(--status-err)' : (ep.p99_ms||0) > 500 ? 'var(--status-warn)' : 'var(--text-muted)';
+      return '<tr><td style="font-size:11px;word-break:break-all">'+(ep.path||ep.url)+'</td><td style="text-align:right;font-weight:600">'+ep.count+'</td><td style="text-align:right;color:var(--text-muted)">'+(ep.p50_ms||'-')+'ms</td><td style="text-align:right">'+ep.avg_duration_ms+'ms</td><td style="text-align:right;color:'+p95c+';font-weight:600">'+(ep.p95_ms||'-')+'ms</td><td style="text-align:right;color:'+p99c+'">'+(ep.p99_ms||'-')+'ms</td><td style="text-align:right;color:var(--text-muted)">'+ep.max_duration_ms+'ms</td></tr>';
     }).join('')}
     </tbody></table></div></details>` : '';
+
+  // 이상 탐지 배너
+  const allIssues = scans.flatMap(rt => rt.issues || []);
+  const issueHtml = allIssues.length ? `<div style="margin-top:8px;padding:10px 14px;border-radius:6px;border:1px solid ${allIssues.some(i => i.severity==='error') ? '#ef4444' : '#f59e0b'};background:${allIssues.some(i => i.severity==='error') ? '#7f1d1d22' : '#713f1222'}">
+    <div style="font-weight:700;margin-bottom:6px;color:${allIssues.some(i => i.severity==='error') ? 'var(--status-err)' : 'var(--status-warn)'}">이상 탐지 ${allIssues.length}건</div>
+    ${allIssues.map(i => {
+      const ic = i.severity === 'error' ? 'var(--status-err)' : 'var(--status-warn)';
+      const badge = i.severity === 'error' ? 'ERROR' : 'WARN';
+      return '<div style="font-size:12px;margin:3px 0"><span style="color:'+ic+';font-weight:600;margin-right:6px">['+badge+']</span><span style="color:var(--text-muted);margin-right:4px">['+i.category+']</span>'+i.message+'</div>';
+    }).join('')}
+  </div>` : '';
 
   // 매니저
   const mgrHtml = mgrArr.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#60a5fa;padding:6px 0">매니저/컨트롤러 (${mgrArr.length}개)</summary>
@@ -4345,6 +4357,7 @@ function renderCombinedRuntimeScan(logs) {
       <table><thead><tr><th>페르소나</th><th style="text-align:right">전체 노드</th><th style="text-align:right">활성</th><th style="text-align:right">비활성</th><th style="text-align:right">고아</th><th style="text-align:right">미사용 컴포넌트</th><th style="text-align:right">깊이</th><th style="text-align:right">JS Heap</th><th style="text-align:right">스캔</th></tr></thead>
       <tbody>${compareRows}</tbody></table>
     </div>
+    ${issueHtml}
     ${mgrHtml}${inactiveHtml}${orphanHtml}${unusedHtml}${httpHtml}${texHtml}
   </div>`;
 }
