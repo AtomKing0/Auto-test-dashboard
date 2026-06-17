@@ -5425,7 +5425,6 @@ async function deleteSelectedNruCat(gameId) {
   const panel = document.getElementById(`cat-nru-${gameId}`);
   if (panel) {
     panel.innerHTML = renderCatNru(gameId);
-    setTimeout(() => renderNruGoldFlowChart(gameId), 50);
   }
 }
 
