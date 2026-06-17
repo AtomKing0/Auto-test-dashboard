@@ -2155,7 +2155,11 @@ function renderCatNru(gameId) {
   const streakRows = levelResults.map(lv => {
     const cr = lv.clear_rewards || {};
     const sr = Array.isArray(cr.streak_rewards) ? cr.streak_rewards : [];
-    const combo = cr.combo_count || 0;
+    const gauge = cr.streak_gauge || 0;
+    const idx = cr.streak_index || 0;
+    const slots = Array.isArray(cr.streak_slots) ? cr.streak_slots : [];
+    const reqLen = slots[idx] ? slots[idx].req_length : 0;
+    const gaugeStr = reqLen ? `${gauge}/${reqLen}` : (gauge || '-');
     const rewardCount = sr.length;
     const byType = {};
     for (const r of sr) {
@@ -2163,7 +2167,7 @@ function renderCatNru(gameId) {
       byType[name] = (byType[name] || 0) + (Number(r.amount) || 0);
     }
     const typeStr = Object.entries(byType).map(([k, v]) => `${k} ${v.toLocaleString()}`).join(', ') || '-';
-    return { level: lv.level, combo, rewardCount, typeStr, success: lv.success };
+    return { level: lv.level, gaugeStr, rewardCount, typeStr, success: lv.success };
   });
 
   // ── 아이템 사용 상세 (최신 런) ──
@@ -2306,7 +2310,7 @@ function renderCatNru(gameId) {
       const streakWithout = streakRows.filter(r => r.rewardCount === 0);
       const streakWithoutLvs = streakWithout.map(r => 'Lv ' + r.level).join(', ');
       const totalStreakRewards = streakRows.reduce((a,r) => a + r.rewardCount, 0);
-      const totalCombo = streakRows.reduce((a,r) => a + r.combo, 0);
+      const totalCompletions = streakRows.reduce((a,r) => a + r.rewardCount, 0);
       const _badgeColor = (txt) => {
         if (txt.includes('골드')) return '#fbbf24';
         if (txt.includes('해머')) return '#ef4444';
@@ -2323,7 +2327,7 @@ function renderCatNru(gameId) {
       const streakTableRows = streakWithReward.map(r => `<tr>
             <td style="font-weight:600">Lv ${r.level}</td>
             <td style="color:${r.success ? 'var(--status-ok)' : 'var(--status-err)'};font-weight:600">${r.success ? '성공' : '실패'}</td>
-            <td>${r.combo || '-'}</td>
+            <td>${r.gaugeStr}</td>
             <td style="color:var(--status-ok);font-weight:600">${r.rewardCount}회</td>
             <td>${_renderBadges(r.typeStr)}</td>
           </tr>`).join('');
@@ -2332,7 +2336,7 @@ function renderCatNru(gameId) {
         return `<tr>
             <td style="font-weight:600">Lv ${r.level}</td>
             <td style="color:${r.success ? 'var(--status-ok)' : 'var(--status-err)'};font-weight:600">${r.success ? '성공' : '실패'}</td>
-            <td>${r.combo || '-'}</td>
+            <td>${r.gaugeStr}</td>
             <td style="color:${hasReward ? 'var(--status-ok)' : 'inherit'};font-weight:${hasReward ? '600' : '400'}">${hasReward ? r.rewardCount + '회' : '-'}</td>
             <td>${_renderBadges(r.typeStr)}</td>
           </tr>`;
@@ -2345,14 +2349,14 @@ function renderCatNru(gameId) {
         <span style="font-size:11px;color:var(--text-muted);margin-left:4px">(최신 런)</span>
         <div style="margin-left:auto;display:flex;gap:10px;font-size:12px">
           <span style="padding:3px 10px;border-radius:10px;background:#10b98122;color:var(--status-ok);font-weight:600">총 ${totalStreakRewards}회 보상</span>
-          <span style="padding:3px 10px;border-radius:10px;background:var(--border);color:var(--text-secondary)" title="드로우 없이 연속 카드 매치 횟수">총 연속매치 ${totalCombo}</span>
+          <span style="padding:3px 10px;border-radius:10px;background:var(--border);color:var(--text-secondary)" title="스트릭 미터 완성 횟수">미터 완성 ${totalCompletions}회</span>
         </div>
       </div>
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">레벨별 스트릭 미터 보상 횟수 및 보상 종류</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">레벨별 스트릭 미터 게이지 상태, 보상 횟수 및 보상 종류</div>
       ${streakWithReward.length > 0 ? `
       <div style="overflow-x:auto">
         <table>
-          <thead><tr><th>레벨</th><th>결과</th><th title="드로우 없이 연속 카드 매치 횟수 (스트릭 미터 충전 기반)">연속매치</th><th>보상 횟수</th><th>보상 내역</th></tr></thead>
+          <thead><tr><th>레벨</th><th>결과</th><th title="클리어 시점 스트릭 미터 게이지 (현재/필요)">게이지</th><th>보상 횟수</th><th>보상 내역</th></tr></thead>
           <tbody>${streakTableRows}</tbody>
         </table>
       </div>` : '<div style="color:var(--text-muted);font-size:12px;padding:12px 0;text-align:center">보상이 발생한 레벨 없음</div>'}
@@ -2364,7 +2368,7 @@ function renderCatNru(gameId) {
         <button onclick="const t=this.parentElement.querySelector('.nru-streak-all');const v=t.style.display==='none';t.style.display=v?'block':'none';this.textContent=v?'▲ 접기':'▼ 전체 레벨 보기'" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-muted);font-size:11px;padding:4px 12px;cursor:pointer">▼ 전체 레벨 보기</button>
         <div class="nru-streak-all" style="display:none;margin-top:8px;overflow-x:auto">
           <table>
-            <thead><tr><th>레벨</th><th>결과</th><th title="드로우 없이 연속 카드 매치 횟수 (스트릭 미터 충전 기반)">연속매치</th><th>보상 횟수</th><th>보상 내역</th></tr></thead>
+            <thead><tr><th>레벨</th><th>결과</th><th title="클리어 시점 스트릭 미터 게이지 (현재/필요)">게이지</th><th>보상 횟수</th><th>보상 내역</th></tr></thead>
             <tbody>${streakAllTableRows}</tbody>
           </table>
         </div>
