@@ -1193,7 +1193,6 @@ function renderGuide() {
         <div class="guide-cat-item"><span class="ci-icon">💰</span><div class="ci-body"><div class="ci-name">경제</div><div class="ci-desc">골드 수입/지출 흐름, 판당 손익, 외부 골드, 해머 변동 추이</div></div></div>
         <div class="guide-cat-item"><span class="ci-icon">⚖️</span><div class="ci-body"><div class="ci-name">밸런스</div><div class="ci-desc">서버 밸런스시트 대비 실제 비교, 보상 편차율, 난이도별 클리어율</div></div></div>
         <div class="guide-cat-item"><span class="ci-icon">🧩</span><div class="ci-body"><div class="ci-name">기믹</div><div class="ci-desc">기믹 등장 빈도 (키&자물쇠, 얼음, 러너, 플러스카드), 난이도 기여도</div></div></div>
-        <div class="guide-cat-item"><span class="ci-icon">🎓</span><div class="ci-body"><div class="ci-name">NRU</div><div class="ci-desc">신규 유저 튜토리얼 자동화. 레벨별 클리어, 재시도, 소요 시간</div></div></div>
       </div>
     </div>
 
@@ -1377,7 +1376,6 @@ function renderOverview(games) {
         </div>`;
       }).join('')}
     </div>
-    <div id="nru-section"></div>
     <div id="health-check-section"></div>
     <div id="cron-section"></div>
     <div id="run-manager"></div>
@@ -1385,7 +1383,6 @@ function renderOverview(games) {
   `;
   panel.style.display = 'block';
   if (_allRuns.length) renderRunManager(_allRuns);
-  if (_nruRuns.length) { renderNruSummary(_nruRuns); renderNruManager(); }
   renderDbUsage();
 
   renderAvgTimeChart(games);
@@ -1463,142 +1460,6 @@ function renderGameCard(gid, g) {
       ${personaRows}
     </div>
   `;
-}
-
-/* ── NRU 요약 ── */
-
-function renderNruSummary(nruRuns) {
-  const section = document.getElementById('nru-section');
-  if (!section) return;
-  if (!nruRuns || !nruRuns.length) {
-    section.innerHTML = `
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:24px 18px;margin-bottom:16px;text-align:center;">
-        <div style="font-size:13px;color:var(--text-muted);">NRU 테스트 데이터가 없습니다</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">run_nru.py 실행 후 자동 적재됩니다</div>
-      </div>`;
-    return;
-  }
-
-  // 게임별 그룹핑
-  const byGame = {};
-  for (const r of nruRuns) {
-    const gid = r.game_id || 'SCJ';
-    if (!byGame[gid]) byGame[gid] = [];
-    byGame[gid].push(r);
-  }
-
-  const gameBlocks = Object.entries(byGame).sort(([a],[b]) => a.localeCompare(b)).map(([gid, gameRuns]) => {
-    const gameColor = GAME_COLORS[gid] || '#3b82f6';
-    const recent = gameRuns.slice(0, 10);
-    const latest = recent[0];
-    const passCount = recent.filter(r => r.ready).length;
-    const passRate = Math.round(passCount / recent.length * 100);
-    const avgLevels = (recent.reduce((a, r) => a + (r.levels_cleared || 0), 0) / recent.length).toFixed(1);
-    const avgTime = (recent.reduce((a, r) => a + (r.total_time_sec || 0), 0) / recent.length);
-    const avgTimeStr = avgTime >= 60 ? `${(avgTime / 60).toFixed(1)}분` : `${Math.round(avgTime)}초`;
-    const avgRetries = (recent.reduce((a, r) => a + (r.total_retries || 0), 0) / recent.length).toFixed(1);
-
-    const latestStatus = latest.ready;
-    const statusColor = latestStatus ? 'var(--status-ok)' : 'var(--status-err)';
-    const statusLabel = latestStatus ? 'PASS' : 'FAIL';
-    const statusBg = latestStatus ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)';
-
-    const trendDots = recent.slice().reverse().map(r => {
-      const col = r.ready ? 'var(--status-ok)' : 'var(--status-err)';
-      const d = (r.run_date || '').slice(5);
-      return `<div style="display:flex;flex-direction:column;align-items:center;gap:1px" title="${r.run_date} ${r.run_time || ''}&#10;Lv${r.levels_cleared}/${r.total_levels || 25}">
-        <div style="width:14px;height:14px;border-radius:3px;background:${col}"></div>
-        <span style="font-size:8px;color:var(--text-muted)">${d}</span>
-      </div>`;
-    }).join('');
-
-    const levelResults = latest.level_results || [];
-    const levelBars = levelResults.map(lv => {
-      const ok = lv.success;
-      const col = ok ? (lv.retries > 0 ? '#f59e0b' : '#10b981') : '#ef4444';
-      const h = Math.min(100, Math.max(15, (lv.duration_s || 0) * 2.5));
-      const title = `Lv${lv.level}: ${ok ? '성공' : '실패'} ${lv.duration_s}s, ${lv.turns}턴, 재시도${lv.retries || 0}`;
-      return `<div style="display:flex;flex-direction:column;align-items:center;gap:1px;flex:1;min-width:12px" title="${title}">
-        <div style="width:100%;height:${h}px;background:${col};border-radius:2px;min-height:4px"></div>
-        <span style="font-size:8px;color:var(--text-muted)">${lv.level}</span>
-      </div>`;
-    }).join('');
-
-    const checkClass = `nru-ov-check-${gid}`;
-    const rows = recent.map(r => {
-      const passStyle = r.ready ? 'color:var(--status-ok);font-weight:600' : 'color:var(--status-err);font-weight:600';
-      const failInfo = r.ready ? '' : ` (Lv${r.failed_level || '?'})`;
-      const timeStr = (r.total_time_sec || 0) >= 60 ? `${((r.total_time_sec || 0) / 60).toFixed(1)}분` : `${Math.round(r.total_time_sec || 0)}초`;
-      return `<tr>
-        <td><input type="checkbox" class="nru-ov-check ${checkClass}" value="${r.id}"></td>
-        <td>${(r.run_date || '').slice(5)}</td>
-        <td>${r.run_time || '-'}</td>
-        <td style="${passStyle}">${r.ready ? 'PASS' : 'FAIL'}${failInfo}</td>
-        <td>${r.levels_cleared}/${r.total_levels || 25}</td>
-        <td>${timeStr}</td>
-        <td>${r.total_retries || 0}</td>
-        <td>${(r.gold || 0).toLocaleString()}</td>
-      </tr>`;
-    }).join('');
-
-    return `
-    <div style="margin-bottom:16px;border-left:3px solid ${gameColor};padding-left:12px">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
-        <span style="font-weight:700;font-size:14px;">NRU 튜토리얼 테스트</span>
-        <span style="font-size:11px;padding:2px 10px;border-radius:10px;background:${gameColor}1a;color:${gameColor};font-weight:600">${gid}</span>
-        <span style="font-size:11px;padding:2px 10px;border-radius:10px;background:${statusBg};color:${statusColor};font-weight:600">최신 ${statusLabel}</span>
-        <span style="font-size:11px;color:var(--text-muted)">최근 ${recent.length}회 통과율 ${passRate}%</span>
-        <span style="font-size:10px;color:var(--text-muted);margin-left:auto">${latest.run_date || ''} ${latest.run_time || ''}</span>
-      </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
-        <div style="flex:1;min-width:130px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px">
-          <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">통과율 (최근 ${recent.length}회)</div>
-          <div style="font-size:22px;font-weight:700;color:${passRate >= 80 ? 'var(--status-ok)' : passRate >= 50 ? 'var(--status-warn)' : 'var(--status-err)'}">${passRate}%</div>
-        </div>
-        <div style="flex:1;min-width:130px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px">
-          <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">평균 클리어 레벨</div>
-          <div style="font-size:22px;font-weight:700">${avgLevels}<span style="font-size:12px;color:var(--text-muted)">/${latest.total_levels || 25}</span></div>
-        </div>
-        <div style="flex:1;min-width:130px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px">
-          <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">평균 소요 시간</div>
-          <div style="font-size:22px;font-weight:700">${avgTimeStr}</div>
-        </div>
-        <div style="flex:1;min-width:130px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px">
-          <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">평균 재시도</div>
-          <div style="font-size:22px;font-weight:700">${avgRetries}<span style="font-size:12px;color:var(--text-muted)">회</span></div>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px">
-          <h4 style="font-size:12px;color:var(--text-secondary);margin-bottom:10px">최근 실행 추이</h4>
-          <div style="display:flex;gap:6px;align-items:flex-end;justify-content:center">${trendDots}</div>
-        </div>
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px">
-          <h4 style="font-size:12px;color:var(--text-secondary);margin-bottom:10px">최신 런 레벨별 소요시간</h4>
-          <div style="display:flex;gap:2px;align-items:flex-end;height:100px;padding:0 4px">${levelBars}</div>
-          <div style="display:flex;gap:10px;margin-top:6px;font-size:10px;color:var(--text-muted);justify-content:center">
-            <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#10b981;margin-right:3px"></span>성공</span>
-            <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#f59e0b;margin-right:3px"></span>재시도 후 성공</span>
-            <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#ef4444;margin-right:3px"></span>실패</span>
-          </div>
-        </div>
-      </div>
-      <div class="tbl-wrap" style="margin-bottom:0">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <h4 style="margin:0">최근 NRU 실행 이력</h4>
-          <label style="font-size:11px;color:var(--text-muted);margin-left:auto"><input type="checkbox" onclick="document.querySelectorAll('.${checkClass}').forEach(c=>c.checked=this.checked)"> 전체 선택</label>
-          <button class="rm-btn rm-btn-danger" onclick="deleteSelectedNruOv()" style="font-size:11px;padding:3px 10px">선택 삭제</button>
-          <span id="nru-ov-status-${gid}" style="font-size:11px;color:var(--text-muted)"></span>
-        </div>
-        <table>
-          <thead><tr><th style="width:30px"></th><th>날짜</th><th>시간</th><th>결과</th><th>레벨</th><th>소요</th><th>재시도</th><th>골드</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
-    </div>`;
-  }).join('');
-
-  section.innerHTML = gameBlocks;
 }
 
 /* ── Health Check ── */
@@ -2075,7 +1936,7 @@ const NRU_TUTORIAL_ALL = [
   { key: 230002, content_id: 'content_deck_draw', name: '덱 드로우 안내', scene: 'ingame', trigger: 'tutorial_level', triggerVal: 2, type: 'floating' },
   { key: 230003, content_id: 'content_lobby_play', name: '로비 플레이 버튼', scene: 'lobby', trigger: 'level_clear', triggerVal: 1, type: 'focus', node: 'LOBBYPLAYBUTTON', skip: 'specout' },
   { key: 230004, content_id: 'content_shop', name: '상점 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 3, type: 'focus', node: 'SHOPBUTTON', skip: 'specout' },
-  { key: 230005, content_id: 'content_pre_level_popup', name: '프리레벨 팝업', scene: 'pre_level', trigger: 'level_clear', triggerVal: 2, type: 'focus', node: 'PLAYBUTTON' },
+  { key: 230005, content_id: 'content_pre_level_popup', name: '프리레벨 팝업', scene: 'pre_level', trigger: 'level_clear', triggerVal: 3, type: 'focus', node: 'PLAYBUTTON' },
   { key: 230006, content_id: 'content_idle_gold', name: '방치 골드 안내', scene: 'lobby', trigger: 'level_clear', triggerVal: 4, type: 'focus', node: 'IDLEGOLDBUTTON' },
   { key: 230007, content_id: 'gimmick_plus_card', name: '플러스 카드 기믹', scene: 'ingame', trigger: 'first_appear', triggerVal: 'plus_card', type: 'focus' },
   { key: 230008, content_id: 'content_daily_check', name: '일일 출석 체크', scene: 'lobby', trigger: 'level_clear', triggerVal: 4, type: 'focus', node: 'DAILYGIFTDAYONEBUTTON' },
@@ -2263,19 +2124,81 @@ function renderCatNru(gameId) {
   const levelStats = {};
   for (const r of runs) {
     for (const lv of (r.level_results || [])) {
-      if (!levelStats[lv.level]) levelStats[lv.level] = { total: 0, success: 0, totalTime: 0, totalRetries: 0, totalTurns: 0 };
+      if (!levelStats[lv.level]) levelStats[lv.level] = { total: 0, success: 0, totalTime: 0, totalRetries: 0, totalTurns: 0, totalRewardCoin: 0, totalStreakGold: 0 };
       const s = levelStats[lv.level];
       s.total++;
       if (lv.success) s.success++;
       s.totalTime += lv.duration_s || 0;
       s.totalRetries += lv.retries || 0;
       s.totalTurns += lv.turns || 0;
+      const cr = lv.clear_rewards;
+      if (cr) s.totalRewardCoin += parseInt(cr.coin) || 0;
+      const sr = cr && cr.streak_rewards;
+      if (Array.isArray(sr)) s.totalStreakGold += sr.filter(x => x.keyNumber === 40001).reduce((a, x) => a + (Number(x.amount) || 0), 0);
     }
   }
+
+  // 경제 요약 (최신 런 기준)
+  let ecoTotalStreakGold = 0, ecoTotalEntryFee = 0, ecoTotalItemCost = 0, ecoTotalRewardCoin = 0;
+  for (const lv of levelResults) {
+    ecoTotalEntryFee += Number(lv.entry_fee) || 0;
+    ecoTotalItemCost += Number(lv.item_cost) || 0;
+    const cr = lv.clear_rewards;
+    if (cr) ecoTotalRewardCoin += parseInt(cr.coin) || 0;
+    const sr = cr && cr.streak_rewards;
+    if (Array.isArray(sr)) ecoTotalStreakGold += sr.filter(x => x.keyNumber === 40001).reduce((a, x) => a + (Number(x.amount) || 0), 0);
+  }
+  const ecoNetGold = ecoTotalRewardCoin + ecoTotalStreakGold - ecoTotalEntryFee - ecoTotalItemCost;
+
+  // ── 스트릭 보상 상세 (최신 런) ──
+  const ITEM_KEY_MAP = { 40001: '골드', 40002: '해머', 40003: '별' };
+  const streakRows = levelResults.map(lv => {
+    const cr = lv.clear_rewards || {};
+    const sr = Array.isArray(cr.streak_rewards) ? cr.streak_rewards : [];
+    const combo = cr.combo_count || 0;
+    const rewardCount = sr.length;
+    const byType = {};
+    for (const r of sr) {
+      const name = ITEM_KEY_MAP[r.keyNumber] || `#${r.keyNumber}`;
+      byType[name] = (byType[name] || 0) + (Number(r.amount) || 0);
+    }
+    const typeStr = Object.entries(byType).map(([k, v]) => `${k} ${v.toLocaleString()}`).join(', ') || '-';
+    return { level: lv.level, combo, rewardCount, typeStr, success: lv.success };
+  });
+
+  // ── 아이템 사용 상세 (최신 런) ──
+  const itemRows = levelResults.map(lv => {
+    const wild = Number(lv.wild_card_count) || 0;
+    const extra = Number(lv.extra_decks) || 0;
+    const undo = Number(lv.undo_count) || 0;
+    const cost = Number(lv.item_cost) || 0;
+    return { level: lv.level, wild, extra, undo, totalUse: wild + extra + undo, cost, success: lv.success };
+  });
+  const itemTotalWild = itemRows.reduce((a, r) => a + r.wild, 0);
+  const itemTotalExtra = itemRows.reduce((a, r) => a + r.extra, 0);
+  const itemTotalUndo = itemRows.reduce((a, r) => a + r.undo, 0);
+  const itemTotalCost = itemRows.reduce((a, r) => a + r.cost, 0);
+
+  // ── 골드 흐름 (최신 런) ──
+  const goldFlowData = levelResults.map(lv => ({
+    level: lv.level,
+    before: Number(lv.gold_before) || 0,
+    after: Number(lv.gold_after) || 0,
+    entryFee: Number(lv.entry_fee) || 0,
+    reward: (lv.clear_rewards ? parseInt(lv.clear_rewards.coin) || 0 : 0),
+    streakGold: Array.isArray((lv.clear_rewards || {}).streak_rewards)
+      ? lv.clear_rewards.streak_rewards.filter(x => x.keyNumber === 40001).reduce((a, x) => a + (Number(x.amount) || 0), 0) : 0,
+    itemCost: Number(lv.item_cost) || 0,
+  }));
+
+  // ── 보너스 보상 (팝업) ──
+  const bonusRewards = latest.bonus_rewards || [];
 
   const levelRows = Object.entries(levelStats).sort(([a],[b]) => Number(a) - Number(b)).map(([lv, s]) => {
     const cr = Math.round(s.success / s.total * 100);
     const crColor = cr >= 100 ? 'var(--status-ok)' : cr >= 50 ? 'var(--status-warn)' : 'var(--status-err)';
+    const avgReward = s.totalRewardCoin ? Math.round(s.totalRewardCoin / s.total) : 0;
+    const avgStreak = s.totalStreakGold ? Math.round(s.totalStreakGold / s.total) : 0;
     return `<tr>
       <td style="font-weight:600">Lv ${lv}</td>
       <td style="color:${crColor};font-weight:600">${cr}%</td>
@@ -2283,12 +2206,21 @@ function renderCatNru(gameId) {
       <td>${(s.totalTurns / s.total).toFixed(1)}</td>
       <td>${(s.totalRetries / s.total).toFixed(1)}</td>
       <td>${s.total}</td>
+      <td>${avgReward ? avgReward.toLocaleString() : '-'}</td>
+      <td style="color:${avgStreak ? 'var(--status-ok)' : 'inherit'}">${avgStreak ? avgStreak.toLocaleString() : '-'}</td>
     </tr>`;
   }).join('');
 
   const latestRows = levelResults.map(lv => {
     const ok = lv.success;
     const statusColor = ok ? 'var(--status-ok)' : 'var(--status-err)';
+    const entryFee = Number(lv.entry_fee) || 0;
+    const cr = lv.clear_rewards;
+    const rewardCoin = cr ? (parseInt(cr.coin) || 0) : 0;
+    const streakGold = (cr && Array.isArray(cr.streak_rewards)) ? cr.streak_rewards.filter(x => x.keyNumber === 40001).reduce((a, x) => a + (Number(x.amount) || 0), 0) : 0;
+    const itemCost = Number(lv.item_cost) || 0;
+    const wildCount = Number(lv.wild_card_count) || 0;
+    const extraDecks = Number(lv.extra_decks) || 0;
     return `<tr>
       <td style="font-weight:600">Lv ${lv.level}</td>
       <td style="color:${statusColor};font-weight:600">${ok ? '성공' : '실패'}</td>
@@ -2297,12 +2229,26 @@ function renderCatNru(gameId) {
       <td>${lv.matches || 0}</td>
       <td>${lv.draws || 0}</td>
       <td>${lv.retries || 0}</td>
+      <td>${entryFee ? entryFee.toLocaleString() : '-'}</td>
+      <td>${rewardCoin ? rewardCoin.toLocaleString() : '-'}</td>
+      <td style="color:${streakGold ? 'var(--status-ok)' : 'inherit'}">${streakGold ? streakGold.toLocaleString() : '-'}</td>
+      <td style="color:${itemCost ? 'var(--status-err)' : 'inherit'}">${itemCost ? itemCost.toLocaleString() : '-'}</td>
+      <td>${wildCount || '-'}</td>
+      <td>${extraDecks || '-'}</td>
     </tr>`;
   }).join('');
 
   const historyRows = runs.slice(0, 20).map(r => {
     const passStyle = r.ready ? 'color:var(--status-ok);font-weight:600' : 'color:var(--status-err);font-weight:600';
     const timeStr = (r.total_time_sec || 0) >= 60 ? `${((r.total_time_sec || 0) / 60).toFixed(1)}분` : `${Math.round(r.total_time_sec || 0)}초`;
+    // 경제 집계 (런 단위)
+    let hEntryFee = 0, hItemCost = 0, hStreakGold = 0;
+    for (const lv of (r.level_results || [])) {
+      hEntryFee += Number(lv.entry_fee) || 0;
+      hItemCost += Number(lv.item_cost) || 0;
+      const cr = lv.clear_rewards;
+      if (cr && Array.isArray(cr.streak_rewards)) hStreakGold += cr.streak_rewards.filter(x => x.keyNumber === 40001).reduce((a, x) => a + (Number(x.amount) || 0), 0);
+    }
     return `<tr>
       <td><input type="checkbox" class="nru-cat-check" value="${r.id}"></td>
       <td>${(r.run_date || '').slice(5)}</td>
@@ -2313,6 +2259,9 @@ function renderCatNru(gameId) {
       <td>${r.total_retries || 0}</td>
       <td>${(r.gold || 0).toLocaleString()}</td>
       <td>${r.hammer || 0}</td>
+      <td>${hEntryFee ? hEntryFee.toLocaleString() : '-'}</td>
+      <td style="color:${hItemCost ? 'var(--status-err)' : 'inherit'}">${hItemCost ? hItemCost.toLocaleString() : '-'}</td>
+      <td style="color:${hStreakGold ? 'var(--status-ok)' : 'inherit'}">${hStreakGold ? hStreakGold.toLocaleString() : '-'}</td>
     </tr>`;
   }).join('');
 
@@ -2337,18 +2286,133 @@ function renderCatNru(gameId) {
         <div class="value">${runs.length}<span style="font-size:12px;color:var(--text-muted)">회</span></div>
       </div>
     </div>
+    <div class="metric-row">
+      <div class="metric-box">
+        <div class="label">총 스트릭 골드</div>
+        <div class="value" style="color:${ecoTotalStreakGold ? 'var(--status-ok)' : 'inherit'}">${ecoTotalStreakGold ? ecoTotalStreakGold.toLocaleString() : '-'}</div>
+        <div class="sub">최신 런 streak_rewards</div>
+      </div>
+      <div class="metric-box">
+        <div class="label">총 입장료</div>
+        <div class="value">${ecoTotalEntryFee ? ecoTotalEntryFee.toLocaleString() : '-'}</div>
+        <div class="sub">최신 런 entry_fee 합</div>
+      </div>
+      <div class="metric-box">
+        <div class="label">총 아이템 비용</div>
+        <div class="value" style="color:${ecoTotalItemCost ? 'var(--status-err)' : 'inherit'}">${ecoTotalItemCost ? ecoTotalItemCost.toLocaleString() : '-'}</div>
+        <div class="sub">최신 런 item_cost 합</div>
+      </div>
+      <div class="metric-box">
+        <div class="label">순 골드 수익</div>
+        <div class="value" style="color:${ecoNetGold > 0 ? 'var(--status-ok)' : ecoNetGold < 0 ? 'var(--status-err)' : 'inherit'}">${ecoNetGold !== 0 ? (ecoNetGold > 0 ? '+' : '') + ecoNetGold.toLocaleString() : '-'}</div>
+        <div class="sub">보상 - 입장료 - 아이템</div>
+      </div>
+    </div>
     ${_renderNruTutorialSection(latest)}
+
+    <!-- ── 스트릭 보상 상세 ── -->
+    <div class="tbl-wrap">
+      <h4>스트릭 보상 상세 (최신 런)</h4>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">레벨별 스트릭 미터 보상 횟수 및 보상 종류</div>
+      <table>
+        <thead><tr><th>레벨</th><th>결과</th><th>콤보</th><th>보상 횟수</th><th>보상 내역</th></tr></thead>
+        <tbody>${streakRows.map(r => {
+          const hasReward = r.rewardCount > 0;
+          return `<tr>
+            <td style="font-weight:600">Lv ${r.level}</td>
+            <td style="color:${r.success ? 'var(--status-ok)' : 'var(--status-err)'}; font-weight:600">${r.success ? '성공' : '실패'}</td>
+            <td>${r.combo || '-'}</td>
+            <td style="color:${hasReward ? 'var(--status-ok)' : 'inherit'};font-weight:${hasReward ? '600' : '400'}">${hasReward ? r.rewardCount + '회' : '-'}</td>
+            <td style="font-size:12px">${r.typeStr}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
+        총 스트릭 보상: ${streakRows.reduce((a,r) => a + r.rewardCount, 0)}회 |
+        총 콤보: ${streakRows.reduce((a,r) => a + r.combo, 0)}
+      </div>
+    </div>
+
+    <!-- ── 아이템 사용 상세 ── -->
+    <div class="tbl-wrap">
+      <h4>아이템 사용 상세 (최신 런)</h4>
+      <div style="display:flex;gap:16px;margin-bottom:8px;flex-wrap:wrap">
+        <div style="font-size:12px;padding:4px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px">
+          🃏 와일드카드 <b>${itemTotalWild}</b>회
+        </div>
+        <div style="font-size:12px;padding:4px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px">
+          🎴 엑스트라덱 <b>${itemTotalExtra}</b>회
+        </div>
+        <div style="font-size:12px;padding:4px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px">
+          ↩️ 언두 <b>${itemTotalUndo}</b>회
+        </div>
+        <div style="font-size:12px;padding:4px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--status-err)">
+          💰 총 비용 <b>${itemTotalCost.toLocaleString()}</b>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>레벨</th><th>결과</th><th>와일드</th><th>엑스트라덱</th><th>언두</th><th>총 사용</th><th>비용</th></tr></thead>
+        <tbody>${itemRows.map(r => {
+          const hasItem = r.totalUse > 0;
+          return `<tr>
+            <td style="font-weight:600">Lv ${r.level}</td>
+            <td style="color:${r.success ? 'var(--status-ok)' : 'var(--status-err)'}; font-weight:600">${r.success ? '성공' : '실패'}</td>
+            <td style="color:${r.wild ? '#60a5fa' : 'inherit'}">${r.wild || '-'}</td>
+            <td style="color:${r.extra ? '#a78bfa' : 'inherit'}">${r.extra || '-'}</td>
+            <td style="color:${r.undo ? '#fbbf24' : 'inherit'}">${r.undo || '-'}</td>
+            <td style="font-weight:${hasItem ? '600' : '400'}">${hasItem ? r.totalUse : '-'}</td>
+            <td style="color:${r.cost ? 'var(--status-err)' : 'inherit'}">${r.cost ? r.cost.toLocaleString() : '-'}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>
+
+    <!-- ── 골드 흐름 차트 ── -->
+    <div class="chart-box" style="margin-bottom:12px">
+      <h4>골드 흐름 (최신 런)</h4>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">레벨별 골드 잔액 추이 (진입 전 → 클리어 후)</div>
+      <canvas id="chart-nru-gold-flow"></canvas>
+    </div>
+
+    <!-- ── 보너스 보상 (팝업) ── -->
+    ${bonusRewards.length ? `
+    <div class="tbl-wrap">
+      <h4>보너스 보상 — 팝업 수령 내역 (최신 런)</h4>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">출석/마일스톤 등 레벨 보상 외 팝업으로 수령한 골드·해머</div>
+      <table>
+        <thead><tr><th>시각</th><th>팝업</th><th>골드</th><th>해머</th></tr></thead>
+        <tbody>${bonusRewards.map(br => {
+          const gGold = br.gold_gained || 0;
+          const gHammer = br.hammer_gained || 0;
+          return `<tr>
+            <td style="font-size:12px;color:var(--text-muted)">${br.timestamp || '-'}</td>
+            <td>${br.popup || '-'}</td>
+            <td style="color:${gGold > 0 ? 'var(--status-ok)' : 'inherit'};font-weight:${gGold > 0 ? '600' : '400'}">${gGold > 0 ? '+' + gGold.toLocaleString() : '-'}</td>
+            <td style="color:${gHammer > 0 ? 'var(--status-ok)' : 'inherit'};font-weight:${gHammer > 0 ? '600' : '400'}">${gHammer > 0 ? '+' + gHammer : '-'}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
+        합계: 골드 +${bonusRewards.reduce((a,b) => a + (b.gold_gained||0), 0).toLocaleString()},
+        해머 +${bonusRewards.reduce((a,b) => a + (b.hammer_gained||0), 0)}
+      </div>
+    </div>` : `
+    <div class="tbl-wrap">
+      <h4>보너스 보상 — 팝업 수령 내역</h4>
+      <div style="color:var(--text-muted);font-size:12px;padding:8px 0">팝업 보상 데이터 없음 (bonus_rewards 컬럼 추가 후 새 런부터 적재)</div>
+    </div>`}
+
     <div class="tbl-wrap">
       <h4>레벨별 통계 (전체 ${runs.length}회 집계)</h4>
       <table>
-        <thead><tr><th>레벨</th><th>클리어율</th><th>평균 시간</th><th>평균 턴</th><th>평균 재시도</th><th>시도 수</th></tr></thead>
+        <thead><tr><th>레벨</th><th>클리어율</th><th>평균 시간</th><th>평균 턴</th><th>평균 재시도</th><th>시도 수</th><th>평균 보상</th><th>스트릭 골드</th></tr></thead>
         <tbody>${levelRows}</tbody>
       </table>
     </div>
     <div class="tbl-wrap">
       <h4>최신 런 레벨별 상세 (${latest.run_date} ${latest.run_time || ''})</h4>
       <table>
-        <thead><tr><th>레벨</th><th>결과</th><th>시간</th><th>턴</th><th>매치</th><th>드로우</th><th>재시도</th></tr></thead>
+        <thead><tr><th>레벨</th><th>결과</th><th>시간</th><th>턴</th><th>매치</th><th>드로우</th><th>재시도</th><th>입장료</th><th>보상</th><th>스트릭</th><th>아이템</th><th>와일드</th><th>엑스트라덱</th></tr></thead>
         <tbody>${latestRows}</tbody>
       </table>
     </div>
@@ -2360,7 +2424,7 @@ function renderCatNru(gameId) {
         <span id="nru-cat-status" style="font-size:11px;color:var(--text-muted)"></span>
       </div>
       <table>
-        <thead><tr><th style="width:30px"></th><th>날짜</th><th>시간</th><th>결과</th><th>레벨</th><th>소요</th><th>재시도</th><th>골드</th><th>해머</th></tr></thead>
+        <thead><tr><th style="width:30px"></th><th>날짜</th><th>시간</th><th>결과</th><th>레벨</th><th>소요</th><th>재시도</th><th>골드</th><th>해머</th><th>총 입장료</th><th>총 아이템</th><th>스트릭 골드</th></tr></thead>
         <tbody>${historyRows}</tbody>
       </table>
     </div>
@@ -2545,11 +2609,58 @@ const CATEGORY_RENDERERS = {
   nru: (gid, stages, runs) => renderCatNru(gid),
 };
 
+function renderNruGoldFlowChart(gameId) {
+  const canvas = document.getElementById('chart-nru-gold-flow');
+  if (!canvas) return;
+  const runs = _nruRuns.filter(r => r.game_id === gameId);
+  if (!runs.length) return;
+  const levels = runs[0].level_results || [];
+  if (!levels.length) return;
+
+  const labels = levels.map(lv => `Lv ${lv.level}`);
+  const beforeData = levels.map(lv => Number(lv.gold_before) || 0);
+  const afterData = levels.map(lv => Number(lv.gold_after) || 0);
+  const entryFees = levels.map(lv => Number(lv.entry_fee) || 0);
+  const rewards = levels.map(lv => {
+    const cr = lv.clear_rewards || {};
+    let g = parseInt(cr.coin) || 0;
+    if (Array.isArray(cr.streak_rewards)) g += cr.streak_rewards.filter(x => x.keyNumber === 40001).reduce((a, x) => a + (Number(x.amount) || 0), 0);
+    return g;
+  });
+  const itemCosts = levels.map(lv => Number(lv.item_cost) || 0);
+
+  if (_charts.nruGoldFlow) _charts.nruGoldFlow.destroy();
+  _charts.nruGoldFlow = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: '진입 전 골드', data: beforeData, borderColor: '#60a5fa', backgroundColor: 'rgba(96,165,250,0.1)', fill: true, tension: 0.3, pointRadius: 3 },
+        { label: '클리어 후 골드', data: afterData, borderColor: '#34d399', backgroundColor: 'rgba(52,211,153,0.1)', fill: true, tension: 0.3, pointRadius: 3 },
+        { label: '입장료', data: entryFees, type: 'bar', backgroundColor: 'rgba(251,191,36,0.5)', borderColor: '#fbbf24', borderWidth: 1, yAxisID: 'y1' },
+        { label: '보상 (골드+스트릭)', data: rewards, type: 'bar', backgroundColor: 'rgba(52,211,153,0.5)', borderColor: '#34d399', borderWidth: 1, yAxisID: 'y1' },
+        { label: '아이템 비용', data: itemCosts, type: 'bar', backgroundColor: 'rgba(248,113,113,0.5)', borderColor: '#f87171', borderWidth: 1, yAxisID: 'y1' },
+      ],
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 8, font: { size: 11 } } } },
+      scales: {
+        y: { position: 'left', title: { display: true, text: '골드 잔액', font: { size: 11 } }, ticks: { callback: v => v.toLocaleString() } },
+        y1: { position: 'right', title: { display: true, text: '비용/보상', font: { size: 11 } }, grid: { drawOnChartArea: false }, ticks: { callback: v => v.toLocaleString() } },
+      },
+    },
+  });
+}
+
 const CHART_RENDERERS = {
   summary: (id, stages, runs) => { renderSummaryCharts(id, stages, runs); renderRadarChart(id, stages, runs); },
   economy: (id, stages, runs) => renderEconomyCharts(id, stages, runs),
   balance: (id, stages, runs) => renderBalanceCharts(id, stages, runs),
   gimmick: (id, stages, runs) => renderGimmickCharts(id, stages),
+  // NRU (SCJ)
+  nru: (id) => renderNruGoldFlowChart(id),
   // CTZ / MJG
   tiles: (id, stages, runs) => id === 'MJG' ? renderMjgTileCharts(id, stages) : renderTileCharts(id, stages, runs),
   items: (id, stages, runs) => id === 'MJG' ? renderMjgItemCharts(id, stages) : null,
@@ -5237,71 +5348,6 @@ async function deleteSelectedRuns() {
   renderCronHistory(await fetchCronHistory());
 }
 
-/* ── NRU 런 관리 ── */
-
-function renderNruManager() {
-  const section = document.getElementById('nru-section');
-  if (!section || !_nruRuns.length) return;
-  // nru-section 하단에 관리 테이블 삽입 (이미 renderNruSummary가 렌더 완료된 상태)
-  let mgr = document.getElementById('nru-manager');
-  if (!mgr) {
-    mgr = document.createElement('div');
-    mgr.id = 'nru-manager';
-    section.appendChild(mgr);
-  }
-
-  const rows = _nruRuns.map(r => {
-    const passStyle = r.ready ? 'color:var(--status-ok);font-weight:600' : 'color:var(--status-err);font-weight:600';
-    const timeStr = (r.total_time_sec || 0) >= 60 ? `${((r.total_time_sec || 0) / 60).toFixed(1)}분` : `${Math.round(r.total_time_sec || 0)}초`;
-    return `<div class="rm-row">
-      <input type="checkbox" class="nru-check" value="${r.id}">
-      <span style="min-width:80px">${r.run_date || '-'}</span>
-      <span style="min-width:40px">${r.run_time || '-'}</span>
-      <span style="${passStyle};min-width:40px">${r.ready ? 'PASS' : 'FAIL'}</span>
-      <span style="min-width:60px">${r.levels_cleared}/${r.total_levels || 25}</span>
-      <span style="min-width:50px">${timeStr}</span>
-      <span style="min-width:40px">${r.total_retries || 0}회</span>
-      <span style="color:var(--text-muted);font-size:10px">${(r.reason || '').slice(0, 30) || '-'}</span>
-      <span style="color:var(--text-muted);font-size:10px;margin-left:auto">${r.id.slice(0, 8)}</span>
-    </div>`;
-  }).join('');
-
-  mgr.innerHTML = `
-    <div class="tbl-wrap" style="margin-top:12px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-        <h4 style="margin:0">NRU 데이터 관리</h4>
-        <label style="font-size:11px;color:var(--text-muted);margin-left:auto"><input type="checkbox" id="nru-select-all" onclick="document.querySelectorAll('.nru-check').forEach(c=>c.checked=this.checked)"> 전체 선택</label>
-        <button class="rm-btn rm-btn-danger" onclick="deleteSelectedNru()" style="font-size:11px;padding:3px 10px">선택 삭제</button>
-        <span id="nru-mgr-status" style="font-size:11px;color:var(--text-muted)"></span>
-      </div>
-      ${rows}
-    </div>
-  `;
-}
-
-async function deleteSelectedNruOv() {
-  const checked = [...document.querySelectorAll('.nru-ov-check:checked')].map(cb => cb.value);
-  if (!checked.length) { alert('삭제할 NRU 런을 선택해주세요.'); return; }
-  if (!confirm(`${checked.length}건의 NRU 런을 삭제하시겠습니까? (복구 불가)`)) return;
-
-  const statusEl = document.getElementById('nru-ov-status');
-  statusEl.textContent = '삭제 중...';
-  let deleted = 0, failed = 0;
-  for (const runId of checked) {
-    try {
-      await sb.rpc('delete_nru_run', { target_id: runId });
-      deleted++;
-    } catch (e) {
-      console.error('NRU 삭제 실패:', runId, e);
-      failed++;
-    }
-  }
-  statusEl.textContent = `삭제 완료: ${deleted}건${failed ? `, 실패 ${failed}건` : ''}`;
-  _nruRuns = await fetchNruRuns();
-  renderNruSummary(_nruRuns);
-  renderNruManager();
-}
-
 async function deleteSelectedNruCat(gameId) {
   const checked = [...document.querySelectorAll('.nru-cat-check:checked')].map(cb => cb.value);
   if (!checked.length) { alert('삭제할 NRU 런을 선택해주세요.'); return; }
@@ -5323,31 +5369,10 @@ async function deleteSelectedNruCat(gameId) {
   _nruRuns = await fetchNruRuns();
   // 카테고리 탭 다시 렌더
   const panel = document.getElementById(`cat-nru-${gameId}`);
-  if (panel) panel.innerHTML = renderCatNru(gameId);
-}
-
-async function deleteSelectedNru() {
-  const checked = [...document.querySelectorAll('.nru-check:checked')].map(cb => cb.value);
-  if (!checked.length) { alert('삭제할 NRU 런을 선택해주세요.'); return; }
-  if (!confirm(`${checked.length}건의 NRU 런을 삭제하시겠습니까? (복구 불가)`)) return;
-
-  const statusEl = document.getElementById('nru-mgr-status');
-  statusEl.textContent = '삭제 중...';
-  let deleted = 0, failed = 0;
-  for (const runId of checked) {
-    try {
-      await sb.rpc('delete_nru_run', { target_id: runId });
-      deleted++;
-    } catch (e) {
-      console.error('NRU 삭제 실패:', runId, e);
-      failed++;
-    }
+  if (panel) {
+    panel.innerHTML = renderCatNru(gameId);
+    setTimeout(() => renderNruGoldFlowChart(gameId), 50);
   }
-  statusEl.textContent = `삭제 완료: ${deleted}건${failed ? `, 실패 ${failed}건` : ''}`;
-  // 데이터 갱신
-  _nruRuns = await fetchNruRuns();
-  renderNruSummary(_nruRuns);
-  renderNruManager();
 }
 
 /* ── 크론 이력 삭제 ── */
@@ -5756,7 +5781,6 @@ function subscribeRealtime() {
       async (payload) => {
         try {
           _nruRuns = await fetchNruRuns();
-          renderNruSummary(_nruRuns);
           const status = payload.new.ready ? 'PASS' : 'FAIL';
           const nruMsg = `NRU 결과 도착: ${status} (Lv${payload.new.levels_cleared})`;
           showToast(nruMsg);
@@ -5892,7 +5916,6 @@ async function init() {
     const games = buildOverviewFromViews(overviewStats, personaStats, dailyTrend);
     _overviewGames = games;
     renderOverview(games);
-    renderNruSummary(nruRuns);
     renderHealthCheck(healthChecks);
     renderCronHistory(cron);
     renderGameTabs(Object.keys(games));
