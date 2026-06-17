@@ -2179,18 +2179,6 @@ function renderCatNru(gameId) {
   const itemTotalUndo = itemRows.reduce((a, r) => a + r.undo, 0);
   const itemTotalCost = itemRows.reduce((a, r) => a + r.cost, 0);
 
-  // ── 골드 흐름 (최신 런) ──
-  const goldFlowData = levelResults.map(lv => ({
-    level: lv.level,
-    before: Number(lv.gold_before) || 0,
-    after: Number(lv.gold_after) || 0,
-    entryFee: Number(lv.entry_fee) || 0,
-    reward: (lv.clear_rewards ? parseInt(lv.clear_rewards.coin) || 0 : 0),
-    streakGold: Array.isArray((lv.clear_rewards || {}).streak_rewards)
-      ? lv.clear_rewards.streak_rewards.filter(x => x.keyNumber === 40001).reduce((a, x) => a + (Number(x.amount) || 0), 0) : 0,
-    itemCost: Number(lv.item_cost) || 0,
-  }));
-
   // ── 보너스 보상 (팝업) ──
   const bonusRewards = latest.bonus_rewards || [];
 
@@ -2221,8 +2209,10 @@ function renderCatNru(gameId) {
     const itemCost = Number(lv.item_cost) || 0;
     const wildCount = Number(lv.wild_card_count) || 0;
     const extraDecks = Number(lv.extra_decks) || 0;
+    const stageId = lv.stage || '-';
     return `<tr>
       <td style="font-weight:600">Lv ${lv.level}</td>
+      <td style="font-size:11px;color:var(--text-muted)">${stageId}</td>
       <td style="color:${statusColor};font-weight:600">${ok ? '성공' : '실패'}</td>
       <td>${(lv.duration_s || 0).toFixed(1)}초</td>
       <td>${lv.turns || 0}</td>
@@ -2355,14 +2345,14 @@ function renderCatNru(gameId) {
         <span style="font-size:11px;color:var(--text-muted);margin-left:4px">(최신 런)</span>
         <div style="margin-left:auto;display:flex;gap:10px;font-size:12px">
           <span style="padding:3px 10px;border-radius:10px;background:#10b98122;color:var(--status-ok);font-weight:600">총 ${totalStreakRewards}회 보상</span>
-          <span style="padding:3px 10px;border-radius:10px;background:var(--border);color:var(--text-secondary)">총 콤보 ${totalCombo}</span>
+          <span style="padding:3px 10px;border-radius:10px;background:var(--border);color:var(--text-secondary)" title="드로우 없이 연속 카드 매치 횟수">총 연속매치 ${totalCombo}</span>
         </div>
       </div>
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">레벨별 스트릭 미터 보상 횟수 및 보상 종류</div>
       ${streakWithReward.length > 0 ? `
       <div style="overflow-x:auto">
         <table>
-          <thead><tr><th>레벨</th><th>결과</th><th>콤보</th><th>보상 횟수</th><th>보상 내역</th></tr></thead>
+          <thead><tr><th>레벨</th><th>결과</th><th title="드로우 없이 연속 카드 매치 횟수 (스트릭 미터 충전 기반)">연속매치</th><th>보상 횟수</th><th>보상 내역</th></tr></thead>
           <tbody>${streakTableRows}</tbody>
         </table>
       </div>` : '<div style="color:var(--text-muted);font-size:12px;padding:12px 0;text-align:center">보상이 발생한 레벨 없음</div>'}
@@ -2374,7 +2364,7 @@ function renderCatNru(gameId) {
         <button onclick="const t=this.parentElement.querySelector('.nru-streak-all');const v=t.style.display==='none';t.style.display=v?'block':'none';this.textContent=v?'▲ 접기':'▼ 전체 레벨 보기'" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-muted);font-size:11px;padding:4px 12px;cursor:pointer">▼ 전체 레벨 보기</button>
         <div class="nru-streak-all" style="display:none;margin-top:8px;overflow-x:auto">
           <table>
-            <thead><tr><th>레벨</th><th>결과</th><th>콤보</th><th>보상 횟수</th><th>보상 내역</th></tr></thead>
+            <thead><tr><th>레벨</th><th>결과</th><th title="드로우 없이 연속 카드 매치 횟수 (스트릭 미터 충전 기반)">연속매치</th><th>보상 횟수</th><th>보상 내역</th></tr></thead>
             <tbody>${streakAllTableRows}</tbody>
           </table>
         </div>
@@ -2459,17 +2449,6 @@ function renderCatNru(gameId) {
     </div>`;
     })()}
 
-    <!-- ── 골드 흐름 차트 ── -->
-    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:16px;border-top:3px solid #10b981">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-        <span style="font-size:18px">📈</span>
-        <h4 style="font-size:calc(14px * var(--fs-scale));color:var(--text-primary);margin:0;font-weight:700">골드 흐름</h4>
-        <span style="font-size:11px;color:var(--text-muted);margin-left:4px">(최신 런)</span>
-      </div>
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">레벨별 골드 잔액 추이 (진입 전 → 클리어 후)</div>
-      <canvas id="chart-nru-gold-flow"></canvas>
-    </div>
-
     <!-- ── 보너스 보상 (팝업) ── -->
     ${(() => {
       if (!bonusRewards.length) return `
@@ -2528,7 +2507,7 @@ function renderCatNru(gameId) {
     <div class="tbl-wrap">
       <h4>최신 런 레벨별 상세 (${latest.run_date} ${latest.run_time || ''})</h4>
       <table>
-        <thead><tr><th>레벨</th><th>결과</th><th>시간</th><th>턴</th><th>매치</th><th>드로우</th><th>재시도</th><th>입장료</th><th>보상</th><th>스트릭</th><th>아이템</th><th>와일드</th><th>엑스트라덱</th></tr></thead>
+        <thead><tr><th>레벨</th><th>스테이지</th><th>결과</th><th>시간</th><th>턴</th><th>매치</th><th>드로우</th><th>재시도</th><th>입장료</th><th>보상</th><th>스트릭</th><th>아이템</th><th>와일드</th><th>엑스트라덱</th></tr></thead>
         <tbody>${latestRows}</tbody>
       </table>
     </div>
@@ -2725,58 +2704,13 @@ const CATEGORY_RENDERERS = {
   nru: (gid, stages, runs) => renderCatNru(gid),
 };
 
-function renderNruGoldFlowChart(gameId) {
-  const canvas = document.getElementById('chart-nru-gold-flow');
-  if (!canvas) return;
-  const runs = _nruRuns.filter(r => r.game_id === gameId);
-  if (!runs.length) return;
-  const levels = runs[0].level_results || [];
-  if (!levels.length) return;
-
-  const labels = levels.map(lv => `Lv ${lv.level}`);
-  const beforeData = levels.map(lv => Number(lv.gold_before) || 0);
-  const afterData = levels.map(lv => Number(lv.gold_after) || 0);
-  const entryFees = levels.map(lv => Number(lv.entry_fee) || 0);
-  const rewards = levels.map(lv => {
-    const cr = lv.clear_rewards || {};
-    let g = parseInt(cr.coin) || 0;
-    if (Array.isArray(cr.streak_rewards)) g += cr.streak_rewards.filter(x => x.keyNumber === 40001).reduce((a, x) => a + (Number(x.amount) || 0), 0);
-    return g;
-  });
-  const itemCosts = levels.map(lv => Number(lv.item_cost) || 0);
-
-  if (_charts.nruGoldFlow) _charts.nruGoldFlow.destroy();
-  _charts.nruGoldFlow = new Chart(canvas, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        { label: '진입 전 골드', data: beforeData, borderColor: '#60a5fa', backgroundColor: 'rgba(96,165,250,0.1)', fill: true, tension: 0.3, pointRadius: 3 },
-        { label: '클리어 후 골드', data: afterData, borderColor: '#34d399', backgroundColor: 'rgba(52,211,153,0.1)', fill: true, tension: 0.3, pointRadius: 3 },
-        { label: '입장료', data: entryFees, type: 'bar', backgroundColor: 'rgba(251,191,36,0.5)', borderColor: '#fbbf24', borderWidth: 1, yAxisID: 'y1' },
-        { label: '보상 (골드+스트릭)', data: rewards, type: 'bar', backgroundColor: 'rgba(52,211,153,0.5)', borderColor: '#34d399', borderWidth: 1, yAxisID: 'y1' },
-        { label: '아이템 비용', data: itemCosts, type: 'bar', backgroundColor: 'rgba(248,113,113,0.5)', borderColor: '#f87171', borderWidth: 1, yAxisID: 'y1' },
-      ],
-    },
-    options: {
-      responsive: true,
-      interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 8, font: { size: 11 } } } },
-      scales: {
-        y: { position: 'left', title: { display: true, text: '골드 잔액', font: { size: 11 } }, ticks: { callback: v => v.toLocaleString() } },
-        y1: { position: 'right', title: { display: true, text: '비용/보상', font: { size: 11 } }, grid: { drawOnChartArea: false }, ticks: { callback: v => v.toLocaleString() } },
-      },
-    },
-  });
-}
-
 const CHART_RENDERERS = {
   summary: (id, stages, runs) => { renderSummaryCharts(id, stages, runs); renderRadarChart(id, stages, runs); },
   economy: (id, stages, runs) => renderEconomyCharts(id, stages, runs),
   balance: (id, stages, runs) => renderBalanceCharts(id, stages, runs),
   gimmick: (id, stages, runs) => renderGimmickCharts(id, stages),
   // NRU (SCJ)
-  nru: (id) => renderNruGoldFlowChart(id),
+  nru: () => {},
   // CTZ / MJG
   tiles: (id, stages, runs) => id === 'MJG' ? renderMjgTileCharts(id, stages) : renderTileCharts(id, stages, runs),
   items: (id, stages, runs) => id === 'MJG' ? renderMjgItemCharts(id, stages) : null,
