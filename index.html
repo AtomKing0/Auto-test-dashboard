@@ -2311,96 +2311,212 @@ function renderCatNru(gameId) {
     ${_renderNruTutorialSection(latest)}
 
     <!-- ── 스트릭 보상 상세 ── -->
-    <div class="tbl-wrap">
-      <h4>스트릭 보상 상세 (최신 런)</h4>
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">레벨별 스트릭 미터 보상 횟수 및 보상 종류</div>
-      <table>
-        <thead><tr><th>레벨</th><th>결과</th><th>콤보</th><th>보상 횟수</th><th>보상 내역</th></tr></thead>
-        <tbody>${streakRows.map(r => {
-          const hasReward = r.rewardCount > 0;
-          return `<tr>
+    ${(() => {
+      const streakWithReward = streakRows.filter(r => r.rewardCount > 0);
+      const streakWithout = streakRows.filter(r => r.rewardCount === 0);
+      const streakWithoutLvs = streakWithout.map(r => 'Lv ' + r.level).join(', ');
+      const totalStreakRewards = streakRows.reduce((a,r) => a + r.rewardCount, 0);
+      const totalCombo = streakRows.reduce((a,r) => a + r.combo, 0);
+      const _badgeColor = (txt) => {
+        if (txt.includes('골드')) return '#fbbf24';
+        if (txt.includes('해머')) return '#ef4444';
+        if (txt.includes('별')) return '#a78bfa';
+        return 'var(--text-muted)';
+      };
+      const _renderBadges = (typeStr) => {
+        if (typeStr === '-') return '<span style="color:var(--text-muted)">-</span>';
+        return typeStr.split(', ').map(part => {
+          const c = _badgeColor(part);
+          return '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;margin:1px 2px;background:' + c + '22;color:' + c + ';border:1px solid ' + c + '44">' + part + '</span>';
+        }).join('');
+      };
+      const streakTableRows = streakWithReward.map(r => `<tr>
             <td style="font-weight:600">Lv ${r.level}</td>
-            <td style="color:${r.success ? 'var(--status-ok)' : 'var(--status-err)'}; font-weight:600">${r.success ? '성공' : '실패'}</td>
+            <td style="color:${r.success ? 'var(--status-ok)' : 'var(--status-err)'};font-weight:600">${r.success ? '성공' : '실패'}</td>
+            <td>${r.combo || '-'}</td>
+            <td style="color:var(--status-ok);font-weight:600">${r.rewardCount}회</td>
+            <td>${_renderBadges(r.typeStr)}</td>
+          </tr>`).join('');
+      const streakAllTableRows = streakRows.map(r => {
+        const hasReward = r.rewardCount > 0;
+        return `<tr>
+            <td style="font-weight:600">Lv ${r.level}</td>
+            <td style="color:${r.success ? 'var(--status-ok)' : 'var(--status-err)'};font-weight:600">${r.success ? '성공' : '실패'}</td>
             <td>${r.combo || '-'}</td>
             <td style="color:${hasReward ? 'var(--status-ok)' : 'inherit'};font-weight:${hasReward ? '600' : '400'}">${hasReward ? r.rewardCount + '회' : '-'}</td>
-            <td style="font-size:12px">${r.typeStr}</td>
+            <td>${_renderBadges(r.typeStr)}</td>
           </tr>`;
-        }).join('')}</tbody>
-      </table>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
-        총 스트릭 보상: ${streakRows.reduce((a,r) => a + r.rewardCount, 0)}회 |
-        총 콤보: ${streakRows.reduce((a,r) => a + r.combo, 0)}
+      }).join('');
+      return `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:16px;border-top:3px solid #fbbf24">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span style="font-size:18px">🎯</span>
+        <h4 style="font-size:calc(14px * var(--fs-scale));color:var(--text-primary);margin:0;font-weight:700">스트릭 보상 상세</h4>
+        <span style="font-size:11px;color:var(--text-muted);margin-left:4px">(최신 런)</span>
+        <div style="margin-left:auto;display:flex;gap:10px;font-size:12px">
+          <span style="padding:3px 10px;border-radius:10px;background:#10b98122;color:var(--status-ok);font-weight:600">총 ${totalStreakRewards}회 보상</span>
+          <span style="padding:3px 10px;border-radius:10px;background:var(--border);color:var(--text-secondary)">총 콤보 ${totalCombo}</span>
+        </div>
       </div>
-    </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">레벨별 스트릭 미터 보상 횟수 및 보상 종류</div>
+      ${streakWithReward.length > 0 ? `
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>레벨</th><th>결과</th><th>콤보</th><th>보상 횟수</th><th>보상 내역</th></tr></thead>
+          <tbody>${streakTableRows}</tbody>
+        </table>
+      </div>` : '<div style="color:var(--text-muted);font-size:12px;padding:12px 0;text-align:center">보상이 발생한 레벨 없음</div>'}
+      ${streakWithout.length > 0 ? `
+      <div style="font-size:11px;color:var(--text-muted);margin-top:8px;padding:6px 10px;background:var(--bg-body);border-radius:6px">
+        보상 없는 레벨 (${streakWithout.length}개): ${streakWithoutLvs}
+      </div>` : ''}
+      <div style="margin-top:8px">
+        <button onclick="const t=this.parentElement.querySelector('.nru-streak-all');const v=t.style.display==='none';t.style.display=v?'block':'none';this.textContent=v?'▲ 접기':'▼ 전체 레벨 보기'" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-muted);font-size:11px;padding:4px 12px;cursor:pointer">▼ 전체 레벨 보기</button>
+        <div class="nru-streak-all" style="display:none;margin-top:8px;overflow-x:auto">
+          <table>
+            <thead><tr><th>레벨</th><th>결과</th><th>콤보</th><th>보상 횟수</th><th>보상 내역</th></tr></thead>
+            <tbody>${streakAllTableRows}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+    })()}
 
     <!-- ── 아이템 사용 상세 ── -->
-    <div class="tbl-wrap">
-      <h4>아이템 사용 상세 (최신 런)</h4>
-      <div style="display:flex;gap:16px;margin-bottom:8px;flex-wrap:wrap">
-        <div style="font-size:12px;padding:4px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px">
-          🃏 와일드카드 <b>${itemTotalWild}</b>회
+    ${(() => {
+      const itemWithUse = itemRows.filter(r => r.totalUse > 0);
+      const itemWithout = itemRows.filter(r => r.totalUse === 0);
+      const itemWithoutLvs = itemWithout.map(r => 'Lv ' + r.level).join(', ');
+      const maxUse = Math.max(...itemRows.map(r => r.totalUse), 1);
+      const _itemBar = (val, max, color) => {
+        if (!val) return '<span style="color:var(--text-muted)">-</span>';
+        const pct = Math.round(val / max * 100);
+        return '<div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:6px;border-radius:3px;background:var(--border);overflow:hidden;min-width:40px"><div style="height:100%;border-radius:3px;background:' + color + ';width:' + pct + '%"></div></div><span style="color:' + color + ';font-weight:600;font-size:12px;min-width:18px">' + val + '</span></div>';
+      };
+      const itemTableRows = itemWithUse.map(r => `<tr>
+            <td style="font-weight:600">Lv ${r.level}</td>
+            <td style="color:${r.success ? 'var(--status-ok)' : 'var(--status-err)'};font-weight:600">${r.success ? '성공' : '실패'}</td>
+            <td style="min-width:90px">${_itemBar(r.wild, maxUse, '#60a5fa')}</td>
+            <td style="min-width:90px">${_itemBar(r.extra, maxUse, '#a78bfa')}</td>
+            <td style="min-width:90px">${_itemBar(r.undo, maxUse, '#fbbf24')}</td>
+            <td style="font-weight:600">${r.totalUse}</td>
+            <td style="color:${r.cost ? 'var(--status-err)' : 'inherit'};font-weight:${r.cost ? '600' : '400'}">${r.cost ? '-' + r.cost.toLocaleString() : '-'}</td>
+          </tr>`).join('');
+      const itemAllTableRows = itemRows.map(r => `<tr>
+            <td style="font-weight:600">Lv ${r.level}</td>
+            <td style="color:${r.success ? 'var(--status-ok)' : 'var(--status-err)'};font-weight:600">${r.success ? '성공' : '실패'}</td>
+            <td style="min-width:90px">${_itemBar(r.wild, maxUse, '#60a5fa')}</td>
+            <td style="min-width:90px">${_itemBar(r.extra, maxUse, '#a78bfa')}</td>
+            <td style="min-width:90px">${_itemBar(r.undo, maxUse, '#fbbf24')}</td>
+            <td style="font-weight:${r.totalUse ? '600' : '400'}">${r.totalUse || '-'}</td>
+            <td style="color:${r.cost ? 'var(--status-err)' : 'inherit'};font-weight:${r.cost ? '600' : '400'}">${r.cost ? '-' + r.cost.toLocaleString() : '-'}</td>
+          </tr>`).join('');
+      return `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:16px;border-top:3px solid #60a5fa">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span style="font-size:18px">🃏</span>
+        <h4 style="font-size:calc(14px * var(--fs-scale));color:var(--text-primary);margin:0;font-weight:700">아이템 사용 상세</h4>
+        <span style="font-size:11px;color:var(--text-muted);margin-left:4px">(최신 런)</span>
+      </div>
+      <div style="display:flex;gap:12px;margin:10px 0 12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:120px;padding:10px 14px;background:var(--bg-body);border-radius:8px;border-left:3px solid #60a5fa">
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">와일드카드</div>
+          <div style="font-size:18px;font-weight:700;color:#60a5fa">${itemTotalWild}<span style="font-size:11px;font-weight:400;color:var(--text-muted)"> 회</span></div>
         </div>
-        <div style="font-size:12px;padding:4px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px">
-          🎴 엑스트라덱 <b>${itemTotalExtra}</b>회
+        <div style="flex:1;min-width:120px;padding:10px 14px;background:var(--bg-body);border-radius:8px;border-left:3px solid #a78bfa">
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">엑스트라덱</div>
+          <div style="font-size:18px;font-weight:700;color:#a78bfa">${itemTotalExtra}<span style="font-size:11px;font-weight:400;color:var(--text-muted)"> 회</span></div>
         </div>
-        <div style="font-size:12px;padding:4px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px">
-          ↩️ 언두 <b>${itemTotalUndo}</b>회
+        <div style="flex:1;min-width:120px;padding:10px 14px;background:var(--bg-body);border-radius:8px;border-left:3px solid #fbbf24">
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">언두</div>
+          <div style="font-size:18px;font-weight:700;color:#fbbf24">${itemTotalUndo}<span style="font-size:11px;font-weight:400;color:var(--text-muted)"> 회</span></div>
         </div>
-        <div style="font-size:12px;padding:4px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--status-err)">
-          💰 총 비용 <b>${itemTotalCost.toLocaleString()}</b>
+        <div style="flex:1;min-width:120px;padding:10px 14px;background:var(--bg-body);border-radius:8px;border-left:3px solid var(--status-err)">
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">총 비용</div>
+          <div style="font-size:18px;font-weight:700;color:var(--status-err)">${itemTotalCost ? '-' + itemTotalCost.toLocaleString() : '0'}</div>
         </div>
       </div>
-      <table>
-        <thead><tr><th>레벨</th><th>결과</th><th>와일드</th><th>엑스트라덱</th><th>언두</th><th>총 사용</th><th>비용</th></tr></thead>
-        <tbody>${itemRows.map(r => {
-          const hasItem = r.totalUse > 0;
-          return `<tr>
-            <td style="font-weight:600">Lv ${r.level}</td>
-            <td style="color:${r.success ? 'var(--status-ok)' : 'var(--status-err)'}; font-weight:600">${r.success ? '성공' : '실패'}</td>
-            <td style="color:${r.wild ? '#60a5fa' : 'inherit'}">${r.wild || '-'}</td>
-            <td style="color:${r.extra ? '#a78bfa' : 'inherit'}">${r.extra || '-'}</td>
-            <td style="color:${r.undo ? '#fbbf24' : 'inherit'}">${r.undo || '-'}</td>
-            <td style="font-weight:${hasItem ? '600' : '400'}">${hasItem ? r.totalUse : '-'}</td>
-            <td style="color:${r.cost ? 'var(--status-err)' : 'inherit'}">${r.cost ? r.cost.toLocaleString() : '-'}</td>
-          </tr>`;
-        }).join('')}</tbody>
-      </table>
-    </div>
+      ${itemWithUse.length > 0 ? `
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>레벨</th><th>결과</th><th>와일드</th><th>엑스트라덱</th><th>언두</th><th>총 사용</th><th>비용</th></tr></thead>
+          <tbody>${itemTableRows}</tbody>
+        </table>
+      </div>` : '<div style="color:var(--text-muted);font-size:12px;padding:12px 0;text-align:center">아이템을 사용한 레벨 없음</div>'}
+      ${itemWithout.length > 0 ? `
+      <div style="font-size:11px;color:var(--text-muted);margin-top:8px;padding:6px 10px;background:var(--bg-body);border-radius:6px">
+        미사용 레벨 (${itemWithout.length}개): ${itemWithoutLvs}
+      </div>` : ''}
+      <div style="margin-top:8px">
+        <button onclick="const t=this.parentElement.querySelector('.nru-item-all');const v=t.style.display==='none';t.style.display=v?'block':'none';this.textContent=v?'▲ 접기':'▼ 전체 레벨 보기'" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-muted);font-size:11px;padding:4px 12px;cursor:pointer">▼ 전체 레벨 보기</button>
+        <div class="nru-item-all" style="display:none;margin-top:8px;overflow-x:auto">
+          <table>
+            <thead><tr><th>레벨</th><th>결과</th><th>와일드</th><th>엑스트라덱</th><th>언두</th><th>총 사용</th><th>비용</th></tr></thead>
+            <tbody>${itemAllTableRows}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+    })()}
 
     <!-- ── 골드 흐름 차트 ── -->
-    <div class="chart-box" style="margin-bottom:12px">
-      <h4>골드 흐름 (최신 런)</h4>
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">레벨별 골드 잔액 추이 (진입 전 → 클리어 후)</div>
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:16px;border-top:3px solid #10b981">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span style="font-size:18px">📈</span>
+        <h4 style="font-size:calc(14px * var(--fs-scale));color:var(--text-primary);margin:0;font-weight:700">골드 흐름</h4>
+        <span style="font-size:11px;color:var(--text-muted);margin-left:4px">(최신 런)</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">레벨별 골드 잔액 추이 (진입 전 → 클리어 후)</div>
       <canvas id="chart-nru-gold-flow"></canvas>
     </div>
 
     <!-- ── 보너스 보상 (팝업) ── -->
-    ${bonusRewards.length ? `
-    <div class="tbl-wrap">
-      <h4>보너스 보상 — 팝업 수령 내역 (최신 런)</h4>
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">출석/마일스톤 등 레벨 보상 외 팝업으로 수령한 골드·해머</div>
-      <table>
-        <thead><tr><th>시각</th><th>팝업</th><th>골드</th><th>해머</th></tr></thead>
-        <tbody>${bonusRewards.map(br => {
-          const gGold = br.gold_gained || 0;
-          const gHammer = br.hammer_gained || 0;
-          return `<tr>
-            <td style="font-size:12px;color:var(--text-muted)">${br.timestamp || '-'}</td>
-            <td>${br.popup || '-'}</td>
-            <td style="color:${gGold > 0 ? 'var(--status-ok)' : 'inherit'};font-weight:${gGold > 0 ? '600' : '400'}">${gGold > 0 ? '+' + gGold.toLocaleString() : '-'}</td>
-            <td style="color:${gHammer > 0 ? 'var(--status-ok)' : 'inherit'};font-weight:${gHammer > 0 ? '600' : '400'}">${gHammer > 0 ? '+' + gHammer : '-'}</td>
-          </tr>`;
-        }).join('')}</tbody>
-      </table>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
-        합계: 골드 +${bonusRewards.reduce((a,b) => a + (b.gold_gained||0), 0).toLocaleString()},
-        해머 +${bonusRewards.reduce((a,b) => a + (b.hammer_gained||0), 0)}
+    ${(() => {
+      if (!bonusRewards.length) return `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:16px;border-top:3px solid #a78bfa">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span style="font-size:18px">🎁</span>
+        <h4 style="font-size:calc(14px * var(--fs-scale));color:var(--text-primary);margin:0;font-weight:700">보너스 보상 — 팝업 수령 내역</h4>
       </div>
-    </div>` : `
-    <div class="tbl-wrap">
-      <h4>보너스 보상 — 팝업 수령 내역</h4>
-      <div style="color:var(--text-muted);font-size:12px;padding:8px 0">팝업 보상 데이터 없음 (bonus_rewards 컬럼 추가 후 새 런부터 적재)</div>
-    </div>`}
+      <div style="color:var(--text-muted);font-size:12px;padding:12px 0;text-align:center">팝업 보상 데이터 없음 (bonus_rewards 컬럼 추가 후 새 런부터 적재)</div>
+    </div>`;
+      const totalBonusGold = bonusRewards.reduce((a,b) => a + (b.gold_gained||0), 0);
+      const totalBonusHammer = bonusRewards.reduce((a,b) => a + (b.hammer_gained||0), 0);
+      const maxBonusGold = Math.max(...bonusRewards.map(b => b.gold_gained || 0), 1);
+      const maxBonusHammer = Math.max(...bonusRewards.map(b => b.hammer_gained || 0), 1);
+      return `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:16px;border-top:3px solid #a78bfa">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span style="font-size:18px">🎁</span>
+        <h4 style="font-size:calc(14px * var(--fs-scale));color:var(--text-primary);margin:0;font-weight:700">보너스 보상 — 팝업 수령 내역</h4>
+        <span style="font-size:11px;color:var(--text-muted);margin-left:4px">(최신 런)</span>
+        <div style="margin-left:auto;display:flex;gap:10px;font-size:12px">
+          <span style="padding:3px 10px;border-radius:10px;background:#fbbf2422;color:#fbbf24;font-weight:600">골드 +${totalBonusGold.toLocaleString()}</span>
+          <span style="padding:3px 10px;border-radius:10px;background:#ef444422;color:#ef4444;font-weight:600">해머 +${totalBonusHammer}</span>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">출석/마일스톤 등 레벨 보상 외 팝업으로 수령한 골드 · 해머</div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>시각</th><th>팝업</th><th>골드</th><th style="min-width:120px">골드 비율</th><th>해머</th><th style="min-width:120px">해머 비율</th></tr></thead>
+          <tbody>${bonusRewards.map(br => {
+            const gGold = br.gold_gained || 0;
+            const gHammer = br.hammer_gained || 0;
+            const goldPct = Math.round(gGold / maxBonusGold * 100);
+            const hammerPct = Math.round(gHammer / maxBonusHammer * 100);
+            return `<tr>
+              <td style="font-size:11px;color:var(--text-muted);white-space:nowrap">${br.timestamp || '-'}</td>
+              <td style="font-weight:500">${br.popup || '-'}</td>
+              <td style="color:${gGold > 0 ? 'var(--status-ok)' : 'inherit'};font-weight:${gGold > 0 ? '600' : '400'}">${gGold > 0 ? '+' + gGold.toLocaleString() : '-'}</td>
+              <td>${gGold > 0 ? '<div style="height:6px;border-radius:3px;background:var(--border);overflow:hidden"><div style="height:100%;border-radius:3px;background:#fbbf24;width:' + goldPct + '%"></div></div>' : ''}</td>
+              <td style="color:${gHammer > 0 ? 'var(--status-ok)' : 'inherit'};font-weight:${gHammer > 0 ? '600' : '400'}">${gHammer > 0 ? '+' + gHammer : '-'}</td>
+              <td>${gHammer > 0 ? '<div style="height:6px;border-radius:3px;background:var(--border);overflow:hidden"><div style="height:100%;border-radius:3px;background:#ef4444;width:' + hammerPct + '%"></div></div>' : ''}</td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>
+      </div>
+    </div>`;
+    })()}
 
     <div class="tbl-wrap">
       <h4>레벨별 통계 (전체 ${runs.length}회 집계)</h4>
