@@ -1778,8 +1778,10 @@ function renderCronHistory(cron) {
       if (!r) return '<td style="color:var(--text-muted)">-</td>';
       const ok = r.exit_code === 0;
       const color = ok ? 'var(--status-ok)' : 'var(--status-err)';
-      const label = ok ? 'OK' : `FAIL (${r.exit_code})`;
-      return `<td style="color:${color}">${label}</td>`;
+      const label = ok ? 'OK' : 'FAIL';
+      const errText = (!ok && r.error) ? r.error.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
+      const errHtml = errText ? `<div style="font-size:10px;color:var(--text-muted);margin-top:2px;max-width:220px;word-break:break-word">${errText}</div>` : '';
+      return `<td style="color:${color}">${label}${errHtml}</td>`;
     }).join('');
     return `<tr>
       <td><input type="checkbox" class="cron-check" value="${c.id}"></td>
