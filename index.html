@@ -2126,13 +2126,14 @@ function renderCatNru(gameId) {
   const levelStats = {};
   for (const r of runs) {
     for (const lv of (r.level_results || [])) {
-      if (!levelStats[lv.level]) levelStats[lv.level] = { total: 0, success: 0, totalTime: 0, totalRetries: 0, totalTurns: 0, totalRewardCoin: 0, totalStreakGold: 0 };
+      if (!levelStats[lv.level]) levelStats[lv.level] = { total: 0, success: 0, totalTime: 0, totalRetries: 0, totalTurns: 0, totalRewardCoin: 0, totalStreakGold: 0, maxCombo: 0 };
       const s = levelStats[lv.level];
       s.total++;
       if (lv.success) s.success++;
       s.totalTime += lv.duration_s || 0;
       s.totalRetries += lv.retries || 0;
       s.totalTurns += lv.turns || 0;
+      s.maxCombo = Math.max(s.maxCombo, Number(lv.max_combo) || 0);
       const cr = lv.clear_rewards;
       if (cr) s.totalRewardCoin += parseInt(cr.coin) || 0;
       const sr = cr && cr.streak_rewards;
@@ -2188,13 +2189,42 @@ function renderCatNru(gameId) {
   // ── 보너스 보상 (팝업) ──
   const bonusRewards = latest.bonus_rewards || [];
 
+  // 레벨별 개별 실행 데이터 수집 (펼치기용)
+  const levelRunDetails = {};
+  for (const r of runs) {
+    for (const lv of (r.level_results || [])) {
+      if (!levelRunDetails[lv.level]) levelRunDetails[lv.level] = [];
+      levelRunDetails[lv.level].push({
+        date: r.run_date, time: r.run_time,
+        success: lv.success, duration: lv.duration_s || 0,
+        turns: lv.turns || 0, matches: lv.matches || 0, draws: lv.draws || 0,
+        retries: lv.retries || 0, entryFee: Number(lv.entry_fee) || 0,
+        itemCost: Number(lv.item_cost) || 0,
+        wild: Number(lv.wild_card_count) || 0, extra: Number(lv.extra_decks) || 0,
+        undo: Number(lv.undo_count) || 0, maxCombo: Number(lv.max_combo) || 0,
+        rewardCoin: lv.clear_rewards ? (parseInt(lv.clear_rewards.coin) || 0) : 0,
+      });
+    }
+  }
+
   const levelRows = Object.entries(levelStats).sort(([a],[b]) => Number(a) - Number(b)).map(([lv, s]) => {
     const cr = Math.round(s.success / s.total * 100);
     const crColor = cr >= 100 ? 'var(--status-ok)' : cr >= 50 ? 'var(--status-warn)' : 'var(--status-err)';
     const avgReward = s.totalRewardCoin ? Math.round(s.totalRewardCoin / s.total) : 0;
     const avgStreak = s.totalStreakGold ? Math.round(s.totalStreakGold / s.total) : 0;
-    return `<tr>
-      <td style="font-weight:600">Lv ${lv}</td>
+    const details = levelRunDetails[lv] || [];
+    const detailRows = details.map(d => `<tr style="font-size:11px;color:var(--text-muted)">
+      <td>${d.date || ''} ${d.time || ''}</td>
+      <td style="color:${d.success ? 'var(--status-ok)' : 'var(--status-err)'}">${d.success ? '성공' : '실패'}</td>
+      <td>${d.duration.toFixed(1)}초</td><td>${d.turns}</td><td>${d.matches}</td><td>${d.draws}</td>
+      <td>${d.retries}</td><td>${d.entryFee ? d.entryFee.toLocaleString() : '-'}</td>
+      <td>${d.rewardCoin ? d.rewardCoin.toLocaleString() : '-'}</td>
+      <td>${d.itemCost ? d.itemCost.toLocaleString() : '-'}</td>
+      <td>${d.wild || '-'}</td><td>${d.extra || '-'}</td><td>${d.undo || '-'}</td>
+      <td style="color:${d.maxCombo >= 5 ? 'var(--status-ok)' : 'inherit'}">${d.maxCombo || '-'}</td>
+    </tr>`).join('');
+    return `<tr style="cursor:pointer" onclick="var el=document.getElementById('nru-lv-detail-${lv}');el.style.display=el.style.display==='none'?'':'none'">
+      <td style="font-weight:600">▸ Lv ${lv}</td>
       <td style="color:${crColor};font-weight:600">${cr}%</td>
       <td>${(s.totalTime / s.total).toFixed(1)}초</td>
       <td>${(s.totalTurns / s.total).toFixed(1)}</td>
@@ -2202,7 +2232,14 @@ function renderCatNru(gameId) {
       <td>${s.total}</td>
       <td>${avgReward ? avgReward.toLocaleString() : '-'}</td>
       <td style="color:${avgStreak ? 'var(--status-ok)' : 'inherit'}">${avgStreak ? avgStreak.toLocaleString() : '-'}</td>
-    </tr>`;
+      <td style="color:${s.maxCombo >= 5 ? 'var(--status-ok)' : 'inherit'}">${s.maxCombo || '-'}</td>
+    </tr>
+    <tr id="nru-lv-detail-${lv}" style="display:none"><td colspan="9" style="padding:0">
+      <table style="width:100%;font-size:11px;margin:4px 0">
+        <thead><tr style="background:var(--bg-card)"><th>실행일</th><th>결과</th><th>시간</th><th>턴</th><th>매치</th><th>드로우</th><th>재시도</th><th>입장료</th><th>보상</th><th>아이템</th><th>와일드</th><th>엑스트라</th><th>언두</th><th>콤보</th></tr></thead>
+        <tbody>${detailRows}</tbody>
+      </table>
+    </td></tr>`;
   }).join('');
 
   const latestRows = levelResults.map(lv => {
@@ -2231,6 +2268,7 @@ function renderCatNru(gameId) {
       <td style="color:${itemCost ? 'var(--status-err)' : 'inherit'}">${itemCost ? itemCost.toLocaleString() : '-'}</td>
       <td>${wildCount || '-'}</td>
       <td>${extraDecks || '-'}</td>
+      <td style="color:${(Number(lv.max_combo) || 0) >= 5 ? 'var(--status-ok)' : 'inherit'}">${Number(lv.max_combo) || '-'}</td>
     </tr>`;
   }).join('');
 
@@ -2280,6 +2318,16 @@ function renderCatNru(gameId) {
       <div class="metric-box">
         <div class="label">총 실행</div>
         <div class="value">${runs.length}<span style="font-size:12px;color:var(--text-muted)">회</span></div>
+      </div>
+      <div class="metric-box">
+        <div class="label">최대 연속 매칭</div>
+        <div class="value" style="color:var(--status-ok)">${Math.max(...levelResults.map(lv => Number(lv.max_combo) || 0), 0)}</div>
+        <div class="sub">max combo</div>
+      </div>
+      <div class="metric-box">
+        <div class="label">IAP 구매</div>
+        <div class="value">${(latest.iap_purchases || []).length}<span style="font-size:12px;color:var(--text-muted)">회</span></div>
+        <div class="sub">${(latest.iap_purchases || []).length > 0 ? '골드 충전' : '없음'}</div>
       </div>
     </div>
     <div class="metric-row">
@@ -2501,14 +2549,14 @@ function renderCatNru(gameId) {
     <div class="tbl-wrap">
       <h4>레벨별 통계 (전체 ${runs.length}회 집계)</h4>
       <table>
-        <thead><tr><th>레벨</th><th>클리어율</th><th>평균 시간</th><th>평균 턴</th><th>평균 재시도</th><th>시도 수</th><th>평균 보상</th><th>스트릭 골드</th></tr></thead>
+        <thead><tr><th>레벨</th><th>클리어율</th><th>평균 시간</th><th>평균 턴</th><th>평균 재시도</th><th>시도 수</th><th>평균 보상</th><th>스트릭 골드</th><th>최대콤보</th></tr></thead>
         <tbody>${levelRows}</tbody>
       </table>
     </div>
     <div class="tbl-wrap">
       <h4>최신 런 레벨별 상세 (${latest.run_date} ${latest.run_time || ''})</h4>
       <table>
-        <thead><tr><th>레벨</th><th>스테이지</th><th>결과</th><th>시간</th><th>턴</th><th>매치</th><th>드로우</th><th>재시도</th><th>입장료</th><th>보상</th><th>스트릭</th><th>아이템</th><th>와일드</th><th>엑스트라덱</th></tr></thead>
+        <thead><tr><th>레벨</th><th>스테이지</th><th>결과</th><th>시간</th><th>턴</th><th>매치</th><th>드로우</th><th>재시도</th><th>입장료</th><th>보상</th><th>스트릭</th><th>아이템</th><th>와일드</th><th>엑스트라덱</th><th>최대콤보</th></tr></thead>
         <tbody>${latestRows}</tbody>
       </table>
     </div>
