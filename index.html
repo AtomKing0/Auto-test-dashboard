@@ -794,6 +794,9 @@ let _allRuns = [];
 let _nruRuns = [];
 let _nruSelectedRunId = null;
 let _nruCompareRunId = null;
+let _nruCompareMode = 'run';  // 'run' | 'build'
+let _nruSelectedBuildA = null;
+let _nruSelectedBuildB = null;
 let _charts = {};
 let _gameConfigs = [];
 let _overviewGames = {};
@@ -2122,14 +2125,70 @@ function _nruSelectCompare(gameId, runId) {
   _refreshNruPanel(gameId);
 }
 function _nruToggleCompare(gameId) {
-  if (_nruCompareRunId) { _nruCompareRunId = null; }
-  else {
+  if (_nruCompareMode === 'build') {
+    _nruCompareMode = 'run';
+    _nruSelectedBuildA = null;
+    _nruSelectedBuildB = null;
+  } else if (_nruCompareRunId) {
+    _nruCompareRunId = null;
+  } else {
     const runs = _nruRuns.filter(r => r.game_id === gameId);
     const sel = runs.find(r => r.id === _nruSelectedRunId) || runs[0];
     const other = runs.find(r => r.id !== sel.id);
     _nruCompareRunId = other ? other.id : null;
   }
   _refreshNruPanel(gameId);
+}
+function _nruSwitchToBuildCompare(gameId) {
+  _nruCompareMode = 'build';
+  _nruCompareRunId = null;
+  const versions = _nruGetVersions(gameId);
+  _nruSelectedBuildA = versions[0] || null;
+  _nruSelectedBuildB = versions[1] || null;
+  _refreshNruPanel(gameId);
+}
+function _nruSelectBuildA(gameId, ver) {
+  _nruSelectedBuildA = ver || null;
+  if (_nruSelectedBuildA === _nruSelectedBuildB) _nruSelectedBuildB = null;
+  _refreshNruPanel(gameId);
+}
+function _nruSelectBuildB(gameId, ver) {
+  _nruSelectedBuildB = ver || null;
+  _refreshNruPanel(gameId);
+}
+function _nruGetVersions(gameId) {
+  const runs = _nruRuns.filter(r => r.game_id === gameId && r.client_version);
+  const vMap = {};
+  for (const r of runs) {
+    if (!vMap[r.client_version]) vMap[r.client_version] = [];
+    vMap[r.client_version].push(r);
+  }
+  return Object.keys(vMap).sort((a, b) => {
+    const la = vMap[a][0]?.run_date || '', lb = vMap[b][0]?.run_date || '';
+    return lb.localeCompare(la);
+  });
+}
+function _nruAggregateRuns(runs) {
+  const n = runs.length;
+  if (!n) return null;
+  const passCount = runs.filter(r => r.ready).length;
+  const avgLevels = runs.reduce((a,r) => a + (r.levels_cleared||0), 0) / n;
+  const avgTime = runs.reduce((a,r) => a + (r.total_time_sec||0), 0) / n;
+  const avgGold = runs.reduce((a,r) => a + (r.gold||0), 0) / n;
+  const avgHammer = runs.reduce((a,r) => a + (r.hammer||0), 0) / n;
+  const avgRetries = runs.reduce((a,r) => a + (r.total_retries||0), 0) / n;
+  // 레벨별 집계
+  const lvStats = {};
+  for (const r of runs) {
+    for (const lv of (r.level_results || [])) {
+      if (!lvStats[lv.level]) lvStats[lv.level] = { total:0, success:0, totalTime:0, totalTurns:0, totalRetries:0, totalCombo:0 };
+      const s = lvStats[lv.level];
+      s.total++; if (lv.success) s.success++;
+      s.totalTime += lv.duration_s||0; s.totalTurns += lv.turns||0;
+      s.totalRetries += lv.retries||0; s.totalCombo = Math.max(s.totalCombo, Number(lv.max_combo)||0);
+    }
+  }
+  return { n, passCount, passRate: Math.round(passCount/n*100), avgLevels, avgTime, avgGold, avgHammer, avgRetries, lvStats };
 }
 function _refreshNruPanel(gameId) {
   const panel = document.getElementById(`cat-nru-${gameId}`);
@@ -2165,11 +2224,39 @@ function _nruDeltaTime(sec) {
 }
 function _renderNruVersionBar(gameId, runs, selectedRun, compareRun) {
   const selStyle = 'padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-body);color:var(--text-primary);font-size:12px;min-width:220px;cursor:pointer';
+  const versions = _nruGetVersions(gameId);
+  const hasBuildVersions = versions.length >= 2;
+  const isBuildMode = _nruCompareMode === 'build';
+
+  if (isBuildMode && hasBuildVersions) {
+    const vRuns = v => _nruRuns.filter(r => r.game_id === gameId && r.client_version === v);
+    const mkVerOpts = (selected, exclude) => versions.filter(v => v !== exclude).map(v => {
+      const cnt = vRuns(v).length;
+      const pass = vRuns(v).filter(r => r.ready).length;
+      return `<option value="${v}" ${v === selected ? 'selected' : ''}>${v} (${pass}/${cnt} PASS)</option>`;
+    }).join('');
+    return `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:12px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;flex-wrap:wrap;border-top:3px solid #8b5cf6">
+      <span style="font-size:11px;background:#8b5cf622;color:#8b5cf6;padding:3px 8px;border-radius:6px;font-weight:700">빌드 비교</span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:11px;color:#3b82f6;font-weight:700">A</span>
+        <select onchange="_nruSelectBuildA('${gameId}',this.value)" style="${selStyle}">${mkVerOpts(_nruSelectedBuildA, _nruSelectedBuildB)}</select>
+      </div>
+      <span style="color:var(--text-muted);font-weight:700">vs</span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:11px;color:#f59e0b;font-weight:700">B</span>
+        <select onchange="_nruSelectBuildB('${gameId}',this.value)" style="${selStyle}">${mkVerOpts(_nruSelectedBuildB, _nruSelectedBuildA)}</select>
+      </div>
+      <button onclick="_nruToggleCompare('${gameId}')" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);font-size:12px;cursor:pointer;font-weight:600;background:#8b5cf622;color:#8b5cf6;border-color:#8b5cf644">✕ 빌드 비교 해제</button>
+    </div>`;
+  }
+
   const mkOpts = (selected, exclude) => runs.filter(r => !exclude || r.id !== exclude.id).map(r => {
     const d = (r.run_date || '').slice(5);
     const t = (r.run_time || '').slice(0, 5);
     const st = r.ready ? '✓ PASS' : '✗ FAIL';
-    return `<option value="${r.id}" ${r.id === selected.id ? 'selected' : ''}>${d} ${t} ${st} Lv${r.levels_cleared}</option>`;
+    const ver = r.client_version ? ` [${r.client_version}]` : '';
+    return `<option value="${r.id}" ${r.id === selected.id ? 'selected' : ''}>${d} ${t} ${st} Lv${r.levels_cleared}${ver}</option>`;
   }).join('');
   return `
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:12px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;flex-wrap:wrap">
@@ -2177,7 +2264,8 @@ function _renderNruVersionBar(gameId, runs, selectedRun, compareRun) {
       <span style="font-size:11px;color:#3b82f6;font-weight:700">A</span>
       <select onchange="_nruSelectVersion('${gameId}',this.value)" style="${selStyle}">${mkOpts(selectedRun, null)}</select>
     </div>
-    <button onclick="_nruToggleCompare('${gameId}')" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);font-size:12px;cursor:pointer;font-weight:600;transition:all .2s;${compareRun ? 'background:#8b5cf622;color:#8b5cf6;border-color:#8b5cf644' : 'background:var(--bg-body);color:var(--text-secondary)'}">${compareRun ? '✕ 비교 해제' : '🔀 버전 비교'}</button>
+    <button onclick="_nruToggleCompare('${gameId}')" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);font-size:12px;cursor:pointer;font-weight:600;transition:all .2s;${compareRun ? 'background:#8b5cf622;color:#8b5cf6;border-color:#8b5cf644' : 'background:var(--bg-body);color:var(--text-secondary)'}">${compareRun ? '✕ 비교 해제' : '🔀 런 비교'}</button>
+    ${hasBuildVersions ? `<button onclick="_nruSwitchToBuildCompare('${gameId}')" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);font-size:12px;cursor:pointer;font-weight:600;background:var(--bg-body);color:var(--text-secondary);transition:all .2s">🏗️ 빌드 비교</button>` : ''}
     ${compareRun ? `<div style="display:flex;align-items:center;gap:6px">
       <span style="font-size:11px;color:#f59e0b;font-weight:700">B</span>
       <select onchange="_nruSelectCompare('${gameId}',this.value)" style="${selStyle}">${mkOpts(compareRun, selectedRun)}</select>
@@ -2276,6 +2364,92 @@ function _renderNruComparison(runA, runB) {
           <th style="color:#3b82f6">A 턴</th><th style="color:#f59e0b">B 턴</th>
           <th style="color:#3b82f6">A 재시도</th><th style="color:#f59e0b">B 재시도</th>
           <th style="color:#3b82f6">A 콤보</th><th style="color:#f59e0b">B 콤보</th>
+        </tr></thead>
+        <tbody>${lvRows}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+function _renderNruBuildComparison(gameId) {
+  const verA = _nruSelectedBuildA, verB = _nruSelectedBuildB;
+  if (!verA || !verB) return '';
+  const runsA = _nruRuns.filter(r => r.game_id === gameId && r.client_version === verA);
+  const runsB = _nruRuns.filter(r => r.game_id === gameId && r.client_version === verB);
+  const aggA = _nruAggregateRuns(runsA), aggB = _nruAggregateRuns(runsB);
+  if (!aggA || !aggB) return '';
+  const fmtT = s => s >= 60 ? `${(s/60).toFixed(1)}분` : `${Math.round(s)}초`;
+  const allLevels = [...new Set([...Object.keys(aggA.lvStats), ...Object.keys(aggB.lvStats)])].map(Number).sort((a,b)=>a-b);
+  const lvRows = allLevels.map(lv => {
+    const a = aggA.lvStats[lv], b = aggB.lvStats[lv];
+    const aCR = a ? Math.round(a.success/a.total*100) : null;
+    const bCR = b ? Math.round(b.success/b.total*100) : null;
+    const aAvgT = a ? (a.totalTime/a.total) : 0;
+    const bAvgT = b ? (b.totalTime/b.total) : 0;
+    const aAvgTn = a ? (a.totalTurns/a.total).toFixed(1) : '-';
+    const bAvgTn = b ? (b.totalTurns/b.total).toFixed(1) : '-';
+    const aAvgR = a ? (a.totalRetries/a.total).toFixed(1) : '-';
+    const bAvgR = b ? (b.totalRetries/b.total).toFixed(1) : '-';
+    let chg = '';
+    if (aCR !== null && bCR !== null) {
+      const d = aCR - bCR;
+      if (d > 0) chg = `<span style="color:var(--status-ok);font-size:10px;font-weight:700">▲ +${d}%p</span>`;
+      else if (d < 0) chg = `<span style="color:var(--status-err);font-size:10px;font-weight:700">▼ ${d}%p</span>`;
+    }
+    const crStyle = cr => cr >= 100 ? 'color:var(--status-ok);font-weight:600' : cr >= 50 ? 'color:var(--status-warn);font-weight:600' : 'color:var(--status-err);font-weight:600';
+    const rowBg = (aCR!==null&&bCR!==null&&aCR!==bCR) ? (aCR>bCR ? 'background:#10b98108' : 'background:#ef444408') : '';
+    return `<tr style="${rowBg}">
+      <td style="font-weight:600">Lv ${lv}</td>
+      <td style="${a?crStyle(aCR):''}">${aCR!==null?aCR+'%':'-'}</td>
+      <td style="${b?crStyle(bCR):''}">${bCR!==null?bCR+'%':'-'}</td>
+      <td>${chg||'<span style="color:var(--text-muted)">—</span>'}</td>
+      <td>${a?aAvgT.toFixed(1)+'초':'-'}</td><td>${b?bAvgT.toFixed(1)+'초':'-'}</td>
+      <td>${a&&b?_nruDeltaTime(aAvgT-bAvgT):'-'}</td>
+      <td>${aAvgTn}</td><td>${bAvgTn}</td>
+      <td>${aAvgR}</td><td>${bAvgR}</td>
+      <td>${a?a.total:'-'}</td><td>${b?b.total:'-'}</td>
+    </tr>`;
+  }).join('');
+  const deltaPass = aggA.passRate - aggB.passRate;
+  const deltaLv = aggA.avgLevels - aggB.avgLevels;
+  const deltaTime = aggA.avgTime - aggB.avgTime;
+  const deltaRetries = aggA.avgRetries - aggB.avgRetries;
+  return `
+  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:16px;border-top:3px solid #8b5cf6">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <span style="font-size:18px">🏗️</span>
+      <h4 style="margin:0;font-weight:700">빌드 버전 비교</h4>
+      <span style="font-size:11px;color:var(--text-muted)">런 집계 기반 A vs B 비교</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 90px 1fr;gap:12px;margin-bottom:16px">
+      <div style="padding:14px;background:var(--bg-body);border-radius:10px;border-left:3px solid #3b82f6">
+        <div style="font-size:10px;color:#3b82f6;margin-bottom:4px;font-weight:700">A — ${verA}</div>
+        <div style="font-size:22px;font-weight:700;color:${aggA.passRate>=80?'var(--status-ok)':'var(--status-err)'}">${aggA.passRate}%</div>
+        <div style="font-size:12px;margin-top:4px">통과율 ${aggA.passCount}/${aggA.n}회 · 평균 Lv${aggA.avgLevels.toFixed(1)}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">평균 ${fmtT(aggA.avgTime)} · 재시도 ${aggA.avgRetries.toFixed(1)} · 골드 ${Math.round(aggA.avgGold).toLocaleString()}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:11px">
+        <div style="color:var(--text-muted)">통과율</div><div>${_nruDelta(deltaPass)}${deltaPass?'%p':''}</div>
+        <div style="color:var(--text-muted)">레벨</div><div>${_nruDelta(Math.round(deltaLv*10)/10)}</div>
+        <div style="color:var(--text-muted)">시간</div><div>${_nruDeltaTime(deltaTime)}</div>
+        <div style="color:var(--text-muted)">재시도</div><div>${_nruDelta(Math.round(deltaRetries*10)/10, true)}</div>
+      </div>
+      <div style="padding:14px;background:var(--bg-body);border-radius:10px;border-left:3px solid #f59e0b">
+        <div style="font-size:10px;color:#f59e0b;margin-bottom:4px;font-weight:700">B — ${verB}</div>
+        <div style="font-size:22px;font-weight:700;color:${aggB.passRate>=80?'var(--status-ok)':'var(--status-err)'}">${aggB.passRate}%</div>
+        <div style="font-size:12px;margin-top:4px">통과율 ${aggB.passCount}/${aggB.n}회 · 평균 Lv${aggB.avgLevels.toFixed(1)}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">평균 ${fmtT(aggB.avgTime)} · 재시도 ${aggB.avgRetries.toFixed(1)} · 골드 ${Math.round(aggB.avgGold).toLocaleString()}</div>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table style="font-size:12px">
+        <thead><tr>
+          <th>레벨</th>
+          <th style="color:#3b82f6">A 클리어율</th><th style="color:#f59e0b">B 클리어율</th><th>변화</th>
+          <th style="color:#3b82f6">A 평균시간</th><th style="color:#f59e0b">B 평균시간</th><th>Δ</th>
+          <th style="color:#3b82f6">A 평균턴</th><th style="color:#f59e0b">B 평균턴</th>
+          <th style="color:#3b82f6">A 재시도</th><th style="color:#f59e0b">B 재시도</th>
+          <th style="color:#3b82f6">A 샘플</th><th style="color:#f59e0b">B 샘플</th>
         </tr></thead>
         <tbody>${lvRows}</tbody>
       </table>
@@ -2472,10 +2646,12 @@ function renderCatNru(gameId) {
     }
     const isSelected = r.id === latest.id;
     const rowBg = isSelected ? 'background:#3b82f610;border-left:3px solid #3b82f6' : '';
+    const ver = r.client_version || '-';
     return `<tr style="cursor:pointer;${rowBg}" onclick="_nruSelectVersion('${gameId}','${r.id}')" title="이 런을 선택하여 상세 보기">
       <td onclick="event.stopPropagation()"><input type="checkbox" class="nru-cat-check" value="${r.id}"></td>
       <td>${(r.run_date || '').slice(5)}</td>
       <td>${r.run_time || '-'}</td>
+      <td style="font-size:11px;color:var(--text-muted)">${ver}</td>
       <td style="${passStyle}">${r.ready ? 'PASS' : 'FAIL'}</td>
       <td>${r.levels_cleared}/${r.total_levels || 25}</td>
       <td>${timeStr}</td>
@@ -2490,7 +2666,8 @@ function renderCatNru(gameId) {
 
   return `
     ${_renderNruVersionBar(gameId, runs, latest, compareRun)}
-    ${compareRun ? _renderNruComparison(latest, compareRun) : ''}
+    ${_nruCompareMode === 'build' ? _renderNruBuildComparison(gameId) : ''}
+    ${_nruCompareMode === 'run' && compareRun ? _renderNruComparison(latest, compareRun) : ''}
     <div class="metric-row">
       <div class="metric-box">
         <div class="label">전체 통과율</div>
@@ -2759,7 +2936,7 @@ function renderCatNru(gameId) {
         <span id="nru-cat-status" style="font-size:11px;color:var(--text-muted)"></span>
       </div>
       <table>
-        <thead><tr><th style="width:30px"></th><th>날짜</th><th>시간</th><th>결과</th><th>레벨</th><th>소요</th><th>재시도</th><th>골드</th><th>해머</th><th>총 입장료</th><th>총 아이템</th><th>스트릭 골드</th></tr></thead>
+        <thead><tr><th style="width:30px"></th><th>날짜</th><th>시간</th><th>빌드</th><th>결과</th><th>레벨</th><th>소요</th><th>재시도</th><th>골드</th><th>해머</th><th>총 입장료</th><th>총 아이템</th><th>스트릭 골드</th></tr></thead>
         <tbody>${historyRows}</tbody>
       </table>
     </div>
