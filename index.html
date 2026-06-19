@@ -2194,6 +2194,13 @@ function renderCatNru(gameId) {
   for (const r of runs) {
     for (const lv of (r.level_results || [])) {
       if (!levelRunDetails[lv.level]) levelRunDetails[lv.level] = [];
+      const cr = lv.clear_rewards || {};
+      const srArr = Array.isArray(cr.streak_rewards) ? cr.streak_rewards : [];
+      const sSlots = Array.isArray(cr.streak_slots) ? cr.streak_slots : [];
+      const sIdx = cr.streak_index || 0;
+      const sReqLen = sSlots[sIdx] ? sSlots[sIdx].req_length : 0;
+      const sGauge = cr.streak_gauge || 0;
+      const sRewardStr = srArr.length > 0 ? srArr.map(x => `${ITEM_KEY_MAP[x.keyNumber] || '#'+x.keyNumber} ${(Number(x.amount)||0).toLocaleString()}`).join(', ') : '-';
       levelRunDetails[lv.level].push({
         date: r.run_date, time: r.run_time,
         success: lv.success, duration: lv.duration_s || 0,
@@ -2203,6 +2210,8 @@ function renderCatNru(gameId) {
         wild: Number(lv.wild_card_count) || 0, extra: Number(lv.extra_decks) || 0,
         undo: Number(lv.undo_count) || 0, maxCombo: Number(lv.max_combo) || 0,
         rewardCoin: lv.clear_rewards ? (parseInt(lv.clear_rewards.coin) || 0) : 0,
+        streakMeter: sReqLen, streakGauge: sGauge, streakReward: sRewardStr,
+        streakGot: srArr.length > 0,
       });
     }
   }
@@ -2222,6 +2231,9 @@ function renderCatNru(gameId) {
       <td>${d.itemCost ? d.itemCost.toLocaleString() : '-'}</td>
       <td>${d.wild || '-'}</td><td>${d.extra || '-'}</td><td>${d.undo || '-'}</td>
       <td style="color:${d.maxCombo >= 5 ? 'var(--status-ok)' : 'inherit'}">${d.maxCombo || '-'}</td>
+      <td>${d.streakMeter ? d.streakMeter + '칸' : '-'}</td>
+      <td>${d.streakMeter ? d.streakGauge + '/' + d.streakMeter : '-'}</td>
+      <td style="color:${d.streakGot ? 'var(--status-ok)' : 'inherit'}">${d.streakGot ? '✓ ' + d.streakReward : '-'}</td>
     </tr>`).join('');
     return `<tr style="cursor:pointer" onclick="var el=document.getElementById('nru-lv-detail-${lv}');el.style.display=el.style.display==='none'?'':'none'">
       <td style="font-weight:600">▸ Lv ${lv}</td>
@@ -2234,9 +2246,9 @@ function renderCatNru(gameId) {
       <td style="color:${avgStreak ? 'var(--status-ok)' : 'inherit'}">${avgStreak ? avgStreak.toLocaleString() : '-'}</td>
       <td style="color:${s.maxCombo >= 5 ? 'var(--status-ok)' : 'inherit'}">${s.maxCombo || '-'}</td>
     </tr>
-    <tr id="nru-lv-detail-${lv}" style="display:none"><td colspan="9" style="padding:0">
+    <tr id="nru-lv-detail-${lv}" style="display:none"><td colspan="10" style="padding:0">
       <table style="width:100%;font-size:11px;margin:4px 0">
-        <thead><tr style="background:var(--bg-card)"><th>실행일</th><th>결과</th><th>시간</th><th>턴</th><th>매치</th><th>드로우</th><th>재시도</th><th>입장료</th><th>보상</th><th>아이템</th><th>와일드</th><th>엑스트라</th><th>언두</th><th>콤보</th></tr></thead>
+        <thead><tr style="background:var(--bg-card)"><th>실행일</th><th>결과</th><th>시간</th><th>턴</th><th>매치</th><th>드로우</th><th>재시도</th><th>입장료</th><th>보상</th><th>아이템</th><th>와일드</th><th>엑스트라</th><th>언두</th><th>콤보</th><th>미터</th><th>게이지</th><th>스트릭 보상</th></tr></thead>
         <tbody>${detailRows}</tbody>
       </table>
     </td></tr>`;
