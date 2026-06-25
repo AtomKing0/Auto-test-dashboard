@@ -2571,6 +2571,7 @@ function renderCatNru(gameId) {
     const avgReward = s.totalRewardCoin ? Math.round(s.totalRewardCoin / s.total) : 0;
     const avgStreak = s.totalStreakGold ? Math.round(s.totalStreakGold / s.total) : 0;
     const details = levelRunDetails[lv] || [];
+    const latestMeter = details.reduce((m, d) => d.streakMeter || m, 0);
     const detailRows = details.map(d => `<tr style="font-size:11px;color:var(--text-muted)">
       <td>${d.date || ''} ${d.time || ''}</td>
       <td style="color:${d.success ? 'var(--status-ok)' : 'var(--status-err)'}">${d.success ? '성공' : '실패'}</td>
@@ -2592,10 +2593,11 @@ function renderCatNru(gameId) {
       <td>${(s.totalRetries / s.total).toFixed(1)}</td>
       <td>${s.total}</td>
       <td>${avgReward ? avgReward.toLocaleString() : '-'}</td>
+      <td>${latestMeter ? latestMeter + '칸' : '-'}</td>
       <td style="color:${avgStreak ? 'var(--status-ok)' : 'inherit'}">${avgStreak ? avgStreak.toLocaleString() : '-'}</td>
       <td style="color:${s.maxCombo >= 5 ? 'var(--status-ok)' : 'inherit'}">${s.maxCombo || '-'}</td>
     </tr>
-    <tr id="nru-lv-detail-${lv}" style="display:none"><td colspan="10" style="padding:0">
+    <tr id="nru-lv-detail-${lv}" style="display:none"><td colspan="11" style="padding:0">
       <table style="width:100%;font-size:11px;margin:4px 0">
         <thead><tr style="background:var(--bg-card)"><th>실행일</th><th>결과</th><th>시간</th><th>턴</th><th>매치</th><th>드로우</th><th>재시도</th><th>입장료</th><th>보상</th><th>아이템</th><th>와일드</th><th>엑스트라</th><th>언두</th><th>콤보</th><th>미터</th><th>게이지</th><th>스트릭 보상</th></tr></thead>
         <tbody>${detailRows}</tbody>
@@ -2610,6 +2612,9 @@ function renderCatNru(gameId) {
     const cr = lv.clear_rewards;
     const rewardCoin = cr ? (parseInt(cr.coin) || 0) : 0;
     const streakGold = (cr && Array.isArray(cr.streak_rewards)) ? cr.streak_rewards.filter(x => x.keyNumber === 40001).reduce((a, x) => a + (Number(x.amount) || 0), 0) : 0;
+    const sSlots = cr && Array.isArray(cr.streak_slots) ? cr.streak_slots : [];
+    const sIdx = cr ? (cr.streak_index || 0) : 0;
+    const meterLen = sSlots[sIdx] ? sSlots[sIdx].req_length : 0;
     const itemCost = Number(lv.item_cost) || 0;
     const wildCount = Number(lv.wild_card_count) || 0;
     const extraDecks = Number(lv.extra_decks) || 0;
@@ -2625,6 +2630,7 @@ function renderCatNru(gameId) {
       <td>${lv.retries || 0}</td>
       <td>${entryFee ? entryFee.toLocaleString() : '-'}</td>
       <td>${rewardCoin ? rewardCoin.toLocaleString() : '-'}</td>
+      <td>${meterLen ? meterLen + '칸' : '-'}</td>
       <td style="color:${streakGold ? 'var(--status-ok)' : 'inherit'}">${streakGold ? streakGold.toLocaleString() : '-'}</td>
       <td style="color:${itemCost ? 'var(--status-err)' : 'inherit'}">${itemCost ? itemCost.toLocaleString() : '-'}</td>
       <td>${wildCount || '-'}</td>
@@ -2917,14 +2923,14 @@ function renderCatNru(gameId) {
     <div class="tbl-wrap">
       <h4>레벨별 통계 (전체 ${runs.length}회 집계)</h4>
       <table>
-        <thead><tr><th>레벨</th><th>클리어율</th><th>평균 시간</th><th>평균 턴</th><th>평균 재시도</th><th>시도 수</th><th>평균 보상</th><th>스트릭 골드</th><th>최대콤보</th></tr></thead>
+        <thead><tr><th>레벨</th><th>클리어율</th><th>평균 시간</th><th>평균 턴</th><th>평균 재시도</th><th>시도 수</th><th>평균 보상</th><th>스트릭 미터</th><th>스트릭 골드</th><th>최대콤보</th></tr></thead>
         <tbody>${levelRows}</tbody>
       </table>
     </div>
     <div class="tbl-wrap">
       <h4>선택 런 레벨별 상세 (${latest.run_date} ${latest.run_time || ''})</h4>
       <table>
-        <thead><tr><th>레벨</th><th>스테이지</th><th>결과</th><th>시간</th><th>턴</th><th>매치</th><th>드로우</th><th>재시도</th><th>입장료</th><th>보상</th><th>스트릭</th><th>아이템</th><th>와일드</th><th>엑스트라덱</th><th>최대콤보</th></tr></thead>
+        <thead><tr><th>레벨</th><th>스테이지</th><th>결과</th><th>시간</th><th>턴</th><th>매치</th><th>드로우</th><th>재시도</th><th>입장료</th><th>보상</th><th>미터</th><th>스트릭</th><th>아이템</th><th>와일드</th><th>엑스트라덱</th><th>최대콤보</th></tr></thead>
         <tbody>${latestRows}</tbody>
       </table>
     </div>
