@@ -315,29 +315,42 @@ tr:hover td { background: rgba(59,130,246,.05); }
 }
 .cap-menu button:hover { background: rgba(59,130,246,.1); color: var(--text-primary); }
 .cap-overlay {
-  position: fixed; inset: 0; z-index: 400; background: rgba(0,0,0,.6);
+  position: fixed; inset: 0; z-index: 400; background: rgba(0,0,0,.45);
   display: flex; align-items: center; justify-content: center;
+  pointer-events: auto;
 }
 .cap-picker {
   background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
-  padding: 20px; width: 360px; max-height: 70vh; overflow-y: auto;
-  box-shadow: 0 12px 40px rgba(0,0,0,.5);
+  padding: 20px; width: 420px; max-height: 70vh; overflow-y: auto;
+  box-shadow: 0 12px 40px rgba(0,0,0,.5); position: relative; z-index: 401;
 }
 .cap-picker h4 { font-size: 15px; margin-bottom: 12px; color: var(--text-primary); }
 .cap-picker label {
   display: flex; align-items: center; gap: 8px; padding: 8px 6px;
   font-size: 13px; color: var(--text-secondary); cursor: pointer; border-radius: 6px;
+  transition: background .15s;
 }
-.cap-picker label:hover { background: rgba(59,130,246,.06); }
+.cap-picker label:hover { background: rgba(59,130,246,.1); }
+.cap-picker label.cap-label-hover { background: rgba(59,130,246,.15); color: var(--text-primary); }
 .cap-picker input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
-.cap-picker-actions { display: flex; gap: 8px; margin-top: 14px; justify-content: flex-end; }
+.cap-picker .cap-label-text { flex: 1; line-height: 1.35; }
+.cap-picker-actions { display: flex; gap: 8px; margin-top: 14px; justify-content: flex-end; align-items: center; }
+.cap-picker-actions .cap-count { font-size: 12px; color: var(--text-secondary); margin-right: auto; }
 .cap-picker-actions button {
   padding: 8px 18px; border: 1px solid var(--border); border-radius: 8px;
   background: var(--bg-card); color: var(--text-secondary); font-size: 13px; cursor: pointer;
+  transition: all .15s;
 }
 .cap-picker-actions button:hover { color: var(--text-primary); border-color: var(--text-secondary); }
 .cap-picker-actions .cap-go { background: #3b82f6; color: #fff; border-color: #3b82f6; }
 .cap-picker-actions .cap-go:hover { background: #2563eb; }
+.cap-picker-actions .cap-go:disabled { background: #6b7280; border-color: #6b7280; cursor: not-allowed; opacity: .6; }
+.cap-highlight-outline {
+  outline: 2px solid #3b82f6 !important;
+  outline-offset: 2px;
+  background-color: rgba(59,130,246,.06) !important;
+  transition: outline .2s, background-color .2s;
+}
 
 /* ── Notification Panel ── */
 .notif-panel {
@@ -6019,36 +6032,88 @@ function openSectionPicker() {
   const scanRoot = activeCat || activePanel;
   const sections = [];
   scanRoot.querySelectorAll('.metric-row, .persona-grid, .chart-grid, .tbl-wrap, .gold-flow, .check-grid, .perf-gauge, .ov-summary, .cards').forEach((el, i) => {
-    const h4 = el.querySelector('h4');
-    let label = h4 ? h4.textContent.trim() : _getSectionLabel(el);
+    let label = _getSectionLabel(el);
     if (sections.some(s => s.label === label)) label += ` (${i + 1})`;
     sections.push({ el, label, idx: i });
   });
   if (!sections.length) { showToast('캡처할 섹션이 없습니다'); return; }
 
+  const total = sections.length;
   const overlay = document.createElement('div');
   overlay.className = 'cap-overlay';
   overlay.innerHTML = `
     <div class="cap-picker">
       <h4>캡처할 섹션 선택</h4>
       <label style="padding:4px 6px;font-weight:600;border-bottom:1px solid var(--border);margin-bottom:4px">
-        <input type="checkbox" id="cap-all" checked onchange="document.querySelectorAll('.cap-sec-chk').forEach(c=>c.checked=this.checked)"> 전체 선택
+        <input type="checkbox" id="cap-all" checked> 전체 선택
       </label>
-      ${sections.map(s => `<label><input type="checkbox" class="cap-sec-chk" data-idx="${s.idx}" checked> ${s.label}</label>`).join('')}
+      ${sections.map(s => `<label data-cap-idx="${s.idx}"><input type="checkbox" class="cap-sec-chk" data-idx="${s.idx}" checked> <span class="cap-label-text">${s.label}</span></label>`).join('')}
       <div class="cap-picker-actions">
-        <button onclick="this.closest('.cap-overlay').remove()">취소</button>
-        <button class="cap-go" onclick="execSectionCapture(this.closest('.cap-overlay'))">캡처</button>
+        <span class="cap-count">${total}/${total}개 선택</span>
+        <button onclick="_cleanupCapPicker(this.closest('.cap-overlay'))">취소</button>
+        <button class="cap-go" onclick="execSectionCapture(this.closest('.cap-overlay'))">캡처 (${total}/${total}개 선택)</button>
       </div>
     </div>`;
-  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+  /* --- 선택 카운트 + 버튼 상태 업데이트 --- */
+  function updateCapCount() {
+    const checked = overlay.querySelectorAll('.cap-sec-chk:checked').length;
+    const countEl = overlay.querySelector('.cap-count');
+    const goBtn = overlay.querySelector('.cap-go');
+    if (countEl) countEl.textContent = `${checked}/${total}개 선택`;
+    if (goBtn) {
+      goBtn.textContent = `캡처 (${checked}/${total}개 선택)`;
+      goBtn.disabled = checked === 0;
+    }
+    const allChk = overlay.querySelector('#cap-all');
+    if (allChk) allChk.checked = checked === total;
+  }
+
+  /* 전체 선택 체크박스 */
+  const allChk = overlay.querySelector('#cap-all');
+  allChk.addEventListener('change', function() {
+    overlay.querySelectorAll('.cap-sec-chk').forEach(c => c.checked = this.checked);
+    updateCapCount();
+  });
+
+  /* 개별 체크박스 변경 시 카운트 업데이트 */
+  overlay.querySelectorAll('.cap-sec-chk').forEach(chk => {
+    chk.addEventListener('change', updateCapCount);
+  });
+
+  /* --- 호버 하이라이트 --- */
+  overlay.querySelectorAll('label[data-cap-idx]').forEach(lbl => {
+    const idx = +lbl.dataset.capIdx;
+    const targetEl = sections.find(s => s.idx === idx)?.el;
+    if (!targetEl) return;
+
+    lbl.addEventListener('mouseenter', () => {
+      lbl.classList.add('cap-label-hover');
+      targetEl.classList.add('cap-highlight-outline');
+      targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    lbl.addEventListener('mouseleave', () => {
+      lbl.classList.remove('cap-label-hover');
+      targetEl.classList.remove('cap-highlight-outline');
+    });
+  });
+
+  /* --- 오버레이 클릭으로 닫기 --- */
+  overlay.addEventListener('click', e => { if (e.target === overlay) _cleanupCapPicker(overlay); });
   document.body.appendChild(overlay);
   overlay._sections = sections;
+}
+
+function _cleanupCapPicker(overlay) {
+  if (!overlay) return;
+  document.querySelectorAll('.cap-highlight-outline').forEach(el => el.classList.remove('cap-highlight-outline'));
+  overlay.remove();
 }
 
 async function execSectionCapture(overlay) {
   const sections = overlay._sections;
   const checked = [...overlay.querySelectorAll('.cap-sec-chk:checked')].map(c => +c.dataset.idx);
-  overlay.remove();
+  _cleanupCapPicker(overlay);
   if (!checked.length) { showToast('선택된 섹션이 없습니다'); return; }
 
   const btn = document.getElementById('captureBtn');
@@ -6505,15 +6570,38 @@ function _wrapSections(container) {
 }
 
 function _getSectionLabel(el) {
-  const h4 = el.querySelector('h4');
-  if (h4) return h4.textContent.slice(0, 30);
+  const h4 = el.querySelector(':scope > h4, :scope > .section-header h4');
+  if (h4) return h4.textContent.trim().slice(0, 60);
   const cls = el.className || '';
-  if (cls.includes('metric-row')) return '메트릭 카드';
-  if (cls.includes('persona-grid')) return '페르소나 카드';
-  if (cls.includes('chart-grid')) return '차트 영역';
+  if (cls.includes('chart-grid')) {
+    const titles = [...el.querySelectorAll('.chart-box h4')].map(h => h.textContent.trim()).filter(Boolean);
+    if (titles.length) return ('차트 — ' + titles.join(' / ')).slice(0, 60);
+    return '차트 영역';
+  }
+  if (cls.includes('metric-row')) {
+    const items = [...el.querySelectorAll('.metric-box .metric-title, .metric-box h4')].map(t => t.textContent.trim()).filter(Boolean);
+    if (items.length) return ('메트릭 — ' + items.join(' / ')).slice(0, 60);
+    return '메트릭 카드';
+  }
+  if (cls.includes('tbl-wrap')) {
+    const cap = el.querySelector('caption');
+    if (cap) return ('테이블 — ' + cap.textContent.trim()).slice(0, 60);
+    const ths = [...el.querySelectorAll('thead th')].slice(0, 3).map(t => t.textContent.trim()).filter(Boolean);
+    if (ths.length) return ('테이블 — ' + ths.join(' | ')).slice(0, 60);
+    return '테이블';
+  }
+  if (cls.includes('persona-grid')) {
+    const cnt = el.querySelectorAll('.persona-card, .p-card').length;
+    return '페르소나 카드' + (cnt ? ` (${cnt}개)` : '');
+  }
   if (cls.includes('ov-summary')) return '요약 바';
-  if (cls.includes('cards')) return '게임 카드';
-  if (cls.includes('tbl-wrap')) return '테이블';
+  if (cls.includes('cards')) {
+    const cnt = el.querySelectorAll('.game-card, .health-card').length;
+    return '게임 카드' + (cnt ? ` (${cnt}개)` : '');
+  }
+  if (cls.includes('gold-flow')) return '골드 흐름';
+  if (cls.includes('check-grid')) return '검증 체크';
+  if (cls.includes('perf-gauge')) return '성능 게이지';
   return el.tagName.toLowerCase();
 }
 
