@@ -1859,7 +1859,7 @@ let _cronSummaryOpen = true;
 async function fetchCronSummary() {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { data: runs, error: runErr } = await sb.from('freeplay_runs')
-    .select('id,game_id,persona,levels_played,levels_cleared,clear_rate,total_time_sec,gold_after,created_at,details')
+    .select('id,game_id,persona,levels_played,levels_cleared,clear_rate,total_time_sec,created_at,metrics')
     .gte('created_at', since)
     .order('created_at', { ascending: false });
   if (runErr) { console.warn('cronSummary runs fetch 실패:', runErr.message); return _cronSummaryData; }
