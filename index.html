@@ -387,11 +387,86 @@ tr:hover td { background: rgba(59,130,246,.05); }
   border-radius: 8px; display: flex; align-items: center; justify-content: center; padding: 0 4px;
 }
 
+/* ── Cron Summary ── */
+.cron-summary {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+  margin-bottom: 16px; overflow: hidden;
+}
+.cron-summary-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 18px; cursor: pointer; user-select: none;
+  border-bottom: 1px solid var(--border);
+  transition: background .15s;
+}
+.cron-summary-header:hover { background: rgba(59,130,246,.05); }
+.cron-summary-header h4 { margin: 0; font-size: calc(14px * var(--fs-scale)); color: var(--text-primary); flex: 1; }
+.cron-summary-arrow { color: var(--text-muted); font-size: 12px; transition: transform .2s; }
+.cron-summary-arrow.open { transform: rotate(180deg); }
+.cron-summary-body { padding: 16px 18px; display: none; }
+.cron-summary-body.open { display: block; }
+.cron-summary-ok {
+  padding: 14px 18px; text-align: center; font-size: 14px; font-weight: 600;
+  color: var(--status-ok); display: none;
+}
+.cron-summary-ok.show { display: block; }
+
+/* cron matrix table */
+.cron-matrix { width: 100%; border-collapse: collapse; font-size: calc(12px * var(--fs-scale)); margin-bottom: 16px; }
+.cron-matrix th {
+  padding: 8px 10px; text-align: center; font-weight: 600;
+  color: var(--text-muted); border-bottom: 2px solid var(--border);
+  font-size: calc(11px * var(--fs-scale));
+}
+.cron-matrix th:first-child { text-align: left; }
+.cron-matrix td { padding: 8px 10px; text-align: center; border-bottom: 1px solid var(--border); }
+.cron-matrix td:first-child { text-align: left; font-weight: 600; color: var(--text-primary); }
+.cron-matrix .cm-ok { color: var(--status-ok); }
+.cron-matrix .cm-fail { color: var(--status-err); font-weight: 700; }
+.cron-matrix .cm-none { color: var(--text-muted); font-size: 11px; }
+.cron-matrix .cm-slot { font-size: 10px; color: var(--text-muted); font-weight: 400; }
+
+/* issue cards */
+.cron-issues { display: flex; flex-direction: column; gap: 10px; }
+.cron-issue-card {
+  background: rgba(239,68,68,.06); border: 1px solid rgba(239,68,68,.2);
+  border-radius: 8px; padding: 12px 16px; border-left: 3px solid var(--status-err);
+}
+.cron-issue-title {
+  font-size: calc(13px * var(--fs-scale)); font-weight: 700; color: var(--status-err);
+  margin-bottom: 6px; display: flex; align-items: center; gap: 8px;
+}
+.cron-issue-detail {
+  font-size: calc(12px * var(--fs-scale)); color: var(--text-secondary); line-height: 1.6;
+}
+.cron-issue-detail .cid-stage { font-weight: 600; color: var(--text-primary); }
+.cron-issue-detail .cid-label { color: var(--text-muted); min-width: 70px; display: inline-block; }
+.cron-issue-warn {
+  background: rgba(245,158,11,.06); border: 1px solid rgba(245,158,11,.2);
+  border-left-color: var(--status-warn);
+}
+.cron-issue-warn .cron-issue-title { color: var(--status-warn); }
+.cron-slot-label {
+  display: inline-block; padding: 2px 8px; border-radius: 10px;
+  font-size: 10px; font-weight: 600; margin-left: auto;
+}
+.cron-slot-night { background: rgba(99,102,241,.15); color: #818cf8; }
+.cron-slot-morning { background: rgba(251,191,36,.15); color: #f59e0b; }
+.cron-section-divider {
+  display: flex; align-items: center; gap: 10px; margin: 16px 0 12px;
+  font-size: calc(12px * var(--fs-scale)); font-weight: 600; color: var(--text-muted);
+}
+.cron-section-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
 @media (max-width: 768px) {
   .cards { grid-template-columns: 1fr; }
   .chart-grid { grid-template-columns: 1fr; }
   .persona-grid { grid-template-columns: 1fr 1fr; }
   .notif-panel { width: 100%; right: -100%; }
+  .cron-matrix { font-size: 11px; }
+  .cron-matrix th, .cron-matrix td { padding: 6px 4px; }
+  .cron-issue-card { padding: 10px 12px; }
 }
 
 /* ── Sidebar ── */
@@ -1373,6 +1448,7 @@ function renderOverview(games) {
       총 판 <b>${totalLevels.toLocaleString()}</b> &nbsp;·&nbsp;
       총 <b>${timeStr}</b>
     </div>
+    <div id="cron-summary-section"></div>
     <div class="cards">${Object.entries(games).map(([gid, g]) => renderGameCard(gid, g)).join('')}</div>
     ${_makeGridSelector('ov-chart-grid-main', 2, 'chart')}
     <div class="chart-grid" id="ov-chart-grid-main">
@@ -1774,6 +1850,322 @@ function toggleAllHC() {
 }
 
 /* ── 크론 이력 ── */
+
+/* ── 최근 크론 실행 요약 ── */
+
+let _cronSummaryData = { runs: [], stages: [], healthIssues: [] };
+let _cronSummaryOpen = true;
+
+async function fetchCronSummary() {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { data: runs, error: runErr } = await sb.from('freeplay_runs')
+    .select('id,game_id,persona,levels_played,levels_cleared,clear_rate,total_time_sec,gold_after,created_at,details')
+    .gte('created_at', since)
+    .order('created_at', { ascending: false });
+  if (runErr) { console.warn('cronSummary runs fetch 실패:', runErr.message); return _cronSummaryData; }
+
+  const allRuns = runs || [];
+  let failStages = [];
+
+  // 실패 런이 있거나 이슈 감지 조건이 있는 런의 stage_results 조회
+  const runIds = allRuns.map(r => r.id);
+  if (runIds.length) {
+    const { data: stages, error: stgErr } = await sb.from('stage_results')
+      .select('run_id,game_id,persona,stage_number,game_level,result,time_sec,difficulty,details')
+      .in('run_id', runIds);
+    if (!stgErr && stages) failStages = stages;
+  }
+
+  // health_checks 이슈 (최근 24시간)
+  let healthIssues = [];
+  try {
+    const { data: hc } = await sb.from('health_checks')
+      .select('*')
+      .gte('run_date', since.slice(0, 10))
+      .neq('status', 'pass');
+    if (hc) healthIssues = hc;
+  } catch (e) { /* ignore */ }
+
+  _cronSummaryData = { runs: allRuns, stages: failStages, healthIssues };
+  return _cronSummaryData;
+}
+
+function classifyCronSlot(created_at) {
+  const h = new Date(created_at).getHours();
+  if (h >= 0 && h < 2) return 'night';
+  if (h >= 6 && h < 9) return 'morning';
+  return 'other';
+}
+
+function detectCronIssues(runs, stages) {
+  const issues = [];
+
+  // 1. 실패 감지: failed > 0
+  for (const r of runs) {
+    const failed = (r.levels_played || 0) - (r.levels_cleared || 0);
+    if (failed > 0) {
+      const relStages = stages.filter(s => s.run_id === r.id && s.result === 'fail');
+      const stageDetails = relStages.map(s => {
+        const d = s.details || {};
+        const lastEvent = (d.events && d.events.length) ? d.events[d.events.length - 1] : (d.end_reason || s.result);
+        return {
+          stage: s.stage_number,
+          level: s.game_level,
+          difficulty: DIFF_TIERS[s.difficulty] || s.difficulty || '-',
+          reason: typeof lastEvent === 'string' ? lastEvent : (lastEvent?.code || lastEvent?.event || s.result),
+          wild: d.wild_card_count || 0,
+          extra: d.extra_decks || 0,
+          undo: d.undo_count || 0,
+          gold_pnl: d.gold_pnl || 0,
+          dda: d.dda_tier || '-',
+        };
+      });
+      issues.push({
+        type: 'fail',
+        severity: 'error',
+        game: r.game_id,
+        persona: r.persona,
+        played: r.levels_played,
+        cleared: r.levels_cleared,
+        failed,
+        slot: classifyCronSlot(r.created_at),
+        stages: stageDetails,
+      });
+    }
+  }
+
+  // 2. 점수 이상: map_score > score_max
+  for (const s of stages) {
+    const d = s.details || {};
+    if (d.map_score && d.map_score_base && d.map_score > d.map_score_base * 1.5) {
+      issues.push({
+        type: 'score_anomaly',
+        severity: 'warn',
+        game: s.game_id,
+        persona: s.persona,
+        stage: s.stage_number,
+        level: s.game_level,
+        score: d.map_score,
+        scoreBase: d.map_score_base,
+        slot: classifyCronSlot(stages.find(x => x.run_id === s.run_id)?.created_at || new Date().toISOString()),
+      });
+    }
+  }
+
+  // 3. 아이템 과다: wild >= 5 or extra_decks >= 3
+  for (const s of stages) {
+    const d = s.details || {};
+    if ((d.wild_card_count || 0) >= 5 || (d.extra_decks || 0) >= 3) {
+      issues.push({
+        type: 'item_overuse',
+        severity: 'warn',
+        game: s.game_id,
+        persona: s.persona,
+        stage: s.stage_number,
+        level: s.game_level,
+        wild: d.wild_card_count || 0,
+        extra: d.extra_decks || 0,
+        undo: d.undo_count || 0,
+        gold_pnl: d.gold_pnl || 0,
+        slot: classifyCronSlot(stages.find(x => x.run_id === s.run_id)?.created_at || new Date().toISOString()),
+      });
+    }
+  }
+
+  return issues;
+}
+
+function renderCronSummary(data) {
+  const section = document.getElementById('cron-summary-section');
+  if (!section) return;
+
+  const { runs, stages, healthIssues } = data;
+
+  // 크론 데이터 없음
+  if (!runs || !runs.length) {
+    section.innerHTML = `
+      <div class="cron-summary">
+        <div class="cron-summary-header" onclick="toggleCronSummary()">
+          <h4>최근 크론 실행 요약 (24h)</h4>
+          <span style="font-size:12px;color:var(--text-muted)">크론 데이터 없음</span>
+          <span class="cron-summary-arrow${_cronSummaryOpen ? ' open' : ''}">&#9660;</span>
+        </div>
+      </div>`;
+    return;
+  }
+
+  // 이슈 감지
+  const issues = detectCronIssues(runs, stages);
+  const hasIssues = issues.length > 0 || healthIssues.length > 0;
+  const errorCount = issues.filter(i => i.severity === 'error').length + healthIssues.length;
+  const warnCount = issues.filter(i => i.severity === 'warn').length;
+
+  // 시간대별 그룹핑
+  const slotRuns = { night: [], morning: [], other: [] };
+  for (const r of runs) {
+    const slot = classifyCronSlot(r.created_at);
+    slotRuns[slot].push(r);
+  }
+
+  // 매트릭스 데이터 구성: game x persona
+  const gameIds = [...new Set(runs.map(r => r.game_id))].sort();
+
+  function buildSlotMatrix(slotName, slotLabel, slotClass, slotRuns) {
+    if (!slotRuns.length) return '';
+    const matrix = {};
+    for (const r of slotRuns) {
+      const key = r.game_id;
+      if (!matrix[key]) matrix[key] = {};
+      if (!matrix[key][r.persona]) matrix[key][r.persona] = { played: 0, cleared: 0, failed: 0 };
+      matrix[key][r.persona].played += r.levels_played || 0;
+      matrix[key][r.persona].cleared += r.levels_cleared || 0;
+      matrix[key][r.persona].failed += (r.levels_played || 0) - (r.levels_cleared || 0);
+    }
+
+    const headers = PERSONA_ORDER.filter(p => {
+      return Object.values(matrix).some(g => g[p]);
+    });
+
+    const headerCells = headers.map(p =>
+      `<th style="color:${PERSONA_COLORS[p] || 'var(--text-muted)'}">${PERSONA_KO[p] || p}</th>`
+    ).join('');
+
+    const bodyRows = Object.keys(matrix).sort().map(gid => {
+      const cells = headers.map(p => {
+        const d = matrix[gid]?.[p];
+        if (!d) return '<td class="cm-none">-</td>';
+        const hasFail = d.failed > 0;
+        const cls = hasFail ? 'cm-fail' : 'cm-ok';
+        const failBadge = hasFail ? ` <span style="font-size:10px;background:rgba(239,68,68,.15);color:#ef4444;padding:1px 5px;border-radius:8px">F${d.failed}</span>` : '';
+        return `<td class="${cls}">${d.cleared}/${d.played}${failBadge}</td>`;
+      }).join('');
+      return `<tr><td>${gid}</td>${cells}</tr>`;
+    }).join('');
+
+    return `
+      <div class="cron-section-divider">
+        ${slotLabel} <span class="cron-slot-label ${slotClass}">${slotRuns.length}런</span>
+      </div>
+      <table class="cron-matrix">
+        <thead><tr><th>게임</th>${headerCells}</tr></thead>
+        <tbody>${bodyRows}</tbody>
+      </table>`;
+  }
+
+  const nightMatrix = buildSlotMatrix('night', '야간 (00:00~02:00)', 'cron-slot-night', slotRuns.night);
+  const morningMatrix = buildSlotMatrix('morning', '아침 (06:00~09:00)', 'cron-slot-morning', slotRuns.morning);
+  const otherMatrix = buildSlotMatrix('other', '기타 시간대', '', slotRuns.other);
+
+  // 이슈 카드 렌더링
+  let issueHtml = '';
+  if (hasIssues) {
+    // 실패 이슈 (중복 그룹핑: game+persona)
+    const failIssues = issues.filter(i => i.type === 'fail');
+    const failCards = failIssues.map(iss => {
+      const pName = PERSONA_KO[iss.persona] || iss.persona;
+      const stageLines = iss.stages.slice(0, 5).map(s => {
+        const goldStr = s.gold_pnl ? (s.gold_pnl > 0 ? `+${s.gold_pnl.toLocaleString()}` : s.gold_pnl.toLocaleString()) : '0';
+        const itemParts = [];
+        if (s.wild) itemParts.push(`와일드 ${s.wild}회`);
+        if (s.extra) itemParts.push(`추가덱 ${s.extra}회`);
+        if (s.undo) itemParts.push(`되돌리기 ${s.undo}회`);
+        const itemStr = itemParts.length ? itemParts.join(', ') : '아이템 미사용';
+        return `<div style="margin-top:4px">
+          <span class="cid-stage">CC_${String(s.stage || s.level || '-').padStart(4, '0')}</span>
+          <span style="color:${DIFF_COLORS[s.difficulty] || 'var(--text-muted)'}">(${s.difficulty})</span>
+          — ${s.reason || 'unknown'}<br>
+          <span class="cid-label">아이템:</span> ${itemStr}<br>
+          <span class="cid-label">골드:</span> <span style="color:${s.gold_pnl >= 0 ? 'var(--status-ok)' : 'var(--status-err)'}">${goldStr}</span>
+        </div>`;
+      }).join('');
+      return `<div class="cron-issue-card">
+        <div class="cron-issue-title">
+          <span>&#x1F534;</span> ${iss.game} ${pName} — ${iss.failed}/${iss.played} 실패
+        </div>
+        <div class="cron-issue-detail">${stageLines || '<span style="color:var(--text-muted)">스테이지 상세 없음</span>'}</div>
+      </div>`;
+    }).join('');
+
+    // 아이템 과다 이슈 (상위 5건)
+    const itemIssues = issues.filter(i => i.type === 'item_overuse').slice(0, 5);
+    const itemCards = itemIssues.map(iss => {
+      const goldStr = iss.gold_pnl ? (iss.gold_pnl > 0 ? `+${iss.gold_pnl.toLocaleString()}` : iss.gold_pnl.toLocaleString()) : '0';
+      return `<div class="cron-issue-card cron-issue-warn">
+        <div class="cron-issue-title">
+          <span>&#x1F7E1;</span> ${iss.game} — 아이템 과다 사용
+        </div>
+        <div class="cron-issue-detail">
+          <span class="cid-stage">CC_${String(iss.stage || iss.level || '-').padStart(4, '0')}</span>
+          — 와일드 ${iss.wild}회, 추가덱 ${iss.extra}회, 되돌리기 ${iss.undo}회
+          <span style="margin-left:8px;color:${iss.gold_pnl >= 0 ? 'var(--status-ok)' : 'var(--status-err)'}">골드 ${goldStr}</span>
+        </div>
+      </div>`;
+    }).join('');
+
+    // 점수 이상 이슈 (상위 3건)
+    const scoreIssues = issues.filter(i => i.type === 'score_anomaly').slice(0, 3);
+    const scoreCards = scoreIssues.map(iss => {
+      return `<div class="cron-issue-card cron-issue-warn">
+        <div class="cron-issue-title">
+          <span>&#x1F7E1;</span> ${iss.game} — 점수 이상
+        </div>
+        <div class="cron-issue-detail">
+          <span class="cid-stage">CC_${String(iss.stage || iss.level || '-').padStart(4, '0')}</span>
+          — 점수 ${iss.score?.toLocaleString()} (기준 ${iss.scoreBase?.toLocaleString()}, ${((iss.score / iss.scoreBase) * 100).toFixed(0)}%)
+        </div>
+      </div>`;
+    }).join('');
+
+    // health check 이슈
+    const hcCards = healthIssues.slice(0, 5).map(hc => {
+      return `<div class="cron-issue-card">
+        <div class="cron-issue-title">
+          <span>&#x1F534;</span> ${hc.game_id || '-'} — Health Check 실패
+        </div>
+        <div class="cron-issue-detail">
+          <span class="cid-label">체크:</span> ${hc.check_id || '-'}<br>
+          <span class="cid-label">상태:</span> ${hc.status}<br>
+          ${hc.message ? `<span class="cid-label">메시지:</span> ${hc.message}` : ''}
+        </div>
+      </div>`;
+    }).join('');
+
+    const issueDivider = (failCards || itemCards || scoreCards || hcCards)
+      ? '<div class="cron-section-divider">감지된 이슈</div>' : '';
+
+    issueHtml = `${issueDivider}<div class="cron-issues">${failCards}${scoreCards}${itemCards}${hcCards}</div>`;
+  }
+
+  // 상태 배지
+  const statusBadge = !hasIssues
+    ? '<span class="badge badge-ok">전체 정상</span>'
+    : (errorCount > 0
+        ? `<span class="badge badge-err">이슈 ${errorCount + warnCount}건</span>`
+        : `<span class="badge badge-warn">경고 ${warnCount}건</span>`);
+
+  section.innerHTML = `
+    <div class="cron-summary">
+      <div class="cron-summary-header" onclick="toggleCronSummary()">
+        <h4>최근 크론 실행 요약 (24h)</h4>
+        ${statusBadge}
+        <span style="font-size:11px;color:var(--text-muted)">${runs.length}런 · ${gameIds.join(', ')}</span>
+        <span class="cron-summary-arrow${_cronSummaryOpen ? ' open' : ''}" id="cron-summary-arrow">&#9660;</span>
+      </div>
+      ${!hasIssues ? '<div class="cron-summary-ok show">전체 정상 — 최근 24시간 내 감지된 이슈가 없습니다</div>' : ''}
+      <div class="cron-summary-body${_cronSummaryOpen ? ' open' : ''}" id="cron-summary-body">
+        ${nightMatrix}${morningMatrix}${otherMatrix}
+        ${issueHtml}
+      </div>
+    </div>`;
+}
+
+function toggleCronSummary() {
+  _cronSummaryOpen = !_cronSummaryOpen;
+  const body = document.getElementById('cron-summary-body');
+  const arrow = document.getElementById('cron-summary-arrow');
+  if (body) body.classList.toggle('open', _cronSummaryOpen);
+  if (arrow) arrow.classList.toggle('open', _cronSummaryOpen);
+}
 
 function renderCronHistory(cron) {
   if (!cron || !cron.length) return;
@@ -6298,6 +6690,8 @@ function subscribeRealtime() {
       { event: 'INSERT', schema: 'public', table: 'freeplay_runs' },
       async (payload) => {
         await refreshOverviewFromViews();
+        // 크론 요약 자동 갱신
+        fetchCronSummary().then(data => renderCronSummary(data)).catch(e => console.warn('cronSummary 갱신 실패:', e.message));
         // 토스트/브라우저 알림은 server_logs 구독에서 통합 처리 (중복 방지)
         if (_currentGameId === payload.new.game_id) {
           await refreshCurrentGameDetail();
@@ -6392,6 +6786,8 @@ async function refreshOverviewFromViews() {
     const overviewEl = document.getElementById('overview-panel');
     if (overviewEl && overviewEl.style.display !== 'none') {
       renderOverview(games);
+      // 크론 요약 재렌더 (renderOverview가 innerHTML 덮어쓰기 때문)
+      if (_cronSummaryData.runs.length) renderCronSummary(_cronSummaryData);
       restoreGridCols();
       document.getElementById('update-time').textContent = '갱신: ' + new Date().toLocaleString('ko');
     }
@@ -6465,6 +6861,11 @@ async function init() {
 
     // Realtime 구독 시작
     subscribeRealtime();
+
+    // Background: 크론 요약 fetch
+    fetchCronSummary().then(data => {
+      renderCronSummary(data);
+    }).catch(e => { console.warn('cronSummary fetch 실패:', e.message); });
 
     // Background: server_logs fetch (최신 런 서버 로그)
     _serverLogsPromise = fetchServerLogs().then(logs => { _serverLogs = logs; return logs; }).catch(e => { console.warn('server_logs fetch 실패:', e.message); return {}; });
