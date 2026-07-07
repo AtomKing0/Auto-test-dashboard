@@ -1911,7 +1911,7 @@ function detectCronIssues(runs, stages) {
         let reason;
         if (d.failure_type) {
           // MJG/CTZ/PBM: failure_type 기반
-          const ftKr = {deadlock:'데드락',timeout:'시간초과',slotfull:'슬롯 가득',gameover:'게임오버'};
+          const ftKr = {deadlock:'매칭 불가',timeout:'시간 초과',slotfull:'슬롯 가득',gameover:'게임 오버'};
           reason = ftKr[d.failure_type] || d.failure_type;
           if (d.remaining_tiles != null) reason += ` (잔여 ${d.remaining_tiles}타일)`;
         } else if (d.events && d.events.length) {
