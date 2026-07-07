@@ -1882,7 +1882,7 @@ async function fetchCronSummary() {
     const { data: hc } = await sb.from('health_checks')
       .select('*')
       .gte('run_date', since.slice(0, 10))
-      .neq('status', 'pass');
+      .in('status', ['FAIL', 'WARN']);
     if (hc) healthIssues = hc;
   } catch (e) { /* ignore */ }
 
