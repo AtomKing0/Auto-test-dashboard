@@ -1998,8 +1998,10 @@ function renderCronSummary(data) {
   // 이슈 감지
   const issues = detectCronIssues(runs, stages);
   const hasIssues = issues.length > 0 || healthIssues.length > 0;
-  const errorCount = issues.filter(i => i.severity === 'error').length + healthIssues.length;
-  const warnCount = issues.filter(i => i.severity === 'warn').length;
+  const healthErrors = healthIssues.filter(h => h.status === 'FAIL').length;
+  const healthWarns = healthIssues.filter(h => h.status === 'WARN').length;
+  const errorCount = issues.filter(i => i.severity === 'error').length + healthErrors;
+  const warnCount = issues.filter(i => i.severity === 'warn').length + healthWarns;
 
   // 시간대별 그룹핑
   const slotRuns = { night: [], morning: [], other: [] };
@@ -2070,12 +2072,12 @@ function renderCronSummary(data) {
         if (s.wild) itemParts.push(`와일드 ${s.wild}회`);
         if (s.extra) itemParts.push(`추가덱 ${s.extra}회`);
         if (s.undo) itemParts.push(`되돌리기 ${s.undo}회`);
-        const itemStr = itemParts.length ? itemParts.join(', ') : '아이템 미사용';
+        const itemStr = itemParts.length ? itemParts.join(', ') : '';
         return `<div style="margin-top:4px">
-          <span class="cid-stage">CC_${String(s.stage || s.level || '-').padStart(4, '0')}</span>
+          <span class="cid-stage">${s.stage || s.level || '-'}</span>
           <span style="color:${DIFF_COLORS[s.difficulty] || 'var(--text-muted)'}">(${s.difficulty})</span>
           — ${s.reason || 'unknown'}<br>
-          <span class="cid-label">아이템:</span> ${itemStr}<br>
+          ${itemStr ? `<span class="cid-label">아이템:</span> ${itemStr}<br>` : ''}
           <span class="cid-label">골드:</span> <span style="color:${s.gold_pnl >= 0 ? 'var(--status-ok)' : 'var(--status-err)'}">${goldStr}</span>
         </div>`;
       }).join('');
@@ -2096,7 +2098,7 @@ function renderCronSummary(data) {
           <span>&#x1F7E1;</span> ${iss.game} — 아이템 과다 사용
         </div>
         <div class="cron-issue-detail">
-          <span class="cid-stage">CC_${String(iss.stage || iss.level || '-').padStart(4, '0')}</span>
+          <span class="cid-stage">${iss.stage || iss.level || '-'}</span>
           — 와일드 ${iss.wild}회, 추가덱 ${iss.extra}회, 되돌리기 ${iss.undo}회
           <span style="margin-left:8px;color:${iss.gold_pnl >= 0 ? 'var(--status-ok)' : 'var(--status-err)'}">골드 ${goldStr}</span>
         </div>
@@ -2111,7 +2113,7 @@ function renderCronSummary(data) {
           <span>&#x1F7E1;</span> ${iss.game} — 점수 이상
         </div>
         <div class="cron-issue-detail">
-          <span class="cid-stage">CC_${String(iss.stage || iss.level || '-').padStart(4, '0')}</span>
+          <span class="cid-stage">${iss.stage || iss.level || '-'}</span>
           — 점수 ${iss.score?.toLocaleString()} (기준 ${iss.scoreBase?.toLocaleString()}, ${((iss.score / iss.scoreBase) * 100).toFixed(0)}%)
         </div>
       </div>`;
@@ -2119,9 +2121,10 @@ function renderCronSummary(data) {
 
     // health check 이슈
     const hcCards = healthIssues.slice(0, 5).map(hc => {
-      return `<div class="cron-issue-card">
+      const isWarn = hc.status === 'WARN';
+      return `<div class="cron-issue-card${isWarn ? ' cron-issue-warn' : ''}">
         <div class="cron-issue-title">
-          <span>&#x1F534;</span> ${hc.game_id || '-'} — Health Check 실패
+          <span>${isWarn ? '&#x1F7E1;' : '&#x1F534;'}</span> ${hc.game_id || '-'} — Health Check ${isWarn ? '경고' : '실패'}
         </div>
         <div class="cron-issue-detail">
           <span class="cid-label">체크:</span> ${hc.check_id || '-'}<br>
