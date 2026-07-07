@@ -1934,10 +1934,11 @@ function detectCronIssues(runs, stages) {
     }
   }
 
-  // 2. 점수 이상: map_score > score_max
+  // 2. 점수 이상: map_score > score_max (튜토리얼 맵 제외)
   for (const s of stages) {
     const d = s.details || {};
-    if (d.map_score && d.map_score_base && d.map_score > d.map_score_base * 1.5) {
+    if (d.map_score && d.map_score_base && d.map_score > d.map_score_base * 1.5
+        && !(s.stage_number || '').startsWith('TUT_')) {
       issues.push({
         type: 'score_anomaly',
         severity: 'warn',
