@@ -1907,17 +1907,33 @@ function detectCronIssues(runs, stages) {
       const relStages = stages.filter(s => s.run_id === r.id && s.result === 'fail');
       const stageDetails = relStages.map(s => {
         const d = s.details || {};
-        const lastEvent = (d.events && d.events.length) ? d.events[d.events.length - 1] : (d.end_reason || s.result);
+        // 게임별 실패 원인 추출
+        let reason;
+        if (d.failure_type) {
+          // MJG/CTZ/PBM: failure_type 기반
+          const ftKr = {deadlock:'데드락',timeout:'시간초과',slotfull:'슬롯 가득',gameover:'게임오버'};
+          reason = ftKr[d.failure_type] || d.failure_type;
+          if (d.remaining_tiles != null) reason += ` (잔여 ${d.remaining_tiles}타일)`;
+        } else if (d.events && d.events.length) {
+          const last = d.events[d.events.length - 1];
+          reason = typeof last === 'string' ? last : (last?.code || last?.event || s.result);
+          // SCJ 골드 부족 번역
+          if (reason && reason.includes('gold_shortage')) reason = '골드 부족';
+        } else {
+          reason = d.end_reason || s.result || 'unknown';
+        }
+        const hasGold = r.game_id === 'SCJ';  // 골드 시스템이 있는 게임만
         return {
           stage: s.stage_number,
           level: s.game_level,
           difficulty: DIFF_TIERS[s.difficulty] || s.difficulty || '-',
-          reason: typeof lastEvent === 'string' ? lastEvent : (lastEvent?.code || lastEvent?.event || s.result),
+          reason,
           wild: d.wild_card_count || 0,
           extra: d.extra_decks || 0,
           undo: d.undo_count || 0,
-          gold_pnl: d.gold_pnl || 0,
+          gold_pnl: hasGold ? (d.gold_pnl || 0) : null,
           dda: d.dda_tier || '-',
+          hasGold,
         };
       });
       issues.push({
@@ -2074,12 +2090,15 @@ function renderCronSummary(data) {
         if (s.extra) itemParts.push(`추가덱 ${s.extra}회`);
         if (s.undo) itemParts.push(`되돌리기 ${s.undo}회`);
         const itemStr = itemParts.length ? itemParts.join(', ') : '';
+        const goldLine = s.hasGold && s.gold_pnl !== null
+          ? `<span class="cid-label">골드:</span> <span style="color:${s.gold_pnl >= 0 ? 'var(--status-ok)' : 'var(--status-err)'}">${goldStr}</span>`
+          : '';
         return `<div style="margin-top:4px">
           <span class="cid-stage">${s.stage || s.level || '-'}</span>
           <span style="color:${DIFF_COLORS[s.difficulty] || 'var(--text-muted)'}">(${s.difficulty})</span>
           — ${s.reason || 'unknown'}<br>
           ${itemStr ? `<span class="cid-label">아이템:</span> ${itemStr}<br>` : ''}
-          <span class="cid-label">골드:</span> <span style="color:${s.gold_pnl >= 0 ? 'var(--status-ok)' : 'var(--status-err)'}">${goldStr}</span>
+          ${goldLine}
         </div>`;
       }).join('');
       // 스테이지 상세 없으면 metrics에서 원인 추론
