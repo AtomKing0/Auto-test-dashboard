@@ -1900,10 +1900,10 @@ function classifyCronSlot(created_at) {
 function detectCronIssues(runs, stages) {
   const issues = [];
 
-  // 1. 실패 감지: failed > 0
+  // 1. 실패 감지: 3판 이상 실패 시만 이슈 (1~2판 실패는 정상 난이도)
   for (const r of runs) {
     const failed = (r.levels_played || 0) - (r.levels_cleared || 0);
-    if (failed > 0) {
+    if (failed >= 3) {
       const relStages = stages.filter(s => s.run_id === r.id && s.result === 'fail');
       const stageDetails = relStages.map(s => {
         const d = s.details || {};
