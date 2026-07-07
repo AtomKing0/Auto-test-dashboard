@@ -2017,9 +2017,22 @@ function renderCronSummary(data) {
 
   // 이슈 감지
   const issues = detectCronIssues(runs, stages);
+  // health check: GAME_LOOP FAIL이 골드 부족이면 warn으로 다운그레이드
+  for (const hc of healthIssues) {
+    if (hc.check_id === 'GAME_LOOP' && hc.status === 'FAIL' && hc.run_id) {
+      const matchRun = runs.find(r => r.id === hc.run_id);
+      const m = matchRun?.metrics || {};
+      const gs = m.gold_start ?? m.gold_end ?? null;
+      if (gs !== null && gs < 1800) {
+        hc._downgraded = true;
+        hc.message = `골드 부족으로 미플레이 (보유: ${Number(gs).toLocaleString()})`;
+      }
+    }
+  }
+
   const hasIssues = issues.length > 0 || healthIssues.length > 0;
-  const healthErrors = healthIssues.filter(h => h.status === 'FAIL').length;
-  const healthWarns = healthIssues.filter(h => h.status === 'WARN').length;
+  const healthErrors = healthIssues.filter(h => h.status === 'FAIL' && !h._downgraded).length;
+  const healthWarns = healthIssues.filter(h => h.status === 'WARN' || h._downgraded).length;
   const errorCount = issues.filter(i => i.severity === 'error').length + healthErrors;
   const warnCount = issues.filter(i => i.severity === 'warn').length + healthWarns;
 
@@ -2161,7 +2174,7 @@ function renderCronSummary(data) {
 
     // health check 이슈
     const hcCards = healthIssues.slice(0, 5).map(hc => {
-      const isWarn = hc.status === 'WARN';
+      const isWarn = hc.status === 'WARN' || hc._downgraded;
       return `<div class="cron-issue-card${isWarn ? ' cron-issue-warn' : ''}">
         <div class="cron-issue-title">
           <span>${isWarn ? '&#x1F7E1;' : '&#x1F534;'}</span> ${hc.game_id || '-'} — Health Check ${isWarn ? '경고' : '실패'}
