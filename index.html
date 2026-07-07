@@ -1936,9 +1936,12 @@ function detectCronIssues(runs, stages) {
           hasGold,
         };
       });
+      const m = r.metrics || {};
+      const goldStart = m.gold_start ?? m.gold_end ?? null;
+      const isGoldShortage = !stageDetails.length && goldStart !== null && goldStart < 1800;
       issues.push({
         type: 'fail',
-        severity: 'error',
+        severity: isGoldShortage ? 'warn' : 'error',
         game: r.game_id,
         persona: r.persona,
         played: r.levels_played,
@@ -1946,7 +1949,7 @@ function detectCronIssues(runs, stages) {
         failed,
         slot: classifyCronSlot(r.created_at),
         stages: stageDetails,
-        metrics: r.metrics || {},
+        metrics: m,
       });
     }
   }
@@ -2103,20 +2106,24 @@ function renderCronSummary(data) {
       }).join('');
       // 스테이지 상세 없으면 metrics에서 원인 추론
       let fallbackInfo = '';
+      let isGoldShortage = false;
       if (!stageLines) {
         const m = iss.metrics || {};
         const goldStart = m.gold_start ?? m.gold_end ?? null;
         if (goldStart !== null && goldStart < 1800) {
           fallbackInfo = `<span style="color:var(--status-warn)">골드 부족으로 입장 불가 (보유: ${Number(goldStart).toLocaleString()}, 필요: 1,800)</span>`;
+          isGoldShortage = true;
         } else if (m.stop_reason) {
           fallbackInfo = `<span style="color:var(--text-muted)">중단 사유: ${m.stop_reason}</span>`;
         } else {
           fallbackInfo = '<span style="color:var(--text-muted)">스테이지 상세 없음</span>';
         }
       }
-      return `<div class="cron-issue-card">
+      const icon = isGoldShortage ? '&#x1F7E1;' : '&#x1F534;';
+      const cardClass = isGoldShortage ? ' cron-issue-warn' : '';
+      return `<div class="cron-issue-card${cardClass}">
         <div class="cron-issue-title">
-          <span>&#x1F534;</span> ${iss.game} ${pName} — ${iss.failed}/${iss.played} 실패
+          <span>${icon}</span> ${iss.game} ${pName} — ${iss.failed}/${iss.played} 실패
         </div>
         <div class="cron-issue-detail">${stageLines || fallbackInfo}</div>
       </div>`;
