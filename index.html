@@ -2517,6 +2517,8 @@ async function switchTab(id, _btn) {
       renderRadarChart(id, stages, gameRuns);
       _renderedCats['summary'] = true;
     }, 50);
+    _updateUrlHash();
+    _saveLastTab();
   } catch (e) {
     panels.innerHTML = `<div class="state-msg"><div class="icon">⚠️</div><div>${id} 데이터 로딩 실패: ${e.message}</div></div>`;
   }
@@ -3786,6 +3788,8 @@ function switchCat(gameId, catId, btn) {
       _renderedCats[catId] = true;
     }, 50);
   }
+  _updateUrlHash();
+  _saveLastTab();
 }
 
 /* ══════════════════════════════════════════════
@@ -7066,6 +7070,8 @@ async function init() {
         }
       }
       updateIssueSummary(_overviewGames);
+      // URL 해시에서 필터/탭 복원
+      _restoreFromHash();
       return runs;
     }).catch(e => {
       console.warn('runs 백그라운드 fetch 실패:', e.message);
@@ -7363,6 +7369,7 @@ function sidebarSystemNav(target) {
     cgEl.innerHTML = renderCrossGameAnalysis();
     renderCrossGameCharts();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    _updateUrlHash(); _saveLastTab();
     return;
   }
   // NRU 현황 페이지
@@ -7389,6 +7396,7 @@ function sidebarSystemNav(target) {
     nruEl.style.display = 'block';
     nruEl.innerHTML = renderNruOverview();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    _updateUrlHash(); _saveLastTab();
     return;
   }
   // NRU 숨기기
@@ -7419,6 +7427,7 @@ function sidebarSystemNav(target) {
     guideEl.style.display = 'block';
     guideEl.innerHTML = renderGuide();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    _updateUrlHash(); _saveLastTab();
     return;
   }
   // 가이드 숨기기
@@ -7455,6 +7464,7 @@ function sidebarSystemNav(target) {
       }
     }, wasGameTab ? 300 : 100);
   }
+  _updateUrlHash(); _saveLastTab();
 }
 
 /* ── 사이드바 DB 미니바 업데이트 ── */
@@ -8132,6 +8142,107 @@ function refreshCrossGame() {
 }
 
 /* ══════════════════════════════════════════════
+   Feature 10: URL 딥링크
+   ══════════════════════════════════════════════ */
+
+function _updateUrlHash() {
+  const parts = [];
+  // 필터 상태
+  if (_ovFilterGames) parts.push('games=' + [..._ovFilterGames].join(','));
+  if (_ovFilterPersonas) parts.push('personas=' + [..._ovFilterPersonas].join(','));
+  if (_ovFilterDays) parts.push('days=' + _ovFilterDays);
+  // 탭 상태
+  if (_currentGameId) {
+    parts.push('tab=' + _currentGameId);
+    // 서브탭 (게임 상세 카테고리)
+    const activeCat = document.querySelector(`[id^="cat-"][id$="-${_currentGameId}"].cat-panel.active`);
+    if (activeCat) {
+      const catId = activeCat.id.replace('cat-', '').replace('-' + _currentGameId, '');
+      if (catId !== 'summary') parts.push('cat=' + catId);
+    }
+  } else {
+    // 시스템 탭 확인
+    const activeSys = document.querySelector('#sidebar-system .sidebar-item.active');
+    if (activeSys) {
+      const sysId = activeSys.dataset.id;
+      if (sysId) parts.push('tab=' + sysId);
+    }
+  }
+  history.replaceState(null, '', parts.length ? '#' + parts.join('&') : location.pathname);
+}
+
+function _readUrlHash() {
+  const hash = location.hash.slice(1);
+  if (!hash) return null;
+  const params = {};
+  for (const part of hash.split('&')) {
+    const [k, v] = part.split('=');
+    if (k && v) params[k] = v;
+  }
+  return params;
+}
+
+async function _restoreFromHash() {
+  const params = _readUrlHash();
+  if (!params) return;
+  // 필터 복원
+  if (params.games) _ovFilterGames = new Set(params.games.split(','));
+  if (params.personas) _ovFilterPersonas = new Set(params.personas.split(','));
+  if (params.days) _ovFilterDays = Number(params.days) || null;
+  // 필터 적용 (Overview 재렌더)
+  if (params.games || params.personas || params.days) {
+    const filtered = _getFilteredRuns();
+    const games = aggregateOverview(filtered);
+    _overviewGames = games;
+    renderOverview(games);
+  }
+  // 탭 복원
+  if (params.tab) {
+    const tabId = params.tab;
+    const sysIds = ['cross-game', 'health', 'cron', 'runs', 'nru', 'guide'];
+    if (sysIds.includes(tabId)) {
+      sidebarSystemNav(tabId);
+    } else {
+      // 게임 탭
+      await switchTab(tabId, null);
+      // 서브탭 복원
+      if (params.cat) {
+        const catBtn = document.querySelector(`[onclick*="switchCat('${tabId}','${params.cat}'"]`);
+        if (catBtn) catBtn.click();
+      }
+    }
+  }
+}
+
+/* ══════════════════════════════════════════════
+   Feature 11: 레이아웃 영속화 보강
+   ══════════════════════════════════════════════ */
+
+function _saveLastTab() {
+  const tabInfo = {};
+  if (_currentGameId) {
+    tabInfo.type = 'game';
+    tabInfo.id = _currentGameId;
+    const activeCat = document.querySelector(`[id^="cat-"][id$="-${_currentGameId}"].cat-panel.active`);
+    if (activeCat) tabInfo.cat = activeCat.id.replace('cat-', '').replace('-' + _currentGameId, '');
+  } else {
+    const activeSys = document.querySelector('#sidebar-system .sidebar-item.active');
+    if (activeSys && activeSys.dataset.id) {
+      tabInfo.type = 'system';
+      tabInfo.id = activeSys.dataset.id;
+    } else {
+      tabInfo.type = 'overview';
+    }
+  }
+  localStorage.setItem('dash_last_tab', JSON.stringify(tabInfo));
+}
+
+function _getLastTab() {
+  try { return JSON.parse(localStorage.getItem('dash_last_tab')) || null; }
+  catch { return null; }
+}
+
+/* ══════════════════════════════════════════════
    리그레션 배지 (요약 바 통합용)
    ══════════════════════════════════════════════ */
 
@@ -8489,12 +8600,7 @@ function applyOvFilter() {
   const games = aggregateOverview(filtered);
   _overviewGames = games;
   renderOverview(games);
-  // URL 해시 동기화
-  const params = [];
-  if (_ovFilterGames) params.push('games=' + [..._ovFilterGames].join(','));
-  if (_ovFilterPersonas) params.push('personas=' + [..._ovFilterPersonas].join(','));
-  if (_ovFilterDays) params.push('days=' + _ovFilterDays);
-  history.replaceState(null, '', params.length ? '#' + params.join('&') : location.pathname);
+  _updateUrlHash();
 }
 
 function readFilterFromHash() {
