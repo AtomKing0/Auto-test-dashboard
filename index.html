@@ -745,6 +745,41 @@ body.edit-mode .merge-btn { display: inline-block; }
   .guide-hc-grid { grid-template-columns: 1fr; }
 }
 
+/* ── 기간 비교 입력 ── */
+.cmp-date-input {
+  padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg-body); color: var(--text-primary); font-size: 12px; font-family: inherit;
+}
+.cmp-date-input:focus { outline: none; border-color: #3b82f6; }
+.cmp-preset-btn { padding: 4px 12px; border: 1px solid var(--border); border-radius: 16px; background: transparent; color: var(--text-secondary); font-size: 11px; cursor: pointer; transition: all .15s; font-family: inherit; }
+.cmp-preset-btn.active, .cmp-preset-btn:hover { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+
+/* ── 크로스게임 ── */
+.cg-filter-group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 16px; }
+.cg-period-btn { padding: 4px 12px; border: 1px solid var(--border); border-radius: 16px; background: transparent; color: var(--text-secondary); font-size: 12px; cursor: pointer; transition: all .15s; font-family: inherit; }
+.cg-period-btn.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+.cg-persona-select { padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-card); color: var(--text-primary); font-size: 12px; }
+.cg-matrix { width: 100%; border-collapse: collapse; font-size: 12px; }
+.cg-matrix th { text-align: left; padding: 8px 10px; border-bottom: 2px solid var(--border); color: var(--text-muted); font-weight: 600; }
+.cg-matrix td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+.cg-matrix tr:hover { background: rgba(59,130,246,.04); }
+.cg-best { font-weight: 700; color: var(--status-ok); }
+
+/* ── Heatmap ── */
+.heatmap-grid { display: grid; grid-template-columns: 50px repeat(24, 1fr); gap: 2px; font-size: 10px; }
+.heatmap-label { display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: var(--text-muted); font-weight: 500; }
+.heatmap-header { display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-weight: 500; }
+.heatmap-cell { aspect-ratio: 1; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; cursor: default; transition: transform .1s; }
+.heatmap-cell:hover { transform: scale(1.3); z-index: 1; }
+
+/* ── Overview 필터 ── */
+.ov-filter-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 16px; margin-bottom: 12px; }
+.ov-filter-label { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+.ov-filter-chip { padding: 3px 10px; border: 1px solid var(--border); border-radius: 14px; background: transparent; color: var(--text-secondary); font-size: 11px; cursor: pointer; transition: all .15s; font-family: inherit; }
+.ov-filter-chip.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+.ov-filter-chip:hover:not(.active) { border-color: var(--text-secondary); }
+.ov-filter-sep { width: 1px; height: 20px; background: var(--border); }
+
 @media (max-width: 768px) {
   .sidebar { width: 52px; }
   .sidebar-logo, .sidebar-item-text, .sidebar-badge, .sidebar-section-label { opacity: 0 !important; pointer-events: none; }
@@ -768,6 +803,11 @@ body.edit-mode .merge-btn { display: inline-block; }
       </div>
       <div class="sidebar-section-label" style="margin-top:8px">System</div>
       <div id="sidebar-system">
+        <div class="sidebar-item" data-id="cross-game" onclick="sidebarSystemNav('cross-game')" id="sidebar-cross-game" title="게임 비교">
+          <span class="sidebar-item-icon">🔀</span>
+          <span class="sidebar-item-text">게임 비교</span>
+          <span class="drag-grip">⋮⋮</span>
+        </div>
         <div class="sidebar-item" data-id="health" onclick="sidebarSystemNav('health')" id="sidebar-health" title="Health Check">
           <span class="sidebar-item-icon">🏥</span>
           <span class="sidebar-item-text">Health Check</span>
@@ -781,6 +821,11 @@ body.edit-mode .merge-btn { display: inline-block; }
         <div class="sidebar-item" data-id="runs" onclick="sidebarSystemNav('runs')" id="sidebar-runs" title="런 관리">
           <span class="sidebar-item-icon">🗂</span>
           <span class="sidebar-item-text">런 관리</span>
+          <span class="drag-grip">⋮⋮</span>
+        </div>
+        <div class="sidebar-item" data-id="nru" onclick="sidebarSystemNav('nru')" id="sidebar-nru" title="NRU 현황">
+          <span class="sidebar-item-icon">🎓</span>
+          <span class="sidebar-item-text">NRU</span>
           <span class="drag-grip">⋮⋮</span>
         </div>
         <div class="sidebar-item" data-id="guide" onclick="sidebarSystemNav('guide')" id="sidebar-guide" title="가이드">
@@ -891,6 +936,67 @@ let _overviewGames = {};
 let _lastFetchTime = '';
 let _runsPromise = null;
 let _serverLogsPromise = null;
+
+/* ── 리그레션 감지 상수 ── */
+const REGRESSION_THRESHOLDS = {
+  clear_rate:  { warn: -10, critical: -20, label: '클리어율' },
+  avg_time:    { warn: 30,  critical: 50,  label: '판당 평균시간' },
+  error_rate:  { warn: 100, critical: 200, label: '에러 발생률' },
+};
+const REGRESSION_PERIOD_DAYS = 7;
+
+/* ── 크로스게임 상태 ── */
+let _crossGameDays = 30;
+let _crossGamePersona = null;
+
+/* ── Overview 필터 상태 ── */
+let _ovFilterGames = null;    // null = 전체, Set of game_ids
+let _ovFilterPersonas = null; // null = 전체, Set of personas
+let _ovFilterDays = null;     // null = 전체, number
+
+/* ── 공통 유틸 ── */
+function _fmtDate(d) { return d.toISOString().slice(0, 10); }
+
+function splitByPeriod(runs, days) {
+  days = days || REGRESSION_PERIOD_DAYS;
+  const today = new Date();
+  const recentStart = new Date(today); recentStart.setDate(today.getDate() - days);
+  const prevStart = new Date(recentStart); prevStart.setDate(recentStart.getDate() - days);
+  const recentStr = _fmtDate(recentStart);
+  const prevStr = _fmtDate(prevStart);
+  return {
+    recent: runs.filter(r => r.run_date >= recentStr),
+    previous: runs.filter(r => r.run_date >= prevStr && r.run_date < recentStr),
+  };
+}
+
+function calcPeriodMetrics(runs) {
+  const byGame = {};
+  for (const r of runs) {
+    if (!byGame[r.game_id]) byGame[r.game_id] = { cleared: 0, played: 0, time: 0, errors: 0, runs: 0 };
+    const g = byGame[r.game_id];
+    g.cleared += r.levels_cleared || 0;
+    g.played += r.levels_played || 0;
+    g.time += r.total_time_sec || 0;
+    g.runs++;
+    const m = r.metrics || {};
+    g.errors += (m.console_summary?.errors || 0);
+  }
+  const result = {};
+  for (const [gid, g] of Object.entries(byGame)) {
+    result[gid] = {
+      clear_rate: g.played ? (g.cleared / g.played * 100) : 0,
+      avg_time: g.played ? (g.time / g.played) : 0,
+      error_rate: g.runs ? (g.errors / g.runs) : 0,
+      runs: g.runs, levels: g.played, cleared: g.cleared, time: g.time,
+    };
+  }
+  return result;
+}
+
+function filterRunsByDateRange(runs, start, end) {
+  return runs.filter(r => r.run_date >= start && r.run_date <= end);
+}
 
 /* ── 데이터 Fetch ── */
 
@@ -1440,35 +1546,40 @@ function renderOverview(games) {
     ? `${(totalTime / 3600).toFixed(1)}시간`
     : `${Math.round(totalTime / 60)}분`;
 
+  // 리그레션 배지 계산
+  const _regBadge = _buildRegressionBadge();
+
+  // 이슈 + 커버리지 2열
+  const issueCount = Object.values(games).reduce((a,g) => a + g.issueCount, 0);
+  const coverageRows = Object.entries(games).map(([gid, g]) => {
+    const pList = Object.entries(g.personas).sort(([a],[b]) => (PERSONA_ORDER.indexOf(a)===-1?99:PERSONA_ORDER.indexOf(a)) - (PERSONA_ORDER.indexOf(b)===-1?99:PERSONA_ORDER.indexOf(b)))
+      .map(([p, d]) => `${PERSONA_KO[p]||p} ${d.runs}`).join(' / ');
+    const lastDate = Object.values(g.personas).reduce((mx, d) => d.lastDate > mx ? d.lastDate : mx, '');
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;">
+      <span style="font-weight:600;min-width:40px;">${gid}</span>
+      <span style="color:var(--text-secondary)">${g.runs}런 (${pList})</span>
+      <span style="color:var(--text-muted);margin-left:auto">최근 ${lastDate ? lastDate.slice(5) : '-'}</span>
+    </div>`;
+  }).join('');
+
   panel.innerHTML = `
-    <div class="ov-summary">
-      <b>전체 현황</b> &nbsp;·&nbsp;
-      게임 <b>${Object.keys(games).length}종</b> &nbsp;·&nbsp;
-      총 런 <b>${totalRuns}</b> &nbsp;·&nbsp;
-      총 판 <b>${totalLevels.toLocaleString()}</b> &nbsp;·&nbsp;
-      총 <b>${timeStr}</b>
+    <div id="ov-filter-bar"></div>
+    <div class="ov-summary" style="display:flex;align-items:center;flex-wrap:wrap;gap:8px">
+      <div style="flex:1">
+        <b>전체 현황</b> &nbsp;·&nbsp;
+        게임 <b>${Object.keys(games).length}종</b> &nbsp;·&nbsp;
+        총 런 <b>${totalRuns}</b> &nbsp;·&nbsp;
+        총 판 <b>${totalLevels.toLocaleString()}</b> &nbsp;·&nbsp;
+        총 <b>${timeStr}</b>
+      </div>
+      ${_regBadge}
     </div>
-    <div id="cron-summary-section"></div>
     <div class="cards">${Object.entries(games).map(([gid, g]) => renderGameCard(gid, g)).join('')}</div>
-    ${_makeGridSelector('ov-chart-grid-main', 2, 'chart')}
-    <div class="chart-grid" id="ov-chart-grid-main">
-      <div class="chart-box"><h4>게임별 판당 평균 시간</h4><canvas id="chart-avg-time"></canvas></div>
-      <div class="chart-box"><h4>일별 런 수 추이</h4><canvas id="chart-daily-runs"></canvas></div>
-    </div>
-    <div class="tbl-wrap"><h4>이슈 요약 (총 ${Object.values(games).reduce((a,g) => a + g.issueCount, 0)}건)</h4>
-      ${_renderIssueSummaryContent(games)}
-    </div>
-    <div class="tbl-wrap"><h4>테스트 커버리지</h4>
-      ${Object.entries(games).map(([gid, g]) => {
-        const pList = Object.entries(g.personas).sort(([a],[b]) => (PERSONA_ORDER.indexOf(a)===-1?99:PERSONA_ORDER.indexOf(a)) - (PERSONA_ORDER.indexOf(b)===-1?99:PERSONA_ORDER.indexOf(b)))
-          .map(([p, d]) => `${PERSONA_KO[p]||p} ${d.runs}`).join(' / ');
-        const lastDate = Object.values(g.personas).reduce((mx, d) => d.lastDate > mx ? d.lastDate : mx, '');
-        return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;">
-          <span style="font-weight:600;min-width:40px;">${gid}</span>
-          <span style="color:var(--text-secondary)">${g.runs}런 (${pList})</span>
-          <span style="color:var(--text-muted);margin-left:auto">최근 ${lastDate ? lastDate.slice(5) : '-'}</span>
-        </div>`;
-      }).join('')}
+    <div class="chart-box" style="margin-bottom:16px"><h4>일별 런 수 추이</h4><canvas id="chart-daily-runs"></canvas></div>
+    <div id="trend-analysis-section"></div>
+    <div class="chart-grid" style="margin-bottom:16px">
+      <div class="tbl-wrap" style="margin-bottom:0"><h4>이슈 요약 (${issueCount}건)</h4>${_renderIssueSummaryContent(games)}</div>
+      <div class="tbl-wrap" style="margin-bottom:0"><h4>테스트 커버리지</h4>${coverageRows}</div>
     </div>
     <div id="health-check-section"></div>
     <div id="cron-section"></div>
@@ -1479,8 +1590,9 @@ function renderOverview(games) {
   if (_allRuns.length) renderRunManager(_allRuns);
   renderDbUsage();
 
-  renderAvgTimeChart(games);
   renderDailyRunsChart(games);
+  renderTrendAnalysis();
+  renderOverviewFilterBar();
 }
 
 function renderAvgTimeChart(games) {
@@ -2345,10 +2457,14 @@ let _currentGameId = '';
 let _renderedCats = {};
 
 async function switchTab(id, _btn) {
-  // 가이드 숨기기 + 시스템 사이드바 active 해제
+  // 가이드·크로스게임·NRU 숨기기 + 시스템 사이드바 active 해제
   const guideEl = document.getElementById('guide-section');
   if (guideEl) guideEl.style.display = 'none';
-  ['sidebar-health','sidebar-cron','sidebar-runs','sidebar-guide'].forEach(sid => {
+  const cgHide = document.getElementById('cross-game-section');
+  if (cgHide) cgHide.style.display = 'none';
+  const nruHide = document.getElementById('nru-system-section');
+  if (nruHide) nruHide.style.display = 'none';
+  ['sidebar-cross-game','sidebar-health','sidebar-cron','sidebar-runs','sidebar-nru','sidebar-guide'].forEach(sid => {
     document.getElementById(sid)?.classList.remove('active');
   });
 
@@ -7213,15 +7329,75 @@ function restoreSidebar() {
 }
 
 function sidebarSystemNav(target) {
-  const SYSTEM_TITLES = { health: 'Health Check', cron: '크론 이력', runs: '런 관리', guide: '가이드' };
-  const sectionMap = { health: 'health-check-section', cron: 'cron-section', runs: 'run-manager', guide: 'guide-section' };
+  const SYSTEM_TITLES = { 'cross-game': '게임 비교', health: 'Health Check', cron: '크론 이력', runs: '런 관리', nru: 'NRU 현황', guide: '가이드' };
+  const sectionMap = { 'cross-game': 'cross-game-section', health: 'health-check-section', cron: 'cron-section', runs: 'run-manager', nru: 'nru-system-section', guide: 'guide-section' };
 
   // 모든 사이드바 active 초기화 (게임 + 시스템)
   document.querySelectorAll('#sidebar-games .sidebar-item').forEach(b => b.classList.remove('active'));
-  ['sidebar-health','sidebar-cron','sidebar-runs','sidebar-guide'].forEach(id => {
+  ['sidebar-cross-game','sidebar-health','sidebar-cron','sidebar-runs','sidebar-nru','sidebar-guide'].forEach(id => {
     document.getElementById(id)?.classList.remove('active');
   });
   document.getElementById(`sidebar-${target}`)?.classList.add('active');
+
+  // 게임 비교 페이지
+  if (target === 'cross-game') {
+    const overview = document.getElementById('overview-panel');
+    const panels = document.getElementById('game-panels');
+    overview.style.display = 'none';
+    if (panels) panels.innerHTML = '';
+    _currentGameId = '';
+    _renderedCats = {};
+    const titleEl = document.getElementById('page-title');
+    if (titleEl) titleEl.textContent = '게임 비교';
+    // 가이드 숨기기
+    const guideHide = document.getElementById('guide-section');
+    if (guideHide) guideHide.style.display = 'none';
+    const content = document.querySelector('.content');
+    let cgEl = document.getElementById('cross-game-section');
+    if (!cgEl) {
+      cgEl = document.createElement('div');
+      cgEl.id = 'cross-game-section';
+      content.appendChild(cgEl);
+    }
+    cgEl.style.display = 'block';
+    cgEl.innerHTML = renderCrossGameAnalysis();
+    renderCrossGameCharts();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+  // NRU 현황 페이지
+  if (target === 'nru') {
+    const overview = document.getElementById('overview-panel');
+    const panels = document.getElementById('game-panels');
+    overview.style.display = 'none';
+    if (panels) panels.innerHTML = '';
+    _currentGameId = '';
+    _renderedCats = {};
+    const titleEl = document.getElementById('page-title');
+    if (titleEl) titleEl.textContent = 'NRU 현황';
+    const guideHide2 = document.getElementById('guide-section');
+    if (guideHide2) guideHide2.style.display = 'none';
+    const cgHide2 = document.getElementById('cross-game-section');
+    if (cgHide2) cgHide2.style.display = 'none';
+    const content = document.querySelector('.content');
+    let nruEl = document.getElementById('nru-system-section');
+    if (!nruEl) {
+      nruEl = document.createElement('div');
+      nruEl.id = 'nru-system-section';
+      content.appendChild(nruEl);
+    }
+    nruEl.style.display = 'block';
+    nruEl.innerHTML = renderNruOverview();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+  // NRU 숨기기
+  const nruEl = document.getElementById('nru-system-section');
+  if (nruEl) nruEl.style.display = 'none';
+
+  // 크로스게임 숨기기
+  const cgEl = document.getElementById('cross-game-section');
+  if (cgEl) cgEl.style.display = 'none';
 
   // 가이드 페이지는 별도 렌더링
   if (target === 'guide') {
@@ -7497,6 +7673,906 @@ function _injectMergeButtons(container) {
     mergeBtn.onclick = (e) => { e.stopPropagation(); mergeSections(mergeBtn); };
     handle.appendChild(mergeBtn);
   });
+}
+
+/* ══════════════════════════════════════════════
+   Feature 1: 리그레션 자동 감지
+   ══════════════════════════════════════════════ */
+
+function detectRegressions(current, previous) {
+  const alerts = [];
+  const allGameIds = new Set([...Object.keys(current), ...Object.keys(previous)]);
+  for (const gid of allGameIds) {
+    const cur = current[gid];
+    const prev = previous[gid];
+    if (!cur || !prev || prev.runs === 0) continue;
+
+    // 클리어율 (%p)
+    const crDelta = cur.clear_rate - prev.clear_rate;
+    if (crDelta <= REGRESSION_THRESHOLDS.clear_rate.critical) {
+      alerts.push({ game_id: gid, metric: 'clear_rate', severity: 'critical', current: cur.clear_rate, previous: prev.clear_rate, delta: crDelta });
+    } else if (crDelta <= REGRESSION_THRESHOLDS.clear_rate.warn) {
+      alerts.push({ game_id: gid, metric: 'clear_rate', severity: 'warn', current: cur.clear_rate, previous: prev.clear_rate, delta: crDelta });
+    }
+
+    // 평균 시간 (%)
+    if (prev.avg_time > 0) {
+      const timePct = ((cur.avg_time - prev.avg_time) / prev.avg_time) * 100;
+      if (timePct >= REGRESSION_THRESHOLDS.avg_time.critical) {
+        alerts.push({ game_id: gid, metric: 'avg_time', severity: 'critical', current: cur.avg_time, previous: prev.avg_time, delta: timePct });
+      } else if (timePct >= REGRESSION_THRESHOLDS.avg_time.warn) {
+        alerts.push({ game_id: gid, metric: 'avg_time', severity: 'warn', current: cur.avg_time, previous: prev.avg_time, delta: timePct });
+      }
+    }
+
+    // 에러 발생률 (%)
+    if (prev.error_rate > 0) {
+      const errPct = ((cur.error_rate - prev.error_rate) / prev.error_rate) * 100;
+      if (errPct >= REGRESSION_THRESHOLDS.error_rate.critical) {
+        alerts.push({ game_id: gid, metric: 'error_rate', severity: 'critical', current: cur.error_rate, previous: prev.error_rate, delta: errPct });
+      } else if (errPct >= REGRESSION_THRESHOLDS.error_rate.warn) {
+        alerts.push({ game_id: gid, metric: 'error_rate', severity: 'warn', current: cur.error_rate, previous: prev.error_rate, delta: errPct });
+      }
+    }
+  }
+  return alerts;
+}
+
+function renderRegressionAlerts() {
+  const container = document.getElementById('regression-alerts');
+  if (!container) return;
+  const { recent, previous } = splitByPeriod(_allRuns);
+  if (!previous.length) { container.innerHTML = ''; return; }
+
+  const curMetrics = calcPeriodMetrics(recent);
+  const prevMetrics = calcPeriodMetrics(previous);
+  const alerts = detectRegressions(curMetrics, prevMetrics);
+
+  if (!alerts.length) {
+    container.innerHTML = `
+      <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:10px 16px;margin-bottom:12px;font-size:13px;display:flex;align-items:center;gap:8px">
+        <span style="font-size:16px">✅</span>
+        <span style="color:var(--status-ok);font-weight:600">모든 지표 안정</span>
+        <span style="color:var(--text-muted);font-size:11px;margin-left:auto">최근 ${REGRESSION_PERIOD_DAYS}일 vs 이전 ${REGRESSION_PERIOD_DAYS}일</span>
+      </div>`;
+    return;
+  }
+
+  alerts.sort((a, b) => (a.severity === 'critical' ? 0 : 1) - (b.severity === 'critical' ? 0 : 1));
+  const alertCards = alerts.map(a => {
+    const th = REGRESSION_THRESHOLDS[a.metric];
+    const isCrit = a.severity === 'critical';
+    const borderColor = isCrit ? 'var(--status-err)' : 'var(--status-warn)';
+    const bgColor = isCrit ? 'rgba(239,68,68,.08)' : 'rgba(245,158,11,.08)';
+    const icon = isCrit ? '🔴' : '⚠️';
+    const sevLabel = isCrit ? 'CRITICAL' : 'WARN';
+    let deltaStr;
+    if (a.metric === 'clear_rate') deltaStr = `${a.delta > 0 ? '+' : ''}${a.delta.toFixed(1)}%p (${a.previous.toFixed(1)}% → ${a.current.toFixed(1)}%)`;
+    else if (a.metric === 'avg_time') deltaStr = `+${a.delta.toFixed(1)}% (${a.previous.toFixed(1)}s → ${a.current.toFixed(1)}s)`;
+    else deltaStr = `+${a.delta.toFixed(0)}% (${a.previous.toFixed(1)} → ${a.current.toFixed(1)})`;
+    return `<div style="background:${bgColor};border:1px solid ${borderColor}40;border-left:3px solid ${borderColor};border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:14px">${icon}</span>
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:600;color:var(--text-primary)">${a.game_id} — ${th.label}</div>
+        <div style="font-size:11px;color:var(--text-secondary);margin-top:2px">${deltaStr}</div>
+      </div>
+      <span style="font-size:10px;font-weight:600;color:${borderColor};padding:2px 6px;border-radius:4px;background:${bgColor}">${sevLabel}</span>
+    </div>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="font-size:15px">📉</span>
+        <span style="font-weight:600;font-size:13px">리그레션 감지</span>
+        <span style="font-size:11px;color:var(--text-muted);margin-left:auto">최근 ${REGRESSION_PERIOD_DAYS}일 vs 이전 ${REGRESSION_PERIOD_DAYS}일</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:8px">${alertCards}</div>
+    </div>`;
+}
+
+/* ══════════════════════════════════════════════
+   Feature 2: 기간 비교 분석
+   ══════════════════════════════════════════════ */
+
+function renderPeriodComparison() {
+  const section = document.getElementById('period-comparison-section');
+  if (!section) return;
+  section.innerHTML = `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <span style="font-size:15px">📅</span>
+        <span style="font-weight:600;font-size:14px">기간 비교 분석</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+        <button class="cmp-preset-btn" onclick="comparePeriodPreset('week',this)">이번 주 vs 지난 주</button>
+        <button class="cmp-preset-btn" onclick="comparePeriodPreset('month',this)">이번 달 vs 지난 달</button>
+        <button class="cmp-preset-btn" onclick="comparePeriodPreset('7d',this)">최근 7일 vs 이전 7일</button>
+        <button class="cmp-preset-btn" onclick="comparePeriodPreset('14d',this)">최근 14일 vs 이전 14일</button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;font-size:12px">
+        <span style="color:var(--text-muted)">기간 A:</span>
+        <input type="date" id="cmp-start-a" class="cmp-date-input">
+        <span style="color:var(--text-muted)">~</span>
+        <input type="date" id="cmp-end-a" class="cmp-date-input">
+        <span style="color:var(--text-muted);margin-left:8px">기간 B:</span>
+        <input type="date" id="cmp-start-b" class="cmp-date-input">
+        <span style="color:var(--text-muted)">~</span>
+        <input type="date" id="cmp-end-b" class="cmp-date-input">
+        <button class="cmp-preset-btn" onclick="comparePeriodCustom()">비교</button>
+      </div>
+      <div id="period-comparison-result" style="color:var(--text-muted);font-size:12px;text-align:center;padding:12px 0">프리셋을 선택하거나 날짜를 입력하세요</div>
+    </div>`;
+}
+
+function comparePeriodPreset(type, btn) {
+  // 버튼 active 토글
+  document.querySelectorAll('.cmp-preset-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const today = new Date();
+  let startA, endA, startB, endB, labelA, labelB;
+  if (type === 'week') {
+    const dow = today.getDay() || 7;
+    const monThis = new Date(today); monThis.setDate(today.getDate() - dow + 1);
+    startA = _fmtDate(monThis); endA = _fmtDate(today);
+    const prevSun = new Date(monThis); prevSun.setDate(monThis.getDate() - 1);
+    const prevMon = new Date(prevSun); prevMon.setDate(prevSun.getDate() - 6);
+    startB = _fmtDate(prevMon); endB = _fmtDate(prevSun);
+    labelA = '이번 주'; labelB = '지난 주';
+  } else if (type === 'month') {
+    startA = _fmtDate(new Date(today.getFullYear(), today.getMonth(), 1));
+    endA = _fmtDate(today);
+    const prevEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+    startB = _fmtDate(new Date(prevEnd.getFullYear(), prevEnd.getMonth(), 1));
+    endB = _fmtDate(prevEnd);
+    labelA = '이번 달'; labelB = '지난 달';
+  } else {
+    const days = parseInt(type);
+    endA = _fmtDate(today);
+    startA = _fmtDate(new Date(today.getTime() - days * 86400000));
+    endB = _fmtDate(new Date(today.getTime() - days * 86400000 - 86400000));
+    startB = _fmtDate(new Date(today.getTime() - days * 2 * 86400000));
+    labelA = '최근 ' + days + '일'; labelB = '이전 ' + days + '일';
+  }
+  execPeriodComparison(startA, endA, startB, endB, labelA, labelB);
+}
+
+function comparePeriodCustom() {
+  const sA = document.getElementById('cmp-start-a')?.value;
+  const eA = document.getElementById('cmp-end-a')?.value;
+  const sB = document.getElementById('cmp-start-b')?.value;
+  const eB = document.getElementById('cmp-end-b')?.value;
+  if (!sA || !eA || !sB || !eB) { alert('기간 A, B의 시작/종료 날짜를 모두 입력해주세요.'); return; }
+  document.querySelectorAll('.cmp-preset-btn').forEach(b => b.classList.remove('active'));
+  execPeriodComparison(sA, eA, sB, eB, sA + '~' + eA, sB + '~' + eB);
+}
+
+function execPeriodComparison(startA, endA, startB, endB, labelA, labelB) {
+  const runsA = filterRunsByDateRange(_allRuns, startA, endA);
+  const runsB = filterRunsByDateRange(_allRuns, startB, endB);
+  const data = buildComparisonData(runsA, runsB, labelA, labelB);
+  renderComparisonResult(data);
+}
+
+function buildComparisonData(runsA, runsB, labelA, labelB) {
+  const totalA = { runs: runsA.length, levels: 0, cleared: 0, time: 0 };
+  const totalB = { runs: runsB.length, levels: 0, cleared: 0, time: 0 };
+  runsA.forEach(r => { totalA.levels += r.levels_played || 0; totalA.cleared += r.levels_cleared || 0; totalA.time += r.total_time_sec || 0; });
+  runsB.forEach(r => { totalB.levels += r.levels_played || 0; totalB.cleared += r.levels_cleared || 0; totalB.time += r.total_time_sec || 0; });
+
+  const summary = [
+    { label: '총 런 수', a: totalA.runs, b: totalB.runs, fmt: 'int' },
+    { label: '총 판 수', a: totalA.levels, b: totalB.levels, fmt: 'int' },
+    { label: '클리어율', a: totalA.levels ? (totalA.cleared / totalA.levels * 100) : 0, b: totalB.levels ? (totalB.cleared / totalB.levels * 100) : 0, fmt: 'pct' },
+    { label: '판당 평균시간', a: totalA.levels ? (totalA.time / totalA.levels) : 0, b: totalB.levels ? (totalB.time / totalB.levels) : 0, fmt: 'sec' },
+  ];
+
+  // 게임별 클리어율
+  const mA = calcPeriodMetrics(runsA);
+  const mB = calcPeriodMetrics(runsB);
+  const allGames = [...new Set([...Object.keys(mA), ...Object.keys(mB)])].sort();
+
+  // 일별 런 수
+  const dailyA = {}, dailyB = {};
+  runsA.forEach(r => { dailyA[r.run_date] = (dailyA[r.run_date] || 0) + 1; });
+  runsB.forEach(r => { dailyB[r.run_date] = (dailyB[r.run_date] || 0) + 1; });
+
+  return { summary, mA, mB, allGames, dailyA, dailyB, labelA, labelB };
+}
+
+function _cmpFmtVal(v, fmt) {
+  if (fmt === 'int') return v.toLocaleString();
+  if (fmt === 'pct') return v.toFixed(1) + '%';
+  if (fmt === 'sec') return v.toFixed(1) + 's';
+  return String(v);
+}
+
+function _cmpDelta(a, b, fmt) {
+  if (b === 0 && a === 0) return { text: '—', color: 'var(--text-muted)' };
+  let diff, text;
+  if (fmt === 'pct') {
+    diff = a - b;
+    text = (diff > 0 ? '▲ +' : diff < 0 ? '▼ ' : '') + diff.toFixed(1) + '%p';
+  } else if (fmt === 'sec') {
+    diff = b === 0 ? 0 : ((a - b) / b) * 100;
+    // 시간은 줄어드는 게 좋으므로 색상 반전
+    text = (diff > 0 ? '▲ +' : diff < 0 ? '▼ ' : '') + diff.toFixed(1) + '%';
+    const color = diff > 0 ? 'var(--status-err)' : diff < 0 ? 'var(--status-ok)' : 'var(--text-muted)';
+    return { text, color };
+  } else {
+    diff = b === 0 ? 0 : ((a - b) / b) * 100;
+    text = (diff > 0 ? '▲ +' : diff < 0 ? '▼ ' : '') + diff.toFixed(1) + '%';
+  }
+  const color = diff > 0 ? 'var(--status-ok)' : diff < 0 ? 'var(--status-err)' : 'var(--text-muted)';
+  return { text, color };
+}
+
+function renderComparisonResult(data) {
+  const el = document.getElementById('period-comparison-result');
+  if (!el) return;
+  if (!data.summary[0].a && !data.summary[0].b) {
+    el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:12px">선택한 기간에 데이터가 없습니다</div>';
+    return;
+  }
+
+  // 요약 테이블
+  const rows = data.summary.map(s => {
+    const d = _cmpDelta(s.a, s.b, s.fmt);
+    return `<tr>
+      <td style="font-weight:500;color:var(--text-primary)">${s.label}</td>
+      <td style="text-align:right;font-weight:600">${_cmpFmtVal(s.b, s.fmt)}</td>
+      <td style="text-align:right;font-weight:600">${_cmpFmtVal(s.a, s.fmt)}</td>
+      <td style="text-align:right;font-weight:600;color:${d.color}">${d.text}</td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px">
+      <thead><tr>
+        <th style="text-align:left;padding:6px 10px;border-bottom:2px solid var(--border);color:var(--text-muted)">지표</th>
+        <th style="text-align:right;padding:6px 10px;border-bottom:2px solid var(--border);color:var(--text-muted)">${data.labelB}</th>
+        <th style="text-align:right;padding:6px 10px;border-bottom:2px solid var(--border);color:var(--text-muted)">${data.labelA}</th>
+        <th style="text-align:right;padding:6px 10px;border-bottom:2px solid var(--border);color:var(--text-muted)">증감</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="chart-grid">
+      <div class="chart-box"><h4>게임별 클리어율 비교</h4><canvas id="cmp-chart-cr"></canvas></div>
+      <div class="chart-box"><h4>게임별 판당 평균시간 비교</h4><canvas id="cmp-chart-time"></canvas></div>
+    </div>`;
+
+  // 게임별 클리어율 비교 차트
+  if (_charts.cmpClearRate) _charts.cmpClearRate.destroy();
+  const crCtx = document.getElementById('cmp-chart-cr');
+  if (crCtx) {
+    _charts.cmpClearRate = new Chart(crCtx, {
+      type: 'bar',
+      data: {
+        labels: data.allGames,
+        datasets: [
+          { label: data.labelB, data: data.allGames.map(g => data.mB[g]?.clear_rate || 0), backgroundColor: 'rgba(148,163,184,.5)', borderColor: '#94a3b8', borderWidth: 1, borderRadius: 4 },
+          { label: data.labelA, data: data.allGames.map(g => data.mA[g]?.clear_rate || 0), backgroundColor: 'rgba(59,130,246,.6)', borderColor: '#3b82f6', borderWidth: 1, borderRadius: 4 },
+        ],
+      },
+      options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } }, plugins: { legend: { labels: { font: { size: 11 } } } } },
+    });
+  }
+
+  // 게임별 평균시간 비교 차트
+  if (_charts.cmpAvgTime) _charts.cmpAvgTime.destroy();
+  const timeCtx = document.getElementById('cmp-chart-time');
+  if (timeCtx) {
+    _charts.cmpAvgTime = new Chart(timeCtx, {
+      type: 'bar',
+      data: {
+        labels: data.allGames,
+        datasets: [
+          { label: data.labelB, data: data.allGames.map(g => data.mB[g]?.avg_time?.toFixed(1) || 0), backgroundColor: 'rgba(148,163,184,.5)', borderColor: '#94a3b8', borderWidth: 1, borderRadius: 4 },
+          { label: data.labelA, data: data.allGames.map(g => data.mA[g]?.avg_time?.toFixed(1) || 0), backgroundColor: 'rgba(59,130,246,.6)', borderColor: '#3b82f6', borderWidth: 1, borderRadius: 4 },
+        ],
+      },
+      options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { callback: v => v + 's' } } }, plugins: { legend: { labels: { font: { size: 11 } } } } },
+    });
+  }
+}
+
+/* ══════════════════════════════════════════════
+   Feature 3: 게임 비교
+   ══════════════════════════════════════════════ */
+
+function aggregateCrossGame(runs, days, persona) {
+  const cutoff = _fmtDate(new Date(Date.now() - days * 86400000));
+  let filtered = runs.filter(r => r.run_date >= cutoff);
+  if (persona) filtered = filtered.filter(r => r.persona === persona);
+  const result = {};
+  for (const r of filtered) {
+    if (!result[r.game_id]) result[r.game_id] = { cleared: 0, played: 0, time: 0, runs: 0, daily: {}, personas: {} };
+    const g = result[r.game_id];
+    g.cleared += r.levels_cleared || 0;
+    g.played += r.levels_played || 0;
+    g.time += r.total_time_sec || 0;
+    g.runs++;
+    if (!g.daily[r.run_date]) g.daily[r.run_date] = { cleared: 0, played: 0 };
+    g.daily[r.run_date].cleared += r.levels_cleared || 0;
+    g.daily[r.run_date].played += r.levels_played || 0;
+    if (!g.personas[r.persona]) g.personas[r.persona] = { cleared: 0, played: 0, runs: 0 };
+    g.personas[r.persona].cleared += r.levels_cleared || 0;
+    g.personas[r.persona].played += r.levels_played || 0;
+    g.personas[r.persona].runs++;
+  }
+  for (const g of Object.values(result)) {
+    g.clear_rate = g.played ? (g.cleared / g.played * 100) : 0;
+    g.avg_time = g.played ? (g.time / g.played) : 0;
+  }
+  return result;
+}
+
+function renderCrossGameAnalysis() {
+  const data = aggregateCrossGame(_allRuns, _crossGameDays, _crossGamePersona);
+  const gameIds = Object.keys(data).sort();
+  if (!gameIds.length) return '<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:13px">크로스게임 데이터가 없습니다</div>';
+
+  const periodBtns = [7, 14, 30, 90].map(d => `<button class="cg-period-btn${_crossGameDays===d?' active':''}" onclick="crossGamePeriod(${d})">${d}일</button>`).join('');
+  const personaOpts = ['<option value="">전체</option>'].concat(
+    PERSONA_ORDER.map(p => `<option value="${p}"${_crossGamePersona===p?' selected':''}>${PERSONA_KO[p]}</option>`)
+  ).join('');
+
+  // 매트릭스 테이블
+  const bestCr = Math.max(...gameIds.map(g => data[g].clear_rate));
+  const bestTime = Math.min(...gameIds.filter(g => data[g].avg_time > 0).map(g => data[g].avg_time));
+  const matrixRows = gameIds.map(g => {
+    const d = data[g];
+    const crClass = d.clear_rate === bestCr ? ' class="cg-best"' : '';
+    const timeClass = d.avg_time === bestTime ? ' class="cg-best"' : '';
+    const gc = GAME_COLORS[g] || '#8b5cf6';
+    return `<tr>
+      <td><span style="font-weight:600;color:${gc}">${g}</span></td>
+      <td${crClass}>${d.clear_rate.toFixed(1)}%</td>
+      <td${timeClass}>${d.avg_time.toFixed(1)}s</td>
+      <td>${d.runs}</td>
+      <td>${d.played.toLocaleString()}</td>
+      <td>${d.cleared.toLocaleString()}</td>
+    </tr>`;
+  }).join('');
+
+  return `
+    <div class="cg-filter-group">
+      ${periodBtns}
+      <span style="color:var(--text-muted);margin-left:8px;font-size:12px">페르소나:</span>
+      <select class="cg-persona-select" onchange="crossGamePersona(this.value)">${personaOpts}</select>
+    </div>
+    <div class="chart-grid" style="margin-bottom:16px">
+      <div class="chart-box"><h4>클리어율 비교</h4><canvas id="cg-chart-cr"></canvas></div>
+      <div class="chart-box"><h4>판당 평균시간 비교</h4><canvas id="cg-chart-time"></canvas></div>
+    </div>
+    <div class="chart-grid" style="margin-bottom:16px">
+      <div class="chart-box"><h4>일별 클리어율 추이</h4><canvas id="cg-chart-daily"></canvas></div>
+      <div class="chart-box"><h4>페르소나별 성과</h4><canvas id="cg-chart-persona"></canvas></div>
+    </div>
+    <div class="tbl-wrap">
+      <h4>비교 매트릭스</h4>
+      <table class="cg-matrix">
+        <thead><tr><th>게임</th><th>클리어율</th><th>평균시간</th><th>런 수</th><th>총 판</th><th>클리어</th></tr></thead>
+        <tbody>${matrixRows}</tbody>
+      </table>
+    </div>`;
+}
+
+function renderCrossGameCharts() {
+  const data = aggregateCrossGame(_allRuns, _crossGameDays, _crossGamePersona);
+  const gameIds = Object.keys(data).sort();
+  if (!gameIds.length) return;
+  const colors = gameIds.map(g => GAME_COLORS[g] || '#8b5cf6');
+
+  // 1) 클리어율
+  if (_charts.cgClearRate) _charts.cgClearRate.destroy();
+  const crCtx = document.getElementById('cg-chart-cr');
+  if (crCtx) {
+    _charts.cgClearRate = new Chart(crCtx, {
+      type: 'bar', data: { labels: gameIds, datasets: [{ label: '클리어율', data: gameIds.map(g => data[g].clear_rate.toFixed(1)), backgroundColor: colors.map(c => c + '99'), borderColor: colors, borderWidth: 1.5, borderRadius: 6 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } } },
+    });
+  }
+
+  // 2) 평균시간
+  if (_charts.cgAvgTime) _charts.cgAvgTime.destroy();
+  const timeCtx = document.getElementById('cg-chart-time');
+  if (timeCtx) {
+    _charts.cgAvgTime = new Chart(timeCtx, {
+      type: 'bar', data: { labels: gameIds, datasets: [{ label: '평균시간', data: gameIds.map(g => data[g].avg_time.toFixed(1)), backgroundColor: colors.map(c => c + '99'), borderColor: colors, borderWidth: 1.5, borderRadius: 6 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => v + 's' } } } },
+    });
+  }
+
+  // 3) 일별 클리어율 추이
+  if (_charts.cgDailyTrend) _charts.cgDailyTrend.destroy();
+  const dailyCtx = document.getElementById('cg-chart-daily');
+  if (dailyCtx) {
+    const allDates = new Set();
+    gameIds.forEach(g => Object.keys(data[g].daily).forEach(d => allDates.add(d)));
+    const dates = [...allDates].sort();
+    const datasets = gameIds.map((g, i) => ({
+      label: g, borderColor: colors[i], tension: 0.3, fill: false, spanGaps: true, pointRadius: 2,
+      data: dates.map(d => { const dd = data[g].daily[d]; return dd && dd.played ? +(dd.cleared / dd.played * 100).toFixed(1) : null; }),
+    }));
+    _charts.cgDailyTrend = new Chart(dailyCtx, {
+      type: 'line', data: { labels: dates.map(d => d.slice(5)), datasets },
+      options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } }, plugins: { legend: { labels: { font: { size: 11 } } } } },
+    });
+  }
+
+  // 4) 페르소나별 성과
+  if (_charts.cgPersona) _charts.cgPersona.destroy();
+  const pCtx = document.getElementById('cg-chart-persona');
+  if (pCtx) {
+    const datasets = gameIds.map((g, i) => ({
+      label: g, backgroundColor: colors[i] + '99', borderColor: colors[i], borderWidth: 1, borderRadius: 4,
+      data: PERSONA_ORDER.map(p => { const pp = data[g].personas[p]; return pp && pp.played ? +(pp.cleared / pp.played * 100).toFixed(1) : 0; }),
+    }));
+    _charts.cgPersona = new Chart(pCtx, {
+      type: 'bar', data: { labels: PERSONA_ORDER.map(p => PERSONA_KO[p]), datasets },
+      options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } }, plugins: { legend: { labels: { font: { size: 11 } } } } },
+    });
+  }
+}
+
+function crossGamePeriod(days) {
+  _crossGameDays = days;
+  refreshCrossGame();
+}
+function crossGamePersona(persona) {
+  _crossGamePersona = persona || null;
+  refreshCrossGame();
+}
+function refreshCrossGame() {
+  const section = document.getElementById('cross-game-section');
+  if (!section || section.style.display === 'none') return;
+  section.innerHTML = renderCrossGameAnalysis();
+  renderCrossGameCharts();
+}
+
+/* ══════════════════════════════════════════════
+   리그레션 배지 (요약 바 통합용)
+   ══════════════════════════════════════════════ */
+
+function _buildRegressionBadge() {
+  const { recent, previous } = splitByPeriod(_allRuns);
+  if (!previous.length) return '';
+  const curM = calcPeriodMetrics(recent);
+  const prevM = calcPeriodMetrics(previous);
+  const alerts = detectRegressions(curM, prevM);
+  if (!alerts.length) {
+    return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;background:rgba(16,185,129,.1);color:var(--status-ok);font-size:11px;font-weight:600;cursor:pointer" onclick="switchTrendTab('regression')" title="리그레션 상세 보기">✅ 안정</span>`;
+  }
+  const critCount = alerts.filter(a => a.severity === 'critical').length;
+  const warnCount = alerts.length - critCount;
+  const bg = critCount ? 'rgba(239,68,68,.1)' : 'rgba(245,158,11,.1)';
+  const color = critCount ? 'var(--status-err)' : 'var(--status-warn)';
+  const icon = critCount ? '🔴' : '⚠️';
+  const label = critCount ? `CRITICAL ${critCount}` + (warnCount ? ` · WARN ${warnCount}` : '') : `WARN ${warnCount}`;
+  return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;background:${bg};color:${color};font-size:11px;font-weight:600;cursor:pointer" onclick="switchTrendTab('regression')" title="리그레션 상세 보기">${icon} ${label}</span>`;
+}
+
+/* ══════════════════════════════════════════════
+   트렌드 분석 탭 카드 (리그레션 + 기간비교 + 히트맵)
+   ══════════════════════════════════════════════ */
+
+let _currentTrendTab = 'regression';
+
+function switchTrendTab(tab) {
+  _currentTrendTab = tab;
+  renderTrendAnalysis();
+}
+
+function renderTrendAnalysis() {
+  const section = document.getElementById('trend-analysis-section');
+  if (!section) return;
+
+  const tabs = [
+    { id: 'regression', label: '📉 리그레션' },
+    { id: 'comparison', label: '📅 기간 비교' },
+    { id: 'heatmap', label: '🗓️ 히트맵' },
+  ];
+  const tabsHtml = tabs.map(t =>
+    `<button class="cg-period-btn${_currentTrendTab === t.id ? ' active' : ''}" onclick="switchTrendTab('${t.id}')">${t.label}</button>`
+  ).join('');
+
+  let content = '';
+  if (_currentTrendTab === 'regression') {
+    content = _buildRegressionContent();
+  } else if (_currentTrendTab === 'comparison') {
+    content = _buildComparisonContent();
+  } else if (_currentTrendTab === 'heatmap') {
+    content = _buildHeatmapContent();
+  }
+
+  section.innerHTML = `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <span style="font-weight:600;font-size:14px">📊 트렌드 분석</span>
+        <div style="display:flex;gap:6px;margin-left:auto">${tabsHtml}</div>
+      </div>
+      <div id="trend-tab-content">${content}</div>
+    </div>`;
+
+  // 기간 비교 탭이면 차트 렌더 필요
+  if (_currentTrendTab === 'comparison' && _lastComparisonData) {
+    _renderComparisonCharts(_lastComparisonData);
+  }
+}
+
+function _buildRegressionContent() {
+  const { recent, previous } = splitByPeriod(_allRuns);
+  if (!previous.length) return '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px">비교 기간 데이터 부족 (최소 2주 데이터 필요)</div>';
+  const curM = calcPeriodMetrics(recent);
+  const prevM = calcPeriodMetrics(previous);
+  const alerts = detectRegressions(curM, prevM);
+
+  if (!alerts.length) {
+    return `<div style="text-align:center;padding:20px">
+      <span style="font-size:24px">✅</span>
+      <div style="color:var(--status-ok);font-weight:600;margin-top:8px">모든 지표 안정</div>
+      <div style="color:var(--text-muted);font-size:11px;margin-top:4px">최근 ${REGRESSION_PERIOD_DAYS}일 vs 이전 ${REGRESSION_PERIOD_DAYS}일 비교 결과</div>
+    </div>`;
+  }
+
+  alerts.sort((a, b) => (a.severity === 'critical' ? 0 : 1) - (b.severity === 'critical' ? 0 : 1));
+  const cards = alerts.map(a => {
+    const th = REGRESSION_THRESHOLDS[a.metric];
+    const isCrit = a.severity === 'critical';
+    const borderColor = isCrit ? 'var(--status-err)' : 'var(--status-warn)';
+    const bgColor = isCrit ? 'rgba(239,68,68,.08)' : 'rgba(245,158,11,.08)';
+    const icon = isCrit ? '🔴' : '⚠️';
+    let deltaStr;
+    if (a.metric === 'clear_rate') deltaStr = `${a.delta > 0 ? '+' : ''}${a.delta.toFixed(1)}%p (${a.previous.toFixed(1)}% → ${a.current.toFixed(1)}%)`;
+    else if (a.metric === 'avg_time') deltaStr = `+${a.delta.toFixed(1)}% (${a.previous.toFixed(1)}s → ${a.current.toFixed(1)}s)`;
+    else deltaStr = `+${a.delta.toFixed(0)}% (${a.previous.toFixed(1)} → ${a.current.toFixed(1)})`;
+    return `<div style="background:${bgColor};border:1px solid ${borderColor}40;border-left:3px solid ${borderColor};border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:14px">${icon}</span>
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:600;color:var(--text-primary)">${a.game_id} — ${th.label}</div>
+        <div style="font-size:11px;color:var(--text-secondary);margin-top:2px">${deltaStr}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">최근 ${REGRESSION_PERIOD_DAYS}일 vs 이전 ${REGRESSION_PERIOD_DAYS}일</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px">${cards}</div>`;
+}
+
+let _lastComparisonData = null;
+
+function _buildComparisonContent() {
+  return `
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+      <button class="cmp-preset-btn" onclick="comparePeriodPreset('week',this)">이번 주 vs 지난 주</button>
+      <button class="cmp-preset-btn" onclick="comparePeriodPreset('month',this)">이번 달 vs 지난 달</button>
+      <button class="cmp-preset-btn" onclick="comparePeriodPreset('7d',this)">최근 7일 vs 이전 7일</button>
+      <button class="cmp-preset-btn" onclick="comparePeriodPreset('14d',this)">최근 14일 vs 이전 14일</button>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;font-size:12px">
+      <span style="color:var(--text-muted)">기간 A:</span>
+      <input type="date" id="cmp-start-a" class="cmp-date-input">
+      <span style="color:var(--text-muted)">~</span>
+      <input type="date" id="cmp-end-a" class="cmp-date-input">
+      <span style="color:var(--text-muted);margin-left:8px">기간 B:</span>
+      <input type="date" id="cmp-start-b" class="cmp-date-input">
+      <span style="color:var(--text-muted)">~</span>
+      <input type="date" id="cmp-end-b" class="cmp-date-input">
+      <button class="cmp-preset-btn" onclick="comparePeriodCustom()">비교</button>
+    </div>
+    <div id="period-comparison-result" style="color:var(--text-muted);font-size:12px;text-align:center;padding:12px 0">프리셋을 선택하거나 날짜를 입력하세요</div>`;
+}
+
+function _buildHeatmapContent() {
+  const runs = _getFilteredRuns();
+  if (!runs.length) return '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px">데이터가 없습니다</div>';
+
+  const DOW_KR = ['일', '월', '화', '수', '목', '금', '토'];
+  const matrix = Array.from({ length: 7 }, () => Array(24).fill(null).map(() => ({ runs: 0, levels: 0, cleared: 0 })));
+  for (const r of runs) {
+    if (!r.created_at) continue;
+    const dt = new Date(r.created_at);
+    matrix[dt.getDay()][dt.getHours()].runs++;
+    matrix[dt.getDay()][dt.getHours()].levels += r.levels_played || 0;
+    matrix[dt.getDay()][dt.getHours()].cleared += r.levels_cleared || 0;
+  }
+  let maxRuns = 0;
+  for (const row of matrix) for (const cell of row) if (cell.runs > maxRuns) maxRuns = cell.runs;
+
+  let headerHtml = '<div class="heatmap-label"></div>';
+  for (let h = 0; h < 24; h++) headerHtml += `<div class="heatmap-header">${h}</div>`;
+
+  let rowsHtml = '';
+  for (let dow = 1; dow <= 7; dow++) {
+    const d = dow % 7;
+    rowsHtml += `<div class="heatmap-label">${DOW_KR[d]}</div>`;
+    for (let h = 0; h < 24; h++) {
+      const cell = matrix[d][h];
+      if (cell.runs === 0) {
+        rowsHtml += `<div class="heatmap-cell" style="background:var(--border)" title="${DOW_KR[d]} ${h}시: 없음"></div>`;
+      } else {
+        const intensity = Math.min(cell.runs / Math.max(maxRuns, 1), 1);
+        const cr = cell.levels ? Math.round(cell.cleared / cell.levels * 100) : 0;
+        const hue = Math.round(cr * 1.2);
+        const alpha = 0.3 + intensity * 0.7;
+        rowsHtml += `<div class="heatmap-cell" style="background:hsla(${hue},70%,45%,${alpha.toFixed(2)})" title="${DOW_KR[d]} ${h}시: ${cell.runs}런, ${cell.levels}판, 클리어 ${cr}%">${cell.runs}</div>`;
+      }
+    }
+  }
+
+  return `
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">색상: 클리어율 (🟢높음 → 🔴낮음) · 진하기: 런 수</div>
+    <div class="heatmap-grid">${headerHtml}${rowsHtml}</div>`;
+}
+
+/* ══════════════════════════════════════════════
+   Feature 5: NRU 시스템 탭
+   ══════════════════════════════════════════════ */
+
+function renderNruOverview() {
+  if (!_nruRuns.length) {
+    return `<div style="text-align:center;padding:60px 20px">
+      <div style="font-size:32px;margin-bottom:12px">🎓</div>
+      <div style="font-size:14px;color:var(--text-muted)">NRU 데이터가 없습니다</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:4px">run_nru.py 실행 후 자동 적재됩니다</div>
+    </div>`;
+  }
+
+  // 게임별 그룹핑
+  const byGame = {};
+  for (const r of _nruRuns) {
+    if (!byGame[r.game_id]) byGame[r.game_id] = [];
+    byGame[r.game_id].push(r);
+  }
+  const gameIds = Object.keys(byGame).sort();
+
+  // 게임별 요약 카드
+  const gameCards = gameIds.map(gid => {
+    const runs = byGame[gid];
+    const passCount = runs.filter(r => r.ready).length;
+    const passRate = Math.round(passCount / runs.length * 100);
+    const latestRun = runs[0];
+    const levels = latestRun.level_results || [];
+    const totalLevels = levels.length;
+    const clearedLevels = levels.filter(l => l.success).length;
+    const latestDate = latestRun.run_date || '';
+    const versions = [...new Set(runs.map(r => r.client_version).filter(Boolean))];
+    const gc = GAME_COLORS[gid] || '#8b5cf6';
+
+    return `<div class="game-card" style="--gc:${gc}">
+      <h3>${gid} NRU</h3>
+      <div class="stat"><span class="stat-label">총 런</span><span class="stat-value">${runs.length}회</span></div>
+      <div class="stat"><span class="stat-label">통과율</span><span class="stat-value" style="color:${passRate>=80?'var(--status-ok)':passRate>=50?'var(--status-warn)':'var(--status-err)'}">${passRate}%</span></div>
+      <div class="stat"><span class="stat-label">최근 레벨</span><span class="stat-value">${clearedLevels}/${totalLevels} 클리어</span></div>
+      <div class="stat"><span class="stat-label">최근 실행</span><span class="stat-value">${latestDate ? latestDate.slice(5) : '-'}</span></div>
+      <div class="stat"><span class="stat-label">빌드</span><span class="stat-value" style="font-size:11px">${versions.slice(0,2).join(', ') || '-'}</span></div>
+    </div>`;
+  }).join('');
+
+  // 레벨별 통합 히트맵
+  const levelHeatmap = gameIds.map(gid => {
+    const runs = byGame[gid];
+    const levelStats = {};
+    for (const r of runs) {
+      for (const lv of (r.level_results || [])) {
+        if (!levelStats[lv.level]) levelStats[lv.level] = { total: 0, success: 0 };
+        levelStats[lv.level].total++;
+        if (lv.success) levelStats[lv.level].success++;
+      }
+    }
+    const gc = GAME_COLORS[gid] || '#8b5cf6';
+    const cells = Object.entries(levelStats).sort(([a],[b]) => Number(a) - Number(b)).map(([lv, s]) => {
+      const rate = Math.round(s.success / s.total * 100);
+      const bg = rate >= 100 ? 'rgba(16,185,129,.7)' : rate >= 50 ? 'rgba(245,158,11,.5)' : 'rgba(239,68,68,.6)';
+      return `<div style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:4px;background:${bg};font-size:10px;font-weight:600;color:#fff;margin:2px" title="Lv${lv}: ${rate}% (${s.success}/${s.total})">${lv}</div>`;
+    }).join('');
+    return `<div style="margin-bottom:12px">
+      <div style="font-size:12px;font-weight:600;color:${gc};margin-bottom:4px">${gid}</div>
+      <div style="display:flex;flex-wrap:wrap">${cells}</div>
+    </div>`;
+  }).join('');
+
+  // 게임별 NRU 상세 보기 버튼
+  const detailBtns = gameIds.map(gid =>
+    `<button class="ctrl-btn" onclick="switchTab('${gid}',null);setTimeout(()=>{const nruBtn=document.querySelector('[onclick*=\\'switchCat\\'][onclick*=\\'nru\\']');if(nruBtn)nruBtn.click();},200)" style="font-size:11px">${gid} 상세 보기 →</button>`
+  ).join(' ');
+
+  return `
+    <div class="cards">${gameCards}</div>
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px">
+      <h4 style="font-size:14px;margin-bottom:12px">레벨별 클리어 현황</h4>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">
+        <span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:rgba(16,185,129,.7);vertical-align:middle"></span> 100%
+        <span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:rgba(245,158,11,.5);vertical-align:middle;margin-left:8px"></span> 50~99%
+        <span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:rgba(239,68,68,.6);vertical-align:middle;margin-left:8px"></span> 0~49%
+      </div>
+      ${levelHeatmap}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${detailBtns}</div>`;
+}
+
+/* ══════════════════════════════════════════════
+   Feature 6: 고급 필터링
+   ══════════════════════════════════════════════ */
+
+function renderOverviewFilterBar() {
+  const bar = document.getElementById('ov-filter-bar');
+  if (!bar) return;
+
+  const allGames = [...new Set(_allRuns.map(r => r.game_id))].sort();
+  const gameChips = allGames.map(g => {
+    const active = !_ovFilterGames || _ovFilterGames.has(g);
+    return `<button class="ov-filter-chip${active ? ' active' : ''}" onclick="toggleOvFilterGame('${g}')">${g}</button>`;
+  }).join('');
+
+  const personaChips = PERSONA_ORDER.map(p => {
+    const active = !_ovFilterPersonas || _ovFilterPersonas.has(p);
+    return `<button class="ov-filter-chip${active ? ' active' : ''}" onclick="toggleOvFilterPersona('${p}')" style="border-color:${PERSONA_COLORS[p]}40">${PERSONA_KO[p]}</button>`;
+  }).join('');
+
+  const dayOpts = [7, 14, 30, 90].map(d => {
+    const active = _ovFilterDays === d;
+    return `<button class="ov-filter-chip${active ? ' active' : ''}" onclick="setOvFilterDays(${d})">${d}일</button>`;
+  }).join('');
+  const allDaysActive = !_ovFilterDays;
+
+  bar.innerHTML = `
+    <div class="ov-filter-bar">
+      <span class="ov-filter-label">게임</span>
+      ${gameChips}
+      <div class="ov-filter-sep"></div>
+      <span class="ov-filter-label">페르소나</span>
+      ${personaChips}
+      <div class="ov-filter-sep"></div>
+      <span class="ov-filter-label">기간</span>
+      <button class="ov-filter-chip${allDaysActive ? ' active' : ''}" onclick="setOvFilterDays(0)">전체</button>
+      ${dayOpts}
+      <div class="ov-filter-sep"></div>
+      <button class="ov-filter-chip" onclick="resetOvFilter()" style="color:var(--status-warn);border-color:var(--status-warn)40">초기화</button>
+    </div>`;
+}
+
+function _getFilteredRuns() {
+  let runs = _allRuns;
+  if (_ovFilterGames) runs = runs.filter(r => _ovFilterGames.has(r.game_id));
+  if (_ovFilterPersonas) runs = runs.filter(r => _ovFilterPersonas.has(r.persona));
+  if (_ovFilterDays) {
+    const cutoff = _fmtDate(new Date(Date.now() - _ovFilterDays * 86400000));
+    runs = runs.filter(r => r.run_date >= cutoff);
+  }
+  return runs;
+}
+
+function toggleOvFilterGame(gid) {
+  const allGames = [...new Set(_allRuns.map(r => r.game_id))];
+  if (!_ovFilterGames) {
+    // 전체 → 하나 해제
+    _ovFilterGames = new Set(allGames.filter(g => g !== gid));
+  } else if (_ovFilterGames.has(gid)) {
+    _ovFilterGames.delete(gid);
+    if (_ovFilterGames.size === 0) _ovFilterGames = new Set([gid]); // 최소 1개
+  } else {
+    _ovFilterGames.add(gid);
+    if (_ovFilterGames.size === allGames.length) _ovFilterGames = null; // 전체 = null
+  }
+  applyOvFilter();
+}
+
+function toggleOvFilterPersona(p) {
+  if (!_ovFilterPersonas) {
+    _ovFilterPersonas = new Set(PERSONA_ORDER.filter(pp => pp !== p));
+  } else if (_ovFilterPersonas.has(p)) {
+    _ovFilterPersonas.delete(p);
+    if (_ovFilterPersonas.size === 0) _ovFilterPersonas = new Set([p]);
+  } else {
+    _ovFilterPersonas.add(p);
+    if (_ovFilterPersonas.size === PERSONA_ORDER.length) _ovFilterPersonas = null;
+  }
+  applyOvFilter();
+}
+
+function setOvFilterDays(days) {
+  _ovFilterDays = days || null;
+  applyOvFilter();
+}
+
+function resetOvFilter() {
+  _ovFilterGames = null;
+  _ovFilterPersonas = null;
+  _ovFilterDays = null;
+  applyOvFilter();
+}
+
+function applyOvFilter() {
+  const filtered = _getFilteredRuns();
+  const games = aggregateOverview(filtered);
+  _overviewGames = games;
+  renderOverview(games);
+  // URL 해시 동기화
+  const params = [];
+  if (_ovFilterGames) params.push('games=' + [..._ovFilterGames].join(','));
+  if (_ovFilterPersonas) params.push('personas=' + [..._ovFilterPersonas].join(','));
+  if (_ovFilterDays) params.push('days=' + _ovFilterDays);
+  history.replaceState(null, '', params.length ? '#' + params.join('&') : location.pathname);
+}
+
+function readFilterFromHash() {
+  const hash = location.hash.slice(1);
+  if (!hash) return;
+  const params = Object.fromEntries(hash.split('&').map(s => s.split('=')));
+  if (params.games) _ovFilterGames = new Set(params.games.split(','));
+  if (params.personas) _ovFilterPersonas = new Set(params.personas.split(','));
+  if (params.days) _ovFilterDays = Number(params.days) || null;
+}
+
+/* ══════════════════════════════════════════════
+   Feature 8: Heatmap 시각화
+   ══════════════════════════════════════════════ */
+
+function renderHeatmap() {
+  const section = document.getElementById('heatmap-section');
+  if (!section) return;
+
+  const runs = _getFilteredRuns();
+  if (!runs.length) { section.innerHTML = ''; return; }
+
+  // 요일(0=일~6=토) × 시간대(0~23) 매트릭스
+  const DOW_KR = ['일', '월', '화', '수', '목', '금', '토'];
+  const matrix = Array.from({ length: 7 }, () => Array(24).fill(null).map(() => ({ runs: 0, levels: 0, cleared: 0 })));
+
+  for (const r of runs) {
+    if (!r.created_at) continue;
+    const dt = new Date(r.created_at);
+    const dow = dt.getDay();
+    const hour = dt.getHours();
+    matrix[dow][hour].runs++;
+    matrix[dow][hour].levels += r.levels_played || 0;
+    matrix[dow][hour].cleared += r.levels_cleared || 0;
+  }
+
+  // 최대값 (색상 스케일링용)
+  let maxRuns = 0;
+  for (const row of matrix) for (const cell of row) if (cell.runs > maxRuns) maxRuns = cell.runs;
+
+  // 헤더 (시간)
+  let headerHtml = '<div class="heatmap-label"></div>';
+  for (let h = 0; h < 24; h++) {
+    headerHtml += `<div class="heatmap-header">${h}</div>`;
+  }
+
+  // 행 (요일)
+  let rowsHtml = '';
+  for (let dow = 1; dow <= 7; dow++) {
+    const d = dow % 7; // 월(1)~일(0) 순서
+    rowsHtml += `<div class="heatmap-label">${DOW_KR[d]}</div>`;
+    for (let h = 0; h < 24; h++) {
+      const cell = matrix[d][h];
+      if (cell.runs === 0) {
+        rowsHtml += `<div class="heatmap-cell" style="background:var(--border)" title="${DOW_KR[d]} ${h}시: 데이터 없음"></div>`;
+      } else {
+        const intensity = Math.min(cell.runs / Math.max(maxRuns, 1), 1);
+        const cr = cell.levels ? Math.round(cell.cleared / cell.levels * 100) : 0;
+        // 색상: 클리어율 기반 (녹색~빨강), 투명도: 런 수 기반
+        const hue = Math.round(cr * 1.2); // 0(빨강) ~ 120(초록)
+        const alpha = 0.3 + intensity * 0.7;
+        rowsHtml += `<div class="heatmap-cell" style="background:hsla(${hue},70%,45%,${alpha.toFixed(2)})" title="${DOW_KR[d]} ${h}시: ${cell.runs}런, ${cell.levels}판, 클리어 ${cr}%">${cell.runs}</div>`;
+      }
+    }
+  }
+
+  section.innerHTML = `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <span style="font-size:15px">🗓️</span>
+        <span style="font-weight:600;font-size:14px">요일 × 시간대 히트맵</span>
+        <span style="font-size:11px;color:var(--text-muted);margin-left:auto">색상: 클리어율 (🟢높음 → 🔴낮음) · 진하기: 런 수</span>
+      </div>
+      <div class="heatmap-grid">
+        ${headerHtml}
+        ${rowsHtml}
+      </div>
+    </div>`;
 }
 </script>
 </body>
