@@ -953,6 +953,7 @@ let _crossGamePersona = null;
 let _ovFilterGames = null;    // null = 전체, Set of game_ids
 let _ovFilterPersonas = null; // null = 전체, Set of personas
 let _ovFilterDays = null;     // null = 전체, number
+let _ovFilterPlatforms = null; // null = all, Set of 'pc'|'aos'
 
 /* ── 공통 유틸 ── */
 function _fmtDate(d) { return d.toISOString().slice(0, 10); }
@@ -1003,7 +1004,7 @@ function filterRunsByDateRange(runs, start, end) {
 async function fetchRuns() {
   const { data, error } = await sb
     .from('freeplay_runs')
-    .select('id,game_id,persona,run_date,uid,client_ver,levels_played,levels_cleared,clear_rate,total_time_sec,source_path,created_at')
+    .select('id,game_id,persona,run_date,uid,client_ver,levels_played,levels_cleared,clear_rate,total_time_sec,source_path,created_at,platform')
     .order('run_date', { ascending: false });
   if (error) throw error;
   return data || [];
@@ -1013,7 +1014,7 @@ async function fetchGameRuns(gameId) {
   // 기본 정보 + 경량 metrics를 병렬 fetch
   const [basicRes, metricsRes] = await Promise.all([
     sb.from('freeplay_runs')
-      .select('id,game_id,persona,run_date,uid,client_ver,levels_played,levels_cleared,clear_rate,total_time_sec,source_path,created_at')
+      .select('id,game_id,persona,run_date,uid,client_ver,levels_played,levels_cleared,clear_rate,total_time_sec,source_path,created_at,platform')
       .eq('game_id', gameId)
       .order('run_date', { ascending: false }),
     sb.rpc('get_light_metrics', { p_game_id: gameId })
@@ -8150,6 +8151,7 @@ function _updateUrlHash() {
   // 필터 상태
   if (_ovFilterGames) parts.push('games=' + [..._ovFilterGames].join(','));
   if (_ovFilterPersonas) parts.push('personas=' + [..._ovFilterPersonas].join(','));
+  if (_ovFilterPlatforms) parts.push('platforms=' + [..._ovFilterPlatforms].join(','));
   if (_ovFilterDays) parts.push('days=' + _ovFilterDays);
   // 탭 상태
   if (_currentGameId) {
@@ -8188,9 +8190,10 @@ async function _restoreFromHash() {
   // 필터 복원
   if (params.games) _ovFilterGames = new Set(params.games.split(','));
   if (params.personas) _ovFilterPersonas = new Set(params.personas.split(','));
+  if (params.platforms) _ovFilterPlatforms = new Set(params.platforms.split(','));
   if (params.days) _ovFilterDays = Number(params.days) || null;
   // 필터 적용 (Overview 재렌더)
-  if (params.games || params.personas || params.days) {
+  if (params.games || params.personas || params.platforms || params.days) {
     const filtered = _getFilteredRuns();
     const games = aggregateOverview(filtered);
     _overviewGames = games;
@@ -8528,8 +8531,20 @@ function renderOverviewFilterBar() {
   }).join('');
   const allDaysActive = !_ovFilterDays;
 
+  const platformList = [
+    { key: 'pc', label: 'PC' },
+    { key: 'aos', label: 'AOS' },
+  ];
+  const platformChips = platformList.map(({ key, label }) => {
+    const active = !_ovFilterPlatforms || _ovFilterPlatforms.has(key);
+    return `<button class="ov-filter-chip${active ? ' active' : ''}" onclick="toggleOvFilterPlatform('${key}')">${label}</button>`;
+  }).join('');
+
   bar.innerHTML = `
     <div class="ov-filter-bar">
+      <span class="ov-filter-label">플랫폼</span>
+      ${platformChips}
+      <div class="ov-filter-sep"></div>
       <span class="ov-filter-label">게임</span>
       ${gameChips}
       <div class="ov-filter-sep"></div>
@@ -8548,6 +8563,14 @@ function _getFilteredRuns() {
   let runs = _allRuns;
   if (_ovFilterGames) runs = runs.filter(r => _ovFilterGames.has(r.game_id));
   if (_ovFilterPersonas) runs = runs.filter(r => _ovFilterPersonas.has(r.persona));
+  if (_ovFilterPlatforms) {
+    runs = runs.filter(r => {
+      const p = r.platform || 'pc';
+      if (_ovFilterPlatforms.has('pc') && !p.startsWith('aos_')) return true;
+      if (_ovFilterPlatforms.has('aos') && p.startsWith('aos_')) return true;
+      return false;
+    });
+  }
   if (_ovFilterDays) {
     const cutoff = _fmtDate(new Date(Date.now() - _ovFilterDays * 86400000));
     runs = runs.filter(r => r.run_date >= cutoff);
@@ -8583,6 +8606,20 @@ function toggleOvFilterPersona(p) {
   applyOvFilter();
 }
 
+function toggleOvFilterPlatform(p) {
+  const allPlatforms = ['pc', 'aos'];
+  if (!_ovFilterPlatforms) {
+    _ovFilterPlatforms = new Set(allPlatforms.filter(pp => pp !== p));
+  } else if (_ovFilterPlatforms.has(p)) {
+    _ovFilterPlatforms.delete(p);
+    if (_ovFilterPlatforms.size === 0) _ovFilterPlatforms = new Set([p]);
+  } else {
+    _ovFilterPlatforms.add(p);
+    if (_ovFilterPlatforms.size === allPlatforms.length) _ovFilterPlatforms = null;
+  }
+  applyOvFilter();
+}
+
 function setOvFilterDays(days) {
   _ovFilterDays = days || null;
   applyOvFilter();
@@ -8591,6 +8628,7 @@ function setOvFilterDays(days) {
 function resetOvFilter() {
   _ovFilterGames = null;
   _ovFilterPersonas = null;
+  _ovFilterPlatforms = null;
   _ovFilterDays = null;
   applyOvFilter();
 }
@@ -8609,6 +8647,7 @@ function readFilterFromHash() {
   const params = Object.fromEntries(hash.split('&').map(s => s.split('=')));
   if (params.games) _ovFilterGames = new Set(params.games.split(','));
   if (params.personas) _ovFilterPersonas = new Set(params.personas.split(','));
+  if (params.platforms) _ovFilterPlatforms = new Set(params.platforms.split(','));
   if (params.days) _ovFilterDays = Number(params.days) || null;
 }
 
