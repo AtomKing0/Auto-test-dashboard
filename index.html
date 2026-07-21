@@ -803,29 +803,35 @@ body.edit-mode .merge-btn { display: inline-block; }
 
 /* ── Exec Status Banner (visible to all) ── */
 .exec-status-banner {
-  background: linear-gradient(90deg, rgba(59,130,246,.08), rgba(16,185,129,.08));
-  border: 1px solid var(--border); border-radius: 10px;
-  margin: 8px 16px 0; padding: 10px 16px;
+  background: linear-gradient(90deg, rgba(59,130,246,.15), rgba(16,185,129,.10));
+  border: 1px solid rgba(59,130,246,.3); border-radius: 10px;
+  margin: 8px 16px 0; padding: 12px 18px;
+  box-shadow: 0 2px 12px rgba(59,130,246,.15);
 }
 .exec-banner-inner {
   display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
   font-size: calc(13px * var(--fs-scale));
 }
 .exec-banner-item {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 4px 12px; border-radius: 8px;
-  background: var(--bg-card); border: 1px solid var(--border);
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 14px; border-radius: 8px;
 }
-.exec-banner-game { font-weight: 700; }
+.exec-banner-item.running {
+  background: rgba(59,130,246,.15); border: 1px solid rgba(59,130,246,.4);
+}
+.exec-banner-item.pending {
+  background: rgba(245,158,11,.10); border: 1px solid rgba(245,158,11,.3);
+}
+.exec-banner-game { font-weight: 700; font-size: 14px; }
 .exec-banner-detail { color: var(--text-secondary); }
-.exec-banner-status { font-weight: 600; font-size: 12px; }
-.exec-banner-status.running { color: #3b82f6; }
-.exec-banner-status.pending { color: var(--status-warn); }
+.exec-banner-status { font-weight: 700; font-size: 12px; padding: 2px 8px; border-radius: 6px; }
+.exec-banner-status.running { color: #fff; background: #3b82f6; }
+.exec-banner-status.pending { color: #fff; background: #f59e0b; }
 .exec-banner-scheduled { color: var(--text-muted); font-size: 11px; }
-@keyframes execPulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+@keyframes execPulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
 .exec-banner-dot {
-  width: 8px; height: 8px; border-radius: 50%; background: #3b82f6;
-  animation: execPulse 1.5s infinite;
+  width: 10px; height: 10px; border-radius: 50%; background: #3b82f6;
+  animation: execPulse 1.2s infinite;
 }
 .exec-banner-dot.pending { background: var(--status-warn); animation: none; }
 
@@ -9336,7 +9342,7 @@ function renderHeatmap() {
       const { data, error } = await sb
         .from('freeplay_commands')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('requested_at', { ascending: false })
         .limit(20);
 
       if (error) throw error;
@@ -9365,7 +9371,7 @@ function renderHeatmap() {
       const levels = cmd.levels || '-';
       const status = cmd.status || 'pending';
       const statusKr = STATUS_KR[status] || status;
-      const createdAt = cmd.created_at ? formatExecTime(cmd.created_at) : '';
+      const createdAt = cmd.requested_at ? formatExecTime(cmd.requested_at) : '';
       const scheduledAt = cmd.scheduled_at ? formatExecTime(cmd.scheduled_at) : '';
       const canCancel = status === 'pending';
 
@@ -9476,7 +9482,7 @@ function renderHeatmap() {
       const isRunning = status === 'running';
       const statusKr = isRunning ? '실행중' : '대기';
       const scheduled = cmd.scheduled_at ? ' (' + formatExecTime(cmd.scheduled_at) + ' 예약)' : '';
-      return '<div class="exec-banner-item">' +
+      return '<div class="exec-banner-item ' + status + '">' +
         '<span class="exec-banner-dot ' + status + '"></span>' +
         '<span class="exec-banner-game" style="color:' + gc + '">' + game + '</span>' +
         '<span class="exec-banner-detail">' + persona + ' ' + levels + '판</span>' +
