@@ -801,6 +801,34 @@ body.edit-mode .merge-btn { display: inline-block; }
   .main-area { margin-left: 52px; }
 }
 
+/* ── Exec Status Banner (visible to all) ── */
+.exec-status-banner {
+  background: linear-gradient(90deg, rgba(59,130,246,.08), rgba(16,185,129,.08));
+  border: 1px solid var(--border); border-radius: 10px;
+  margin: 8px 16px 0; padding: 10px 16px;
+}
+.exec-banner-inner {
+  display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+  font-size: calc(13px * var(--fs-scale));
+}
+.exec-banner-item {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: 8px;
+  background: var(--bg-card); border: 1px solid var(--border);
+}
+.exec-banner-game { font-weight: 700; }
+.exec-banner-detail { color: var(--text-secondary); }
+.exec-banner-status { font-weight: 600; font-size: 12px; }
+.exec-banner-status.running { color: #3b82f6; }
+.exec-banner-status.pending { color: var(--status-warn); }
+.exec-banner-scheduled { color: var(--text-muted); font-size: 11px; }
+@keyframes execPulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+.exec-banner-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: #3b82f6;
+  animation: execPulse 1.5s infinite;
+}
+.exec-banner-dot.pending { background: var(--status-warn); animation: none; }
+
 /* ── Exec Panel (Freeplay Execution) ── */
 .exec-panel {
   position: fixed; right: -400px; top: 0; bottom: 0; z-index: 310;
@@ -1074,6 +1102,11 @@ body.edit-mode .merge-btn { display: inline-block; }
             <option value="20">20판</option>
           </select>
         </div>
+        <!-- Schedule -->
+        <div>
+          <div class="exec-section-label">예약 (비워두면 즉시 실행)</div>
+          <input type="datetime-local" class="exec-select" id="exec-schedule" style="width:100%">
+        </div>
         <!-- Submit -->
         <button class="exec-submit-btn" id="exec-submit-btn" onclick="promptExecPassword()">&#128274; 실행</button>
         <!-- Divider -->
@@ -1106,6 +1139,11 @@ body.edit-mode .merge-btn { display: inline-block; }
       <button class="ctrl-btn" onclick="resetLayout()" style="margin-left:auto">초기화</button>
       <button class="ctrl-btn" onclick="toggleEditMode()" style="background:#3b82f6;color:#fff">완료</button>
     </div>
+    <!-- ── Exec Status Banner (visible to all) ── -->
+    <div class="exec-status-banner" id="exec-status-banner" style="display:none">
+      <div class="exec-banner-inner" id="exec-banner-inner"></div>
+    </div>
+
     <div class="content">
       <div id="loading" class="state-msg">
         <div class="icon">⏳</div>
@@ -9233,13 +9271,18 @@ function renderHeatmap() {
     try {
       /* Submit one command per selected game */
       const results = [];
+      const scheduleInput = document.getElementById('exec-schedule');
+      const scheduledAt = scheduleInput && scheduleInput.value ? new Date(scheduleInput.value).toISOString() : null;
+
       for (const game of games) {
-        const { data, error } = await sb.rpc('submit_command', {
+        const rpcParams = {
           p_password: password,
           p_game: game,
           p_persona: persona,
           p_levels: levels
-        });
+        };
+        if (scheduledAt) rpcParams.p_scheduled_at = scheduledAt;
+        const { data, error } = await sb.rpc('submit_command', rpcParams);
         if (error) throw error;
         results.push({ game, data });
       }
@@ -9254,11 +9297,13 @@ function renderHeatmap() {
 
       closeExecModal();
       if (typeof showToast === 'function') {
-        showToast(games.join(', ') + ' ' + PERSONA_KR_EXEC[persona] + ' ' + levels + '판 실행 요청 완료');
+        const schedMsg = scheduledAt ? ' (예약: ' + new Date(scheduledAt).toLocaleString('ko') + ')' : '';
+        showToast(games.join(', ') + ' ' + PERSONA_KR_EXEC[persona] + ' ' + levels + '판 실행 요청 완료' + schedMsg);
       }
 
-      /* Clear game selection */
+      /* Clear game selection + schedule */
       document.querySelectorAll('.exec-game-btn.selected').forEach(b => b.classList.remove('selected'));
+      if (scheduleInput) scheduleInput.value = '';
 
       /* Reload queue */
       loadCommandQueue();
@@ -9321,12 +9366,13 @@ function renderHeatmap() {
       const status = cmd.status || 'pending';
       const statusKr = STATUS_KR[status] || status;
       const createdAt = cmd.created_at ? formatExecTime(cmd.created_at) : '';
+      const scheduledAt = cmd.scheduled_at ? formatExecTime(cmd.scheduled_at) : '';
       const canCancel = status === 'pending';
 
       return `<div class="exec-queue-item">
         <span class="exec-queue-game" style="color:${gc}">${game}</span>
         <span class="exec-queue-detail">${persona} ${levels}판</span>
-        <span class="exec-queue-time">${createdAt}</span>
+        <span class="exec-queue-time">${scheduledAt ? '예약 ' + scheduledAt : createdAt}</span>
         <span class="exec-queue-status ${status}">${statusKr}</span>
         ${canCancel ? `<button class="exec-queue-cancel" onclick="cancelExecCommand('${cmd.id}')">취소</button>` : ''}
       </div>`;
@@ -9408,15 +9454,75 @@ function renderHeatmap() {
     updateExecBadge(_execCommandsCache);
   }
 
+  /* ── Exec Status Banner (visible to all without opening panel) ── */
+  window.renderExecBanner = function(commands) {
+    const banner = document.getElementById('exec-status-banner');
+    const inner = document.getElementById('exec-banner-inner');
+    if (!banner || !inner) return;
+
+    const active = (commands || []).filter(c => c.status === 'pending' || c.status === 'running');
+    if (active.length === 0) {
+      banner.style.display = 'none';
+      return;
+    }
+
+    banner.style.display = 'block';
+    inner.innerHTML = active.map(cmd => {
+      const game = cmd.game || '?';
+      const gc = GAME_COLORS[game] || '#3b82f6';
+      const persona = PERSONA_KR_EXEC[cmd.persona] || cmd.persona || '';
+      const levels = cmd.levels || '';
+      const status = cmd.status || 'pending';
+      const isRunning = status === 'running';
+      const statusKr = isRunning ? '실행중' : '대기';
+      const scheduled = cmd.scheduled_at ? ' (' + formatExecTime(cmd.scheduled_at) + ' 예약)' : '';
+      return '<div class="exec-banner-item">' +
+        '<span class="exec-banner-dot ' + status + '"></span>' +
+        '<span class="exec-banner-game" style="color:' + gc + '">' + game + '</span>' +
+        '<span class="exec-banner-detail">' + persona + ' ' + levels + '판</span>' +
+        '<span class="exec-banner-status ' + status + '">' + statusKr + '</span>' +
+        (scheduled ? '<span class="exec-banner-scheduled">' + scheduled + '</span>' : '') +
+      '</div>';
+    }).join('');
+  };
+
+  /* Patch existing functions to also update banner */
+  const _origRenderQueue = renderCommandQueue;
+  renderCommandQueue = function(commands) {
+    _origRenderQueue(commands);
+    renderExecBanner(commands);
+  };
+
+  /* ── Banner Realtime: separate channel for users who never open exec panel ── */
+  let _bannerChannel = null;
+  function initBannerRealtime() {
+    if (_bannerChannel) return;
+    try {
+      _bannerChannel = sb.channel('banner-commands')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'freeplay_commands'
+        }, () => {
+          loadCommandQueue();
+        })
+        .subscribe();
+    } catch (err) {
+      console.warn('[Banner] Realtime subscription error:', err);
+    }
+  }
+
   /* ── Init on load ── */
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
       loadCommandQueue();
       initExecRealtime();
+      initBannerRealtime();
     });
   } else {
     loadCommandQueue();
     initExecRealtime();
+    initBannerRealtime();
   }
 
 })();
