@@ -2793,6 +2793,7 @@ async function switchTab(id, _btn) {
     panels.innerHTML = '';
     _currentGameId = '';
     _renderedCats = {};
+    _updateUrlHash();
     return;
   }
 
