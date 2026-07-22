@@ -1112,6 +1112,15 @@ body.edit-mode .merge-btn { display: inline-block; }
             <button class="exec-game-btn" data-platform="aos" style="--exec-gc:#ef4444" onclick="toggleExecPlatform(this)">AOS</button>
           </div>
         </div>
+        <!-- AOS Device Selection (hidden by default) -->
+        <div id="exec-device-section" style="display:none">
+          <div class="exec-section-label">기기 선택</div>
+          <div class="exec-game-grid" id="exec-device-grid">
+            <button class="exec-game-btn selected" data-device="all" style="--exec-gc:#ef4444" onclick="toggleExecDevice(this)">전체</button>
+            <button class="exec-game-btn" data-device="fold" style="--exec-gc:#ef4444" onclick="toggleExecDevice(this)">Fold2</button>
+            <button class="exec-game-btn" data-device="s21" style="--exec-gc:#ef4444" onclick="toggleExecDevice(this)">S21</button>
+          </div>
+        </div>
         <!-- Persona -->
         <div>
           <div class="exec-section-label">페르소나</div>
@@ -9254,11 +9263,42 @@ function renderHeatmap() {
   window.toggleExecPlatform = function(btn) {
     document.querySelectorAll('#exec-platform-grid .exec-game-btn').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
+    // AOS 선택 시 기기 섹션 표시
+    const deviceSection = document.getElementById('exec-device-section');
+    if (deviceSection) {
+      deviceSection.style.display = btn.dataset.platform === 'aos' ? '' : 'none';
+    }
   };
 
   function getSelectedPlatform() {
     const sel = document.querySelector('#exec-platform-grid .exec-game-btn.selected');
     return sel ? sel.dataset.platform : 'pc';
+  }
+
+  /* ── AOS Device toggle (multi-select with "all" logic) ── */
+  window.toggleExecDevice = function(btn) {
+    const device = btn.dataset.device;
+    if (device === 'all') {
+      // "전체" 클릭 → 나머지 해제, 전체만 선택
+      document.querySelectorAll('#exec-device-grid .exec-game-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    } else {
+      // 개별 기기 클릭 → "전체" 해제
+      document.querySelector('#exec-device-grid [data-device="all"]').classList.remove('selected');
+      btn.classList.toggle('selected');
+      // 아무것도 선택 안 되면 "전체"로 복원
+      const selected = document.querySelectorAll('#exec-device-grid .exec-game-btn.selected:not([data-device="all"])');
+      if (selected.length === 0) {
+        document.querySelector('#exec-device-grid [data-device="all"]').classList.add('selected');
+      }
+    }
+  };
+
+  function getSelectedDevices() {
+    const allBtn = document.querySelector('#exec-device-grid [data-device="all"]');
+    if (allBtn && allBtn.classList.contains('selected')) return null; // null = 전체
+    const selected = Array.from(document.querySelectorAll('#exec-device-grid .exec-game-btn.selected')).map(b => b.dataset.device);
+    return selected.length > 0 ? selected.join(',') : null;
   }
 
   function getSelectedGames() {
@@ -9342,6 +9382,10 @@ function renderHeatmap() {
           p_platform: platform
         };
         if (scheduledAt) rpcParams.p_scheduled_at = scheduledAt;
+        if (platform === 'aos') {
+          const devices = getSelectedDevices();
+          if (devices) rpcParams.p_devices = devices;
+        }
         const { data, error } = await sb.rpc('submit_command', rpcParams);
         if (error) throw error;
         results.push({ game, data });
@@ -9431,9 +9475,12 @@ function renderHeatmap() {
       const canCancel = status === 'pending';
 
       const plat = cmd.platform || 'pc';
-      const platBadge = plat === 'aos'
-        ? '<span style="font-size:10px;background:#ef4444;color:#fff;padding:1px 5px;border-radius:4px;margin-left:4px">AOS</span>'
-        : '';
+      const devicesRaw = cmd.devices || '';
+      let platBadge = '';
+      if (plat === 'aos') {
+        const devLabel = devicesRaw ? devicesRaw.toUpperCase() : '전체';
+        platBadge = `<span style="font-size:10px;background:#ef4444;color:#fff;padding:1px 5px;border-radius:4px;margin-left:4px">AOS ${devLabel}</span>`;
+      }
 
       return `<div class="exec-queue-item">
         <span class="exec-queue-game" style="color:${gc}">${game}${platBadge}</span>
