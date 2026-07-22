@@ -9477,7 +9477,7 @@ function renderHeatmap() {
       const statusKr = STATUS_KR[status] || status;
       const createdAt = cmd.requested_at ? formatExecTime(cmd.requested_at) : '';
       const scheduledAt = cmd.scheduled_at ? formatExecTime(cmd.scheduled_at) : '';
-      const canCancel = status === 'pending';
+      const canCancel = status === 'pending' || status === 'running';
 
       const plat = cmd.platform || 'pc';
       const devicesRaw = cmd.devices || '';
