@@ -4312,7 +4312,7 @@ function renderCatSummary(gameId, stages, runs) {
     </div>` : '';
 
   /* 게임 로딩 시간 (freeplay_commands 캐시에서 조회) */
-  const loadCmds = (_execCommandsCache || []).filter(c => c.game === gameId && c.loading_sec > 0);
+  const loadCmds = (window._execCommandsCache || []).filter(c => c.game === gameId && c.loading_sec > 0);
   let loadingMetric = '';
   if (loadCmds.length > 0) {
     const avgLoad = (loadCmds.reduce((a, c) => a + c.loading_sec, 0) / loadCmds.length).toFixed(1);
@@ -9221,7 +9221,7 @@ function renderHeatmap() {
   const PERSONA_KR_EXEC = { all: '전체', hardcore: '고수', average: '중수', casual: '하수', struggling: '초보' };
   const STATUS_KR = { pending: '대기', running: '실행중', completed: '완료', failed: '실패', cancelled: '취소' };
 
-  let _execCommandsCache = [];
+  window._execCommandsCache = window._execCommandsCache || [];
   let _execChannel = null;
 
   /* ── Panel toggle ── */
