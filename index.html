@@ -8533,6 +8533,8 @@ function _updateUrlHash() {
     if (activeSys) {
       const sysId = activeSys.dataset.id;
       if (sysId) parts.push('tab=' + sysId);
+    } else {
+      parts.push('tab=overview');
     }
   }
   history.replaceState(null, '', parts.length ? '#' + parts.join('&') : location.pathname);
@@ -8568,7 +8570,9 @@ async function _restoreFromHash() {
   if (params.tab) {
     const tabId = params.tab;
     const sysIds = ['cross-game', 'health', 'cron', 'runs', 'nru', 'guide'];
-    if (sysIds.includes(tabId)) {
+    if (tabId === 'overview') {
+      await switchTab('overview', null);
+    } else if (sysIds.includes(tabId)) {
       sidebarSystemNav(tabId);
     } else {
       // 게임 탭
