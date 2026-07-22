@@ -1104,6 +1104,14 @@ body.edit-mode .merge-btn { display: inline-block; }
             <button class="exec-game-btn" data-game="MJG" style="--exec-gc:#8b5cf6" onclick="toggleExecGame(this)">MJG</button>
           </div>
         </div>
+        <!-- Platform -->
+        <div>
+          <div class="exec-section-label">플랫폼</div>
+          <div class="exec-game-grid" id="exec-platform-grid">
+            <button class="exec-game-btn selected" data-platform="pc" style="--exec-gc:#6366f1" onclick="toggleExecPlatform(this)">PC</button>
+            <button class="exec-game-btn" data-platform="aos" style="--exec-gc:#ef4444" onclick="toggleExecPlatform(this)">AOS</button>
+          </div>
+        </div>
         <!-- Persona -->
         <div>
           <div class="exec-section-label">페르소나</div>
@@ -9242,8 +9250,19 @@ function renderHeatmap() {
     btn.classList.toggle('selected');
   };
 
+  /* ── Platform toggle (single-select) ── */
+  window.toggleExecPlatform = function(btn) {
+    document.querySelectorAll('#exec-platform-grid .exec-game-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+  };
+
+  function getSelectedPlatform() {
+    const sel = document.querySelector('#exec-platform-grid .exec-game-btn.selected');
+    return sel ? sel.dataset.platform : 'pc';
+  }
+
   function getSelectedGames() {
-    return Array.from(document.querySelectorAll('.exec-game-btn.selected')).map(b => b.dataset.game);
+    return Array.from(document.querySelectorAll('#exec-game-grid .exec-game-btn.selected')).map(b => b.dataset.game);
   }
 
   /* ── Password modal ── */
@@ -9303,6 +9322,7 @@ function renderHeatmap() {
     const games = getSelectedGames();
     const persona = document.getElementById('exec-persona').value;
     const levels = parseInt(document.getElementById('exec-levels').value, 10);
+    const platform = getSelectedPlatform();
 
     confirmBtn.disabled = true;
     errEl.textContent = '';
@@ -9318,7 +9338,8 @@ function renderHeatmap() {
           p_password: password,
           p_game: game,
           p_persona: persona,
-          p_levels: levels
+          p_levels: levels,
+          p_platform: platform
         };
         if (scheduledAt) rpcParams.p_scheduled_at = scheduledAt;
         const { data, error } = await sb.rpc('submit_command', rpcParams);
@@ -9337,7 +9358,8 @@ function renderHeatmap() {
       closeExecModal();
       if (typeof showToast === 'function') {
         const schedMsg = scheduledAt ? ' (예약: ' + new Date(scheduledAt).toLocaleString('ko') + ')' : '';
-        showToast(games.join(', ') + ' ' + PERSONA_KR_EXEC[persona] + ' ' + levels + '판 실행 요청 완료' + schedMsg);
+        const platMsg = platform === 'aos' ? ' [AOS]' : '';
+        showToast(games.join(', ') + ' ' + PERSONA_KR_EXEC[persona] + ' ' + levels + '판' + platMsg + ' 실행 요청 완료' + schedMsg);
       }
 
       /* Clear game selection + schedule */
@@ -9408,8 +9430,13 @@ function renderHeatmap() {
       const scheduledAt = cmd.scheduled_at ? formatExecTime(cmd.scheduled_at) : '';
       const canCancel = status === 'pending';
 
+      const plat = cmd.platform || 'pc';
+      const platBadge = plat === 'aos'
+        ? '<span style="font-size:10px;background:#ef4444;color:#fff;padding:1px 5px;border-radius:4px;margin-left:4px">AOS</span>'
+        : '';
+
       return `<div class="exec-queue-item">
-        <span class="exec-queue-game" style="color:${gc}">${game}</span>
+        <span class="exec-queue-game" style="color:${gc}">${game}${platBadge}</span>
         <span class="exec-queue-detail">${persona} ${levels}판</span>
         <span class="exec-queue-time">${scheduledAt ? '예약 ' + scheduledAt : createdAt}</span>
         ${cmd.loading_sec ? `<span class="exec-queue-load" title="게임 로딩 시간">${cmd.loading_sec}초</span>` : ''}
