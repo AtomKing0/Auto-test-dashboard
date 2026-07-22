@@ -1110,6 +1110,7 @@ body.edit-mode .merge-btn { display: inline-block; }
           <div class="exec-game-grid" id="exec-platform-grid">
             <button class="exec-game-btn selected" data-platform="pc" style="--exec-gc:#6366f1" onclick="toggleExecPlatform(this)">PC</button>
             <button class="exec-game-btn" data-platform="aos" style="--exec-gc:#ef4444" onclick="toggleExecPlatform(this)">AOS</button>
+            <button class="exec-game-btn" data-platform="both" style="--exec-gc:#8b5cf6" onclick="toggleExecPlatform(this)">PC+AOS</button>
           </div>
         </div>
         <!-- AOS Device Selection (hidden by default) -->
@@ -9263,10 +9264,11 @@ function renderHeatmap() {
   window.toggleExecPlatform = function(btn) {
     document.querySelectorAll('#exec-platform-grid .exec-game-btn').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
-    // AOS 선택 시 기기 섹션 표시
+    // AOS 또는 PC+AOS 선택 시 기기 섹션 표시
     const deviceSection = document.getElementById('exec-device-section');
     if (deviceSection) {
-      deviceSection.style.display = btn.dataset.platform === 'aos' ? '' : 'none';
+      const showDevices = btn.dataset.platform === 'aos' || btn.dataset.platform === 'both';
+      deviceSection.style.display = showDevices ? '' : 'none';
     }
   };
 
@@ -9373,22 +9375,25 @@ function renderHeatmap() {
       const scheduleInput = document.getElementById('exec-schedule');
       const scheduledAt = scheduleInput && scheduleInput.value ? new Date(scheduleInput.value).toISOString() : null;
 
+      // PC+AOS면 두 플랫폼 모두 제출
+      const platforms = platform === 'both' ? ['pc', 'aos'] : [platform];
+      const aosDevices = getSelectedDevices();
+
       for (const game of games) {
-        const rpcParams = {
-          p_password: password,
-          p_game: game,
-          p_persona: persona,
-          p_levels: levels,
-          p_platform: platform
-        };
-        if (scheduledAt) rpcParams.p_scheduled_at = scheduledAt;
-        if (platform === 'aos') {
-          const devices = getSelectedDevices();
-          if (devices) rpcParams.p_devices = devices;
+        for (const plat of platforms) {
+          const rpcParams = {
+            p_password: password,
+            p_game: game,
+            p_persona: persona,
+            p_levels: levels,
+            p_platform: plat
+          };
+          if (scheduledAt) rpcParams.p_scheduled_at = scheduledAt;
+          if (plat === 'aos' && aosDevices) rpcParams.p_devices = aosDevices;
+          const { data, error } = await sb.rpc('submit_command', rpcParams);
+          if (error) throw error;
+          results.push({ game, data });
         }
-        const { data, error } = await sb.rpc('submit_command', rpcParams);
-        if (error) throw error;
-        results.push({ game, data });
       }
 
       /* Check results */
@@ -9402,7 +9407,7 @@ function renderHeatmap() {
       closeExecModal();
       if (typeof showToast === 'function') {
         const schedMsg = scheduledAt ? ' (예약: ' + new Date(scheduledAt).toLocaleString('ko') + ')' : '';
-        const platMsg = platform === 'aos' ? ' [AOS]' : '';
+        const platMsg = platform === 'both' ? ' [PC+AOS]' : platform === 'aos' ? ' [AOS]' : '';
         showToast(games.join(', ') + ' ' + PERSONA_KR_EXEC[persona] + ' ' + levels + '판' + platMsg + ' 실행 요청 완료' + schedMsg);
       }
 
