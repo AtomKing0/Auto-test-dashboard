@@ -1157,6 +1157,20 @@ body.edit-mode .merge-btn { display: inline-block; }
           <div class="exec-section-label">예약 (비워두면 즉시 실행)</div>
           <input type="datetime-local" class="exec-select" id="exec-schedule" style="width:100%">
         </div>
+        <!-- Repeat -->
+        <div id="exec-repeat-section">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#94a3b8">
+            <input type="checkbox" id="exec-repeat-checkbox" onchange="toggleRepeatSelect(this.checked)" style="cursor:pointer">
+            <span>&#128260; 반복 실행 (완료 후 자동 재예약)</span>
+          </label>
+          <select class="exec-select" id="exec-repeat-hours" style="width:100%;margin-top:6px;display:none">
+            <option value="6">6시간마다</option>
+            <option value="12">12시간마다</option>
+            <option value="24" selected>24시간마다</option>
+            <option value="48">48시간마다</option>
+            <option value="72">72시간마다</option>
+          </select>
+        </div>
         <!-- Submit -->
         <button class="exec-submit-btn" id="exec-submit-btn" onclick="promptExecPassword()">&#128274; 실행</button>
         <!-- Divider -->
@@ -9352,6 +9366,11 @@ function renderHeatmap() {
     setTimeout(() => pwInput.focus(), 100);
   };
 
+  window.toggleRepeatSelect = function(checked) {
+    const sel = document.getElementById('exec-repeat-hours');
+    if (sel) sel.style.display = checked ? 'block' : 'none';
+  };
+
   window.closeExecModal = function() {
     document.getElementById('exec-modal-overlay').classList.remove('open');
     document.getElementById('exec-modal-pw').value = '';
@@ -9404,6 +9423,10 @@ function renderHeatmap() {
       const results = [];
       const scheduleInput = document.getElementById('exec-schedule');
       const scheduledAt = scheduleInput && scheduleInput.value ? new Date(scheduleInput.value).toISOString() : null;
+      const repeatCheckbox = document.getElementById('exec-repeat-checkbox');
+      const repeatHours = repeatCheckbox && repeatCheckbox.checked
+        ? parseInt(document.getElementById('exec-repeat-hours').value, 10)
+        : 0;
 
       // PC+AOS면 두 플랫폼 모두 제출
       const platforms = platform === 'both' ? ['pc', 'aos'] : [platform];
@@ -9421,6 +9444,7 @@ function renderHeatmap() {
           };
           if (scheduledAt) rpcParams.p_scheduled_at = scheduledAt;
           if (plat === 'aos' && aosDevices) rpcParams.p_devices = aosDevices;
+          if (repeatHours > 0) rpcParams.p_repeat_hours = repeatHours;
           const { data, error } = await sb.rpc('submit_command', rpcParams);
           if (error) throw error;
           results.push({ game, data });
@@ -9439,15 +9463,18 @@ function renderHeatmap() {
       if (typeof showToast === 'function') {
         const schedMsg = scheduledAt ? ' (예약: ' + new Date(scheduledAt).toLocaleString('ko') + ')' : '';
         const platMsg = platform === 'both' ? ' [PC+AOS]' : platform === 'aos' ? ' [AOS]' : '';
+        const repeatMsg = repeatHours > 0 ? ' 🔄' + repeatHours + 'h 반복' : '';
         const msg = testType === 'nru'
-          ? 'SCJ NRU 테스트' + platMsg + ' 실행 요청 완료' + schedMsg
-          : games.join(', ') + ' ' + PERSONA_KR_EXEC[persona] + ' ' + levels + '판' + platMsg + ' 실행 요청 완료' + schedMsg;
+          ? 'SCJ NRU 테스트' + platMsg + ' 실행 요청 완료' + schedMsg + repeatMsg
+          : games.join(', ') + ' ' + PERSONA_KR_EXEC[persona] + ' ' + levels + '판' + platMsg + ' 실행 요청 완료' + schedMsg + repeatMsg;
         showToast(msg);
       }
 
-      /* Clear game selection + schedule */
+      /* Clear game selection + schedule + repeat */
       document.querySelectorAll('.exec-game-btn.selected').forEach(b => b.classList.remove('selected'));
       if (scheduleInput) scheduleInput.value = '';
+      const repeatCb = document.getElementById('exec-repeat-checkbox');
+      if (repeatCb) { repeatCb.checked = false; toggleRepeatSelect(false); }
 
       /* Reload queue */
       loadCommandQueue();
