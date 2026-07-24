@@ -1122,8 +1122,16 @@ body.edit-mode .merge-btn { display: inline-block; }
             <button class="exec-game-btn" data-device="s21" style="--exec-gc:#ef4444" onclick="toggleExecDevice(this)">S21</button>
           </div>
         </div>
+        <!-- Test Type (AOS 전용) -->
+        <div id="exec-test-type-section" style="display:none">
+          <div class="exec-section-label">테스트 타입</div>
+          <div class="exec-game-grid" id="exec-test-type-grid">
+            <button class="exec-game-btn selected" data-testtype="freeplay" style="--exec-gc:#ef4444" onclick="toggleExecTestType(this)">프리플레이</button>
+            <button class="exec-game-btn" data-testtype="nru" style="--exec-gc:#f59e0b" onclick="toggleExecTestType(this)">NRU</button>
+          </div>
+        </div>
         <!-- Persona -->
-        <div>
+        <div id="exec-persona-section">
           <div class="exec-section-label">페르소나</div>
           <select class="exec-select" id="exec-persona">
             <option value="all">All (4종 전체)</option>
@@ -1134,7 +1142,7 @@ body.edit-mode .merge-btn { display: inline-block; }
           </select>
         </div>
         <!-- Levels -->
-        <div>
+        <div id="exec-levels-section">
           <div class="exec-section-label">판수</div>
           <select class="exec-select" id="exec-levels">
             <option value="3">3판</option>
@@ -9269,11 +9277,19 @@ function renderHeatmap() {
   window.toggleExecPlatform = function(btn) {
     document.querySelectorAll('#exec-platform-grid .exec-game-btn').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
-    // AOS 또는 PC+AOS 선택 시 기기 섹션 표시
+    const isAos = btn.dataset.platform === 'aos' || btn.dataset.platform === 'both';
     const deviceSection = document.getElementById('exec-device-section');
-    if (deviceSection) {
-      const showDevices = btn.dataset.platform === 'aos' || btn.dataset.platform === 'both';
-      deviceSection.style.display = showDevices ? '' : 'none';
+    if (deviceSection) deviceSection.style.display = isAos ? '' : 'none';
+    const testTypeSection = document.getElementById('exec-test-type-section');
+    if (testTypeSection) {
+      testTypeSection.style.display = isAos ? '' : 'none';
+      if (!isAos) {
+        // PC로 전환 시 테스트 타입 freeplay로 리셋 + persona/levels 복원
+        document.querySelectorAll('#exec-test-type-grid .exec-game-btn').forEach(b =>
+          b.classList.toggle('selected', b.dataset.testtype === 'freeplay'));
+        document.getElementById('exec-persona-section').style.display = '';
+        document.getElementById('exec-levels-section').style.display = '';
+      }
     }
   };
 
@@ -9306,6 +9322,29 @@ function renderHeatmap() {
     if (allBtn && allBtn.classList.contains('selected')) return null; // null = 전체
     const selected = Array.from(document.querySelectorAll('#exec-device-grid .exec-game-btn.selected')).map(b => b.dataset.device);
     return selected.length > 0 ? selected.join(',') : null;
+  }
+
+  /* ── Test Type toggle (NRU / freeplay) ── */
+  window.toggleExecTestType = function(btn) {
+    document.querySelectorAll('#exec-test-type-grid .exec-game-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    const isNru = btn.dataset.testtype === 'nru';
+    document.getElementById('exec-persona-section').style.display = isNru ? 'none' : '';
+    document.getElementById('exec-levels-section').style.display = isNru ? 'none' : '';
+    if (isNru) {
+      // NRU: SCJ + AOS 강제 선택
+      document.querySelectorAll('#exec-game-grid .exec-game-btn').forEach(b =>
+        b.classList.toggle('selected', b.dataset.game === 'SCJ'));
+      document.querySelectorAll('#exec-platform-grid .exec-game-btn').forEach(b =>
+        b.classList.toggle('selected', b.dataset.platform === 'aos'));
+      document.getElementById('exec-device-section').style.display = '';
+      document.getElementById('exec-test-type-section').style.display = '';
+    }
+  };
+
+  function getSelectedTestType() {
+    const sel = document.querySelector('#exec-test-type-grid .exec-game-btn.selected');
+    return sel ? sel.dataset.testtype : 'freeplay';
   }
 
   function getSelectedGames() {
@@ -9370,6 +9409,7 @@ function renderHeatmap() {
     const persona = document.getElementById('exec-persona').value;
     const levels = parseInt(document.getElementById('exec-levels').value, 10);
     const platform = getSelectedPlatform();
+    const testType = getSelectedTestType();
 
     confirmBtn.disabled = true;
     errEl.textContent = '';
@@ -9391,7 +9431,8 @@ function renderHeatmap() {
             p_game: game,
             p_persona: persona,
             p_levels: levels,
-            p_platform: plat
+            p_platform: plat,
+            p_test_type: testType
           };
           if (scheduledAt) rpcParams.p_scheduled_at = scheduledAt;
           if (plat === 'aos' && aosDevices) rpcParams.p_devices = aosDevices;
@@ -9413,7 +9454,10 @@ function renderHeatmap() {
       if (typeof showToast === 'function') {
         const schedMsg = scheduledAt ? ' (예약: ' + new Date(scheduledAt).toLocaleString('ko') + ')' : '';
         const platMsg = platform === 'both' ? ' [PC+AOS]' : platform === 'aos' ? ' [AOS]' : '';
-        showToast(games.join(', ') + ' ' + PERSONA_KR_EXEC[persona] + ' ' + levels + '판' + platMsg + ' 실행 요청 완료' + schedMsg);
+        const msg = testType === 'nru'
+          ? 'SCJ NRU 테스트 [AOS] 실행 요청 완료' + schedMsg
+          : games.join(', ') + ' ' + PERSONA_KR_EXEC[persona] + ' ' + levels + '판' + platMsg + ' 실행 요청 완료' + schedMsg;
+        showToast(msg);
       }
 
       /* Clear game selection + schedule */
