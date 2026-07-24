@@ -9440,7 +9440,7 @@ function renderHeatmap() {
         const schedMsg = scheduledAt ? ' (예약: ' + new Date(scheduledAt).toLocaleString('ko') + ')' : '';
         const platMsg = platform === 'both' ? ' [PC+AOS]' : platform === 'aos' ? ' [AOS]' : '';
         const msg = testType === 'nru'
-          ? 'SCJ NRU 테스트 [AOS] 실행 요청 완료' + schedMsg
+          ? 'SCJ NRU 테스트' + platMsg + ' 실행 요청 완료' + schedMsg
           : games.join(', ') + ' ' + PERSONA_KR_EXEC[persona] + ' ' + levels + '판' + platMsg + ' 실행 요청 완료' + schedMsg;
         showToast(msg);
       }
@@ -9687,7 +9687,7 @@ function renderHeatmap() {
       return '<div class="exec-banner-item ' + status + '">' +
         '<span class="exec-banner-dot ' + status + '"></span>' +
         '<span class="exec-banner-game" style="color:' + gc + '">' + game + '</span>' +
-        '<span class="exec-banner-detail">' + persona + ' ' + levels + '판</span>' +
+        '<span class="exec-banner-detail">' + (cmd.test_type === 'nru' ? 'NRU' : persona + ' ' + levels + '판') + '</span>' +
         '<span class="exec-banner-status ' + status + '">' + statusKr + '</span>' +
         (scheduled ? '<span class="exec-banner-scheduled">' + scheduled + '</span>' : '') +
       '</div>';
