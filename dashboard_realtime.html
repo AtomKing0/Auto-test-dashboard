@@ -4355,13 +4355,14 @@ function renderCatSummary(gameId, stages, runs) {
 
   /* 게임 로딩 시간 (freeplay_commands 캐시에서 조회) */
   const loadCmds = (window._execCommandsCache || []).filter(c => c.game === gameId && c.loading_sec > 0);
-  let loadingMetric = '';
+  let loadingMetricInner = '';
   if (loadCmds.length > 0) {
     const avgLoad = (loadCmds.reduce((a, c) => a + c.loading_sec, 0) / loadCmds.length).toFixed(1);
     const minLoad = Math.min(...loadCmds.map(c => c.loading_sec)).toFixed(1);
     const maxLoad = Math.max(...loadCmds.map(c => c.loading_sec)).toFixed(1);
-    loadingMetric = `<div class="metric-box"><div class="label">게임 로딩</div><div class="value" style="color:#60a5fa">${avgLoad}초</div><div class="sub">${minLoad}~${maxLoad}초 (${loadCmds.length}회)</div></div>`;
+    loadingMetricInner = `<div class="metric-box"><div class="label">게임 로딩</div><div class="value" style="color:#60a5fa">${avgLoad}초</div><div class="sub">${minLoad}~${maxLoad}초 (${loadCmds.length}회)</div></div>`;
   }
+  const loadingMetric = `<span id="loading-metric-${gameId}">${loadingMetricInner}</span>`;
 
   return `
     <div class="metric-row">${crMetricHtml}${topMetrics}${loadingMetric}</div>
@@ -9670,6 +9671,19 @@ function renderHeatmap() {
   renderCommandQueue = function(commands) {
     _origRenderQueue2(commands);
     renderLoadingSummary(commands);
+    /* 게임 요약 탭 로딩 메트릭 갱신 */
+    if (typeof _currentGameId !== 'undefined' && _currentGameId) {
+      const el = document.getElementById('loading-metric-' + _currentGameId);
+      if (el) {
+        const lc = (commands || []).filter(c => c.game === _currentGameId && c.loading_sec > 0);
+        if (lc.length > 0) {
+          const avg = (lc.reduce((a, c) => a + c.loading_sec, 0) / lc.length).toFixed(1);
+          const min = Math.min(...lc.map(c => c.loading_sec)).toFixed(1);
+          const max = Math.max(...lc.map(c => c.loading_sec)).toFixed(1);
+          el.innerHTML = `<div class="metric-box"><div class="label">게임 로딩</div><div class="value" style="color:#60a5fa">${avg}초</div><div class="sub">${min}~${max}초 (${lc.length}회)</div></div>`;
+        }
+      }
+    }
   };
 
   /* ── Clear completed/failed/cancelled commands ── */
