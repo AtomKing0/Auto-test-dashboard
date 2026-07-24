@@ -1159,9 +1159,10 @@ body.edit-mode .merge-btn { display: inline-block; }
         </div>
         <!-- Repeat -->
         <div id="exec-repeat-section">
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#94a3b8">
-            <input type="checkbox" id="exec-repeat-checkbox" onchange="toggleRepeatSelect(this.checked)" style="cursor:pointer">
-            <span>&#128260; 반복 실행 (완료 후 자동 재예약)</span>
+          <div class="exec-section-label">반복 실행</div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-primary);background:var(--bg-hover,rgba(255,255,255,.05));border-radius:6px;padding:8px 10px;border:1px solid var(--border)">
+            <input type="checkbox" id="exec-repeat-checkbox" onchange="toggleRepeatSelect(this.checked)" style="cursor:pointer;width:15px;height:15px">
+            <span>&#128260; 완료 후 자동 재예약</span>
           </label>
           <select class="exec-select" id="exec-repeat-hours" style="width:100%;margin-top:6px;display:none">
             <option value="6">6시간마다</option>
