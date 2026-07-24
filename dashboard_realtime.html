@@ -1158,10 +1158,10 @@ body.edit-mode .merge-btn { display: inline-block; }
           <input type="datetime-local" class="exec-select" id="exec-schedule" style="width:100%">
         </div>
         <!-- Repeat -->
-        <div id="exec-repeat-section">
+        <div id="exec-repeat-section" style="display:flex;flex-direction:column;gap:6px">
           <div class="exec-section-label">반복 실행</div>
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-primary);background:var(--bg-hover,rgba(255,255,255,.05));border-radius:6px;padding:8px 10px;border:1px solid var(--border)">
-            <input type="checkbox" id="exec-repeat-checkbox" onchange="toggleRepeatSelect(this.checked)" style="cursor:pointer;width:15px;height:15px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#e2e8f0;background:rgba(99,102,241,0.1);border-radius:6px;padding:8px 10px;border:1px solid rgba(99,102,241,0.4)">
+            <input type="checkbox" id="exec-repeat-checkbox" onchange="toggleRepeatSelect(this.checked)" style="cursor:pointer;width:15px;height:15px;flex-shrink:0">
             <span>&#128260; 완료 후 자동 재예약</span>
           </label>
           <select class="exec-select" id="exec-repeat-hours" style="width:100%;margin-top:6px;display:none">
@@ -4353,14 +4353,17 @@ function renderCatSummary(gameId, stages, runs) {
       </table></div>
     </div>` : '';
 
-  /* 게임 로딩 시간 (freeplay_commands 캐시에서 조회) */
-  const loadCmds = (window._execCommandsCache || []).filter(c => c.game === gameId && c.loading_sec > 0);
+  /* 게임 로딩 시간 (_gameLoadingCache 우선, 폴백: _execCommandsCache) */
+  const glc = ((window._gameLoadingCache || {})[gameId]) || [];
+  const fallbackCmds = glc.length === 0
+    ? (window._execCommandsCache || []).filter(c => c.game === gameId && c.loading_sec > 0).map(c => c.loading_sec)
+    : glc;
   let loadingMetricInner = '';
-  if (loadCmds.length > 0) {
-    const avgLoad = (loadCmds.reduce((a, c) => a + c.loading_sec, 0) / loadCmds.length).toFixed(1);
-    const minLoad = Math.min(...loadCmds.map(c => c.loading_sec)).toFixed(1);
-    const maxLoad = Math.max(...loadCmds.map(c => c.loading_sec)).toFixed(1);
-    loadingMetricInner = `<div class="metric-box"><div class="label">게임 로딩</div><div class="value" style="color:#60a5fa">${avgLoad}초</div><div class="sub">${minLoad}~${maxLoad}초 (${loadCmds.length}회)</div></div>`;
+  if (fallbackCmds.length > 0) {
+    const avgLoad = (fallbackCmds.reduce((a, v) => a + v, 0) / fallbackCmds.length).toFixed(1);
+    const minLoad = Math.min(...fallbackCmds).toFixed(1);
+    const maxLoad = Math.max(...fallbackCmds).toFixed(1);
+    loadingMetricInner = `<div class="metric-box"><div class="label">게임 로딩</div><div class="value" style="color:#60a5fa">${avgLoad}초</div><div class="sub">${minLoad}~${maxLoad}초 (${fallbackCmds.length}회)</div></div>`;
   }
   const loadingMetric = `<span id="loading-metric-${gameId}">${loadingMetricInner}</span>`;
 
@@ -9269,7 +9272,40 @@ function renderHeatmap() {
   const STATUS_KR = { pending: '대기', running: '실행중', completed: '완료', failed: '실패', cancelled: '취소' };
 
   window._execCommandsCache = window._execCommandsCache || [];
+  window._gameLoadingCache = window._gameLoadingCache || {};  // game → [{loading_sec}] 별도 캐시 (정리 시 유지)
   let _execChannel = null;
+
+  /* ── 게임별 로딩 데이터 별도 로드 (정리와 무관하게 유지) ── */
+  async function loadGameLoadingData() {
+    try {
+      const { data } = await sb.from('freeplay_commands')
+        .select('game, loading_sec')
+        .not('loading_sec', 'is', null)
+        .gt('loading_sec', 0)
+        .order('requested_at', { ascending: false })
+        .limit(200);
+      if (!data) return;
+      const byGame = {};
+      for (const r of data) {
+        if (!byGame[r.game]) byGame[r.game] = [];
+        byGame[r.game].push(r.loading_sec);
+      }
+      window._gameLoadingCache = byGame;
+      /* 현재 열려있는 게임 요약 탭 갱신 */
+      if (typeof _currentGameId !== 'undefined' && _currentGameId && byGame[_currentGameId]) {
+        const el = document.getElementById('loading-metric-' + _currentGameId);
+        if (el) _updateLoadingMetricEl(el, byGame[_currentGameId]);
+      }
+    } catch (e) { /* 조용히 실패 */ }
+  }
+
+  function _updateLoadingMetricEl(el, vals) {
+    if (!vals || vals.length === 0) return;
+    const avg = (vals.reduce((a, v) => a + v, 0) / vals.length).toFixed(1);
+    const min = Math.min(...vals).toFixed(1);
+    const max = Math.max(...vals).toFixed(1);
+    el.innerHTML = `<div class="metric-box"><div class="label">게임 로딩</div><div class="value" style="color:#60a5fa">${avg}초</div><div class="sub">${min}~${max}초 (${vals.length}회)</div></div>`;
+  }
 
   /* ── Panel toggle ── */
   window.toggleExecPanel = function() {
@@ -9671,16 +9707,16 @@ function renderHeatmap() {
   renderCommandQueue = function(commands) {
     _origRenderQueue2(commands);
     renderLoadingSummary(commands);
-    /* 게임 요약 탭 로딩 메트릭 갱신 */
+    /* 게임 요약 탭 로딩 메트릭 갱신 (_gameLoadingCache 우선) */
     if (typeof _currentGameId !== 'undefined' && _currentGameId) {
       const el = document.getElementById('loading-metric-' + _currentGameId);
       if (el) {
-        const lc = (commands || []).filter(c => c.game === _currentGameId && c.loading_sec > 0);
-        if (lc.length > 0) {
-          const avg = (lc.reduce((a, c) => a + c.loading_sec, 0) / lc.length).toFixed(1);
-          const min = Math.min(...lc.map(c => c.loading_sec)).toFixed(1);
-          const max = Math.max(...lc.map(c => c.loading_sec)).toFixed(1);
-          el.innerHTML = `<div class="metric-box"><div class="label">게임 로딩</div><div class="value" style="color:#60a5fa">${avg}초</div><div class="sub">${min}~${max}초 (${lc.length}회)</div></div>`;
+        const cached = (window._gameLoadingCache || {})[_currentGameId];
+        if (cached && cached.length > 0) {
+          _updateLoadingMetricEl(el, cached);
+        } else {
+          const lc = (commands || []).filter(c => c.game === _currentGameId && c.loading_sec > 0);
+          if (lc.length > 0) _updateLoadingMetricEl(el, lc.map(c => c.loading_sec));
         }
       }
     }
@@ -9767,11 +9803,13 @@ function renderHeatmap() {
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
       loadCommandQueue();
+      loadGameLoadingData();
       initExecRealtime();
       initBannerRealtime();
     });
   } else {
     loadCommandQueue();
+    loadGameLoadingData();
     initExecRealtime();
     initBannerRealtime();
   }
