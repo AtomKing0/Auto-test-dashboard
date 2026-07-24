@@ -1122,8 +1122,8 @@ body.edit-mode .merge-btn { display: inline-block; }
             <button class="exec-game-btn" data-device="s21" style="--exec-gc:#ef4444" onclick="toggleExecDevice(this)">S21</button>
           </div>
         </div>
-        <!-- Test Type (AOS 전용) -->
-        <div id="exec-test-type-section" style="display:none">
+        <!-- Test Type -->
+        <div id="exec-test-type-section">
           <div class="exec-section-label">테스트 타입</div>
           <div class="exec-game-grid" id="exec-test-type-grid">
             <button class="exec-game-btn selected" data-testtype="freeplay" style="--exec-gc:#ef4444" onclick="toggleExecTestType(this)">프리플레이</button>
@@ -9280,17 +9280,6 @@ function renderHeatmap() {
     const isAos = btn.dataset.platform === 'aos' || btn.dataset.platform === 'both';
     const deviceSection = document.getElementById('exec-device-section');
     if (deviceSection) deviceSection.style.display = isAos ? '' : 'none';
-    const testTypeSection = document.getElementById('exec-test-type-section');
-    if (testTypeSection) {
-      testTypeSection.style.display = isAos ? '' : 'none';
-      if (!isAos) {
-        // PC로 전환 시 테스트 타입 freeplay로 리셋 + persona/levels 복원
-        document.querySelectorAll('#exec-test-type-grid .exec-game-btn').forEach(b =>
-          b.classList.toggle('selected', b.dataset.testtype === 'freeplay'));
-        document.getElementById('exec-persona-section').style.display = '';
-        document.getElementById('exec-levels-section').style.display = '';
-      }
-    }
   };
 
   function getSelectedPlatform() {
@@ -9332,13 +9321,9 @@ function renderHeatmap() {
     document.getElementById('exec-persona-section').style.display = isNru ? 'none' : '';
     document.getElementById('exec-levels-section').style.display = isNru ? 'none' : '';
     if (isNru) {
-      // NRU: SCJ + AOS 강제 선택
+      // NRU: SCJ 강제 선택 (플랫폼은 사용자 선택 유지)
       document.querySelectorAll('#exec-game-grid .exec-game-btn').forEach(b =>
         b.classList.toggle('selected', b.dataset.game === 'SCJ'));
-      document.querySelectorAll('#exec-platform-grid .exec-game-btn').forEach(b =>
-        b.classList.toggle('selected', b.dataset.platform === 'aos'));
-      document.getElementById('exec-device-section').style.display = '';
-      document.getElementById('exec-test-type-section').style.display = '';
     }
   };
 
