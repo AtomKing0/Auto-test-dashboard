@@ -9507,6 +9507,7 @@ function renderHeatmap() {
       const gc = GAME_COLORS[game] || '#3b82f6';
       const persona = PERSONA_KR_EXEC[cmd.persona] || cmd.persona || '-';
       const levels = cmd.levels || '-';
+      const testType = cmd.test_type || 'freeplay';
       const status = cmd.status || 'pending';
       const statusKr = STATUS_KR[status] || status;
       const createdAt = cmd.requested_at ? formatExecTime(cmd.requested_at) : '';
@@ -9523,7 +9524,7 @@ function renderHeatmap() {
 
       return `<div class="exec-queue-item">
         <span class="exec-queue-game" style="color:${gc}">${game}${platBadge}</span>
-        <span class="exec-queue-detail">${persona} ${levels}판</span>
+        <span class="exec-queue-detail">${testType === 'nru' ? 'NRU' : `${persona} ${levels}판`}</span>
         <span class="exec-queue-time">${scheduledAt ? '예약 ' + scheduledAt : createdAt}</span>
         ${cmd.loading_sec ? `<span class="exec-queue-load" title="게임 로딩 시간">${cmd.loading_sec}초</span>` : ''}
         <span class="exec-queue-status ${status}">${statusKr}</span>
