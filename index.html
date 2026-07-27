@@ -930,6 +930,7 @@ body.edit-mode .merge-btn { display: inline-block; }
   white-space: nowrap;
 }
 .exec-queue-status.pending { background: rgba(245,158,11,.15); color: #f59e0b; }
+.exec-queue-status.scheduled { background: rgba(139,92,246,.15); color: #a78bfa; }
 .exec-queue-status.running { background: rgba(59,130,246,.15); color: #3b82f6; }
 .exec-queue-status.completed { background: rgba(16,185,129,.15); color: #10b981; }
 .exec-queue-status.failed { background: rgba(239,68,68,.15); color: #ef4444; }
@@ -9505,9 +9506,33 @@ function renderHeatmap() {
           };
           if (scheduledAt) rpcParams.p_scheduled_at = scheduledAt;
           if (plat === 'aos' && aosDevices) rpcParams.p_devices = aosDevices;
-          if (repeatActive && repeatWeekdays) {
+              if (repeatActive && repeatWeekdays) {
             rpcParams.p_repeat_weekdays = repeatWeekdays;
             rpcParams.p_repeat_time = repeatTime;
+            /* scheduled_at 미설정 시 첫 실행 시각 자동 계산 */
+            if (!rpcParams.p_scheduled_at) {
+              const days = repeatWeekdays.split(',').map(Number);
+              const [rh, rm] = (repeatTime || '09:00').split(':').map(Number);
+              const now = new Date();
+              let found = null;
+              for (let offset = 0; offset < 7; offset++) {
+                const candidate = new Date(now);
+                candidate.setDate(candidate.getDate() + offset);
+                const jsDay = candidate.getDay(); // 0=일, 1=월~6=토
+                const ourDay = jsDay === 0 ? 7 : jsDay; // 1=월~7=일
+                if (days.includes(ourDay)) {
+                  const target = new Date(candidate);
+                  target.setHours(rh, rm, 0, 0);
+                  if (target > now) { found = target; break; }
+                }
+              }
+              if (!found) {
+                found = new Date(now);
+                found.setDate(found.getDate() + 7);
+                found.setHours(rh, rm, 0, 0);
+              }
+              rpcParams.p_scheduled_at = found.toISOString();
+            }
           }
           const { data, error } = await sb.rpc('submit_command', rpcParams);
           if (error) throw error;
@@ -9604,7 +9629,9 @@ function renderHeatmap() {
       const levels = cmd.levels || '-';
       const testType = cmd.test_type || 'freeplay';
       const status = cmd.status || 'pending';
-      const statusKr = STATUS_KR[status] || status;
+      const isFutureScheduled = status === 'pending' && cmd.scheduled_at && new Date(cmd.scheduled_at) > new Date();
+      const displayStatus = isFutureScheduled ? 'scheduled' : status;
+      const statusKr = isFutureScheduled ? '예약됨' : (STATUS_KR[status] || status);
       const createdAt = cmd.requested_at ? formatExecTime(cmd.requested_at) : '';
       const scheduledAt = cmd.scheduled_at ? formatExecTime(cmd.scheduled_at) : '';
       const canCancel = status === 'pending' || status === 'running';
@@ -9622,7 +9649,7 @@ function renderHeatmap() {
         <span class="exec-queue-detail">${testType === 'nru' ? 'NRU' : `${persona} ${levels}판`}</span>
         <span class="exec-queue-time">${scheduledAt ? '예약 ' + scheduledAt : createdAt}</span>
         ${cmd.loading_sec ? `<span class="exec-queue-load" title="게임 로딩 시간">${cmd.loading_sec}초</span>` : ''}
-        <span class="exec-queue-status ${status}">${statusKr}</span>
+        <span class="exec-queue-status ${displayStatus}">${statusKr}</span>
         ${canCancel ? `<button class="exec-queue-cancel" onclick="cancelExecCommand('${cmd.id}')">취소</button>` : ''}
       </div>`;
     }).join('');
@@ -9764,7 +9791,7 @@ function renderHeatmap() {
     try {
       const { data, error } = await sb.rpc('clear_finished_commands');
       if (error) throw error;
-      if (typeof showToast === 'function') showToast(ids.length + '건 삭제 완료');
+      if (typeof showToast === 'function') showToast(finished.length + '건 삭제 완료');
       loadCommandQueue();
     } catch (err) {
       if (typeof showToast === 'function') showToast('삭제 실패: ' + (err.message || ''));
@@ -9791,8 +9818,9 @@ function renderHeatmap() {
       const levels = cmd.levels || '';
       const status = cmd.status || 'pending';
       const isRunning = status === 'running';
-      const statusKr = isRunning ? '실행중' : '대기';
-      const scheduled = cmd.scheduled_at ? ' (' + formatExecTime(cmd.scheduled_at) + ' 예약)' : '';
+      const isFutureSched = status === 'pending' && cmd.scheduled_at && new Date(cmd.scheduled_at) > new Date();
+      const statusKr = isRunning ? '실행중' : isFutureSched ? '예약됨' : '대기';
+      const scheduled = isFutureSched ? ' → ' + formatExecTime(cmd.scheduled_at) : '';
       return '<div class="exec-banner-item ' + status + '">' +
         '<span class="exec-banner-dot ' + status + '"></span>' +
         '<span class="exec-banner-game" style="color:' + gc + '">' + game + '</span>' +

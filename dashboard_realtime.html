@@ -9506,9 +9506,33 @@ function renderHeatmap() {
           };
           if (scheduledAt) rpcParams.p_scheduled_at = scheduledAt;
           if (plat === 'aos' && aosDevices) rpcParams.p_devices = aosDevices;
-          if (repeatActive && repeatWeekdays) {
+              if (repeatActive && repeatWeekdays) {
             rpcParams.p_repeat_weekdays = repeatWeekdays;
             rpcParams.p_repeat_time = repeatTime;
+            /* scheduled_at 미설정 시 첫 실행 시각 자동 계산 */
+            if (!rpcParams.p_scheduled_at) {
+              const days = repeatWeekdays.split(',').map(Number);
+              const [rh, rm] = (repeatTime || '09:00').split(':').map(Number);
+              const now = new Date();
+              let found = null;
+              for (let offset = 0; offset < 7; offset++) {
+                const candidate = new Date(now);
+                candidate.setDate(candidate.getDate() + offset);
+                const jsDay = candidate.getDay(); // 0=일, 1=월~6=토
+                const ourDay = jsDay === 0 ? 7 : jsDay; // 1=월~7=일
+                if (days.includes(ourDay)) {
+                  const target = new Date(candidate);
+                  target.setHours(rh, rm, 0, 0);
+                  if (target > now) { found = target; break; }
+                }
+              }
+              if (!found) {
+                found = new Date(now);
+                found.setDate(found.getDate() + 7);
+                found.setHours(rh, rm, 0, 0);
+              }
+              rpcParams.p_scheduled_at = found.toISOString();
+            }
           }
           const { data, error } = await sb.rpc('submit_command', rpcParams);
           if (error) throw error;
