@@ -9647,12 +9647,20 @@ function renderHeatmap() {
         platBadge = `<span style="font-size:10px;background:#ef4444;color:#fff;padding:1px 5px;border-radius:4px;margin-left:4px">AOS ${devLabel}</span>`;
       }
 
+      // 예약 항목: 시각을 보라색 pill로, "예약됨" 배지 숨김
+      const timeCell = isFutureScheduled
+        ? `<span style="color:#a78bfa;font-size:10px;font-weight:600;white-space:nowrap">📅 ${scheduledAt}</span>`
+        : `<span class="exec-queue-time">${createdAt}</span>`;
+      const statusCell = isFutureScheduled
+        ? ''
+        : `<span class="exec-queue-status ${displayStatus}">${statusKr}</span>`;
+
       return `<div class="exec-queue-item">
         <span class="exec-queue-game" style="color:${gc}">${game}${platBadge}</span>
         <span class="exec-queue-detail">${testType === 'nru' ? 'NRU' : `${persona} ${levels}판`}</span>
-        <span class="exec-queue-time">${scheduledAt ? '예약 ' + scheduledAt : createdAt}</span>
+        ${timeCell}
         ${cmd.loading_sec ? `<span class="exec-queue-load" title="게임 로딩 시간">${cmd.loading_sec}초</span>` : ''}
-        <span class="exec-queue-status ${displayStatus}">${statusKr}</span>
+        ${statusCell}
         ${canCancel ? `<button class="exec-queue-cancel" onclick="cancelExecCommand('${cmd.id}')">취소</button>` : ''}
       </div>`;
     }).join('');
@@ -9822,14 +9830,20 @@ function renderHeatmap() {
       const status = cmd.status || 'pending';
       const isRunning = status === 'running';
       const isFutureSched = status === 'pending' && cmd.scheduled_at && new Date(cmd.scheduled_at) > new Date();
-      const statusKr = isRunning ? '실행중' : isFutureSched ? '예약됨' : '대기';
-      const scheduled = isFutureSched ? ' → ' + formatExecTime(cmd.scheduled_at) : '';
+      const statusKr = isRunning ? '실행중' : '대기';
+      if (isFutureSched) {
+        // 예약 항목: 게임명 + 📅 시각만 표시 (compact)
+        return '<div class="exec-banner-item pending" style="gap:6px;padding:4px 10px">' +
+          '<span class="exec-banner-dot pending"></span>' +
+          '<span class="exec-banner-game" style="color:' + gc + ';font-size:13px">' + game + '</span>' +
+          '<span style="color:#a78bfa;font-size:11px;font-weight:600">📅 ' + formatExecTime(cmd.scheduled_at) + '</span>' +
+        '</div>';
+      }
       return '<div class="exec-banner-item ' + status + '">' +
         '<span class="exec-banner-dot ' + status + '"></span>' +
         '<span class="exec-banner-game" style="color:' + gc + '">' + game + '</span>' +
         '<span class="exec-banner-detail">' + (cmd.test_type === 'nru' ? 'NRU' : persona + ' ' + levels + '판') + '</span>' +
         '<span class="exec-banner-status ' + status + '">' + statusKr + '</span>' +
-        (scheduled ? '<span class="exec-banner-scheduled">' + scheduled + '</span>' : '') +
       '</div>';
     }).join('');
   };
