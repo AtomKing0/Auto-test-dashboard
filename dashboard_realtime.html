@@ -1430,11 +1430,13 @@ function buildOverviewFromViews(overviewStats, personaStats, dailyTrend) {
 }
 
 async function fetchCronHistory() {
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const { data, error } = await sb
     .from('freeplay_commands')
     .select('*')
     .not('repeat_weekdays', 'is', null)
     .in('status', ['completed', 'failed', 'running', 'pending'])
+    .gte('requested_at', sevenDaysAgo)
     .order('requested_at', { ascending: false })
     .limit(50);
   if (error) throw error;
@@ -1766,8 +1768,8 @@ function renderGuide() {
         <p>프리플레이 실행 후 자동 생성되는 품질 검사 결과. 게임별·날짜별 확인 가능</p>
       </div>
       <div class="guide-mini-card">
-        <h5>⏰ 크론 이력</h5>
-        <p>자동 크론 스케줄 실행 이력. 날짜, 시작/종료 시간, 대상 게임, 소요 시간</p>
+        <h5>🔄 정기 반복</h5>
+        <p>요일·시각 지정 정기 반복 실행 이력. 반복 패턴, 예약 시각, 소요 시간, 결과</p>
       </div>
       <div class="guide-mini-card">
         <h5>🗂 런 관리</h5>
@@ -2686,6 +2688,8 @@ function renderCronHistory(cron) {
   if (!section) return;
 
   const DAY_KR = ['','월','화','수','목','금','토','일'];
+  const GAME_COLORS = { SCJ: '#3b82f6', CTZ: '#10b981', PBM: '#f59e0b', MJG: '#8b5cf6' };
+  const PERSONA_KR_EXEC = { all: '전체', hardcore: '고수', average: '중수', casual: '하수', struggling: '초보' };
   const STATUS_COLOR = { completed: 'var(--status-ok)', failed: 'var(--status-err)', running: '#3b82f6', pending: '#f59e0b' };
   const STATUS_LABEL = { completed: '완료', failed: '실패', running: '실행중', pending: '예약됨' };
 
@@ -6840,19 +6844,19 @@ async function deleteSelectedNruCat(gameId) {
   }
 }
 
-/* ── 크론 이력 삭제 ── */
+/* ── 정기 반복 삭제 ── */
 
 async function deleteSelectedCron() {
   const checked = [...document.querySelectorAll('.cron-check:checked')].map(cb => cb.value);
-  if (!checked.length) { alert('삭제할 크론 이력을 선택해주세요.'); return; }
-  if (!confirm(`${checked.length}건의 크론 이력을 삭제하시겠습니까?`)) return;
+  if (!checked.length) { alert('삭제할 정기 반복 이력을 선택해주세요.'); return; }
+  if (!confirm(`${checked.length}건의 정기 반복 이력을 삭제하시겠습니까?`)) return;
 
   const statusEl = document.getElementById('cron-status');
   statusEl.textContent = '삭제 중...';
   let deleted = 0, failed = 0;
   for (const cronId of checked) {
     try {
-      await sb.rpc('delete_cron_history', { target_id: cronId });
+      await sb.from('freeplay_commands').delete().eq('id', cronId);
       deleted++;
     } catch (e) {
       console.error('크론 삭제 실패:', cronId, e);
@@ -7333,12 +7337,12 @@ function subscribeRealtime() {
       }
     )
     .on('postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'cron_history' },
+      { event: '*', schema: 'public', table: 'freeplay_commands' },
       async () => {
         try {
           const cron = await fetchCronHistory();
           renderCronHistory(cron);
-        } catch (e) { console.warn('cron_history 갱신 실패:', e.message); }
+        } catch (e) { console.warn('정기 반복 갱신 실패:', e.message); }
       }
     )
     .subscribe((status) => {
@@ -7737,7 +7741,7 @@ function restoreSidebar() {
 }
 
 function sidebarSystemNav(target) {
-  const SYSTEM_TITLES = { 'cross-game': '게임 비교', health: 'Health Check', cron: '크론 이력', runs: '런 관리', nru: 'NRU 현황', guide: '가이드' };
+  const SYSTEM_TITLES = { 'cross-game': '게임 비교', health: 'Health Check', cron: '정기 반복', runs: '런 관리', nru: 'NRU 현황', guide: '가이드' };
   const sectionMap = { 'cross-game': 'cross-game-section', health: 'health-check-section', cron: 'cron-section', runs: 'run-manager', nru: 'nru-system-section', guide: 'guide-section' };
 
   // 모든 사이드바 active 초기화 (게임 + 시스템)
