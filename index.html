@@ -902,6 +902,12 @@ body.edit-mode .merge-btn { display: inline-block; }
 .exec-submit-btn:hover { opacity: .9; }
 .exec-submit-btn:active { transform: scale(.98); }
 .exec-submit-btn:disabled { opacity: .4; cursor: not-allowed; }
+.exec-day-btn {
+  flex: 1; padding: 6px 0; border: 1px solid rgba(99,102,241,0.4); border-radius: 6px;
+  background: transparent; color: #94a3b8; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: background .15s, color .15s, border-color .15s; font-family: inherit;
+}
+.exec-day-btn.on { background: rgba(99,102,241,0.7); color: #fff; border-color: #6366f1; }
 .exec-divider {
   height: 1px; background: var(--border); margin: 4px 0;
 }
@@ -1152,10 +1158,28 @@ body.edit-mode .merge-btn { display: inline-block; }
             <option value="20">20판</option>
           </select>
         </div>
-        <!-- Schedule -->
+        <!-- Schedule + Repeat -->
         <div>
           <div class="exec-section-label">예약 (비워두면 즉시 실행)</div>
-          <input type="datetime-local" class="exec-select" id="exec-schedule" style="width:100%">
+          <input type="datetime-local" class="exec-select" id="exec-schedule" style="width:100%;margin-bottom:8px">
+          <div onclick="var cb=document.getElementById('exec-repeat-checkbox');cb.checked=!cb.checked;toggleRepeatSelect(cb.checked)" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#e2e8f0;background:rgba(99,102,241,0.15);border-radius:6px;padding:8px 10px;border:1px solid rgba(99,102,241,0.5);margin-top:4px">
+            <input type="checkbox" id="exec-repeat-checkbox" style="cursor:pointer;width:15px;height:15px;flex-shrink:0" onclick="event.stopPropagation();toggleRepeatSelect(this.checked)">
+            <span>&#128260; 정기 반복 (요일 지정)</span>
+          </div>
+          <div id="exec-repeat-panel" style="display:none;margin-top:8px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);border-radius:8px;padding:10px">
+            <div style="font-size:12px;color:#94a3b8;margin-bottom:6px">반복 요일</div>
+            <div style="display:flex;gap:4px;margin-bottom:10px" id="exec-day-btns">
+              <button type="button" class="exec-day-btn" data-day="1">월</button>
+              <button type="button" class="exec-day-btn" data-day="2">화</button>
+              <button type="button" class="exec-day-btn" data-day="3">수</button>
+              <button type="button" class="exec-day-btn" data-day="4">목</button>
+              <button type="button" class="exec-day-btn" data-day="5">금</button>
+              <button type="button" class="exec-day-btn" data-day="6">토</button>
+              <button type="button" class="exec-day-btn" data-day="7">일</button>
+            </div>
+            <div style="font-size:12px;color:#94a3b8;margin-bottom:4px">실행 시각 (KST)</div>
+            <input type="time" id="exec-repeat-time" class="exec-select" style="width:100%" value="09:00">
+          </div>
         </div>
         <!-- Submit -->
         <button class="exec-submit-btn" id="exec-submit-btn" onclick="promptExecPassword()">&#128274; 실행</button>
@@ -4338,15 +4362,19 @@ function renderCatSummary(gameId, stages, runs) {
       </table></div>
     </div>` : '';
 
-  /* 게임 로딩 시간 (freeplay_commands 캐시에서 조회) */
-  const loadCmds = (window._execCommandsCache || []).filter(c => c.game === gameId && c.loading_sec > 0);
-  let loadingMetric = '';
-  if (loadCmds.length > 0) {
-    const avgLoad = (loadCmds.reduce((a, c) => a + c.loading_sec, 0) / loadCmds.length).toFixed(1);
-    const minLoad = Math.min(...loadCmds.map(c => c.loading_sec)).toFixed(1);
-    const maxLoad = Math.max(...loadCmds.map(c => c.loading_sec)).toFixed(1);
-    loadingMetric = `<div class="metric-box"><div class="label">게임 로딩</div><div class="value" style="color:#60a5fa">${avgLoad}초</div><div class="sub">${minLoad}~${maxLoad}초 (${loadCmds.length}회)</div></div>`;
+  /* 게임 로딩 시간 (_gameLoadingCache 우선, 폴백: _execCommandsCache) */
+  const glc = ((window._gameLoadingCache || {})[gameId]) || [];
+  const fallbackCmds = glc.length === 0
+    ? (window._execCommandsCache || []).filter(c => c.game === gameId && c.loading_sec > 0).map(c => c.loading_sec)
+    : glc;
+  let loadingMetricInner = '';
+  if (fallbackCmds.length > 0) {
+    const avgLoad = (fallbackCmds.reduce((a, v) => a + v, 0) / fallbackCmds.length).toFixed(1);
+    const minLoad = Math.min(...fallbackCmds).toFixed(1);
+    const maxLoad = Math.max(...fallbackCmds).toFixed(1);
+    loadingMetricInner = `<div class="metric-box"><div class="label">게임 로딩</div><div class="value" style="color:#60a5fa">${avgLoad}초</div><div class="sub">${minLoad}~${maxLoad}초 (${fallbackCmds.length}회)</div></div>`;
   }
+  const loadingMetric = `<span id="loading-metric-${gameId}">${loadingMetricInner}</span>`;
 
   return `
     <div class="metric-row">${crMetricHtml}${topMetrics}${loadingMetric}</div>
@@ -9253,7 +9281,40 @@ function renderHeatmap() {
   const STATUS_KR = { pending: '대기', running: '실행중', completed: '완료', failed: '실패', cancelled: '취소' };
 
   window._execCommandsCache = window._execCommandsCache || [];
+  window._gameLoadingCache = window._gameLoadingCache || {};  // game → [{loading_sec}] 별도 캐시 (정리 시 유지)
   let _execChannel = null;
+
+  /* ── 게임별 로딩 데이터 별도 로드 (정리와 무관하게 유지) ── */
+  async function loadGameLoadingData() {
+    try {
+      const { data } = await sb.from('freeplay_commands')
+        .select('game, loading_sec')
+        .not('loading_sec', 'is', null)
+        .gt('loading_sec', 0)
+        .order('requested_at', { ascending: false })
+        .limit(200);
+      if (!data) return;
+      const byGame = {};
+      for (const r of data) {
+        if (!byGame[r.game]) byGame[r.game] = [];
+        byGame[r.game].push(r.loading_sec);
+      }
+      window._gameLoadingCache = byGame;
+      /* 현재 열려있는 게임 요약 탭 갱신 */
+      if (typeof _currentGameId !== 'undefined' && _currentGameId && byGame[_currentGameId]) {
+        const el = document.getElementById('loading-metric-' + _currentGameId);
+        if (el) _updateLoadingMetricEl(el, byGame[_currentGameId]);
+      }
+    } catch (e) { /* 조용히 실패 */ }
+  }
+
+  function _updateLoadingMetricEl(el, vals) {
+    if (!vals || vals.length === 0) return;
+    const avg = (vals.reduce((a, v) => a + v, 0) / vals.length).toFixed(1);
+    const min = Math.min(...vals).toFixed(1);
+    const max = Math.max(...vals).toFixed(1);
+    el.innerHTML = `<div class="metric-box"><div class="label">게임 로딩</div><div class="value" style="color:#60a5fa">${avg}초</div><div class="sub">${min}~${max}초 (${vals.length}회)</div></div>`;
+  }
 
   /* ── Panel toggle ── */
   window.toggleExecPanel = function() {
@@ -9352,6 +9413,18 @@ function renderHeatmap() {
     setTimeout(() => pwInput.focus(), 100);
   };
 
+  window.toggleRepeatSelect = function(checked) {
+    const panel = document.getElementById('exec-repeat-panel');
+    if (panel) panel.style.display = checked ? 'block' : 'none';
+  };
+
+  /* Day-of-week toggle buttons */
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('exec-day-btn')) {
+      e.target.classList.toggle('on');
+    }
+  });
+
   window.closeExecModal = function() {
     document.getElementById('exec-modal-overlay').classList.remove('open');
     document.getElementById('exec-modal-pw').value = '';
@@ -9404,6 +9477,17 @@ function renderHeatmap() {
       const results = [];
       const scheduleInput = document.getElementById('exec-schedule');
       const scheduledAt = scheduleInput && scheduleInput.value ? new Date(scheduleInput.value).toISOString() : null;
+      const repeatCheckbox = document.getElementById('exec-repeat-checkbox');
+      const repeatActive = repeatCheckbox && repeatCheckbox.checked;
+      let repeatWeekdays = null;
+      let repeatTime = null;
+      if (repeatActive) {
+        const activeDays = Array.from(document.querySelectorAll('#exec-day-btns .exec-day-btn.on'))
+          .map(b => b.getAttribute('data-day'));
+        repeatWeekdays = activeDays.length > 0 ? activeDays.join(',') : null;
+        const timeInput = document.getElementById('exec-repeat-time');
+        repeatTime = timeInput && timeInput.value ? timeInput.value : '09:00';
+      }
 
       // PC+AOS면 두 플랫폼 모두 제출
       const platforms = platform === 'both' ? ['pc', 'aos'] : [platform];
@@ -9421,6 +9505,10 @@ function renderHeatmap() {
           };
           if (scheduledAt) rpcParams.p_scheduled_at = scheduledAt;
           if (plat === 'aos' && aosDevices) rpcParams.p_devices = aosDevices;
+          if (repeatActive && repeatWeekdays) {
+            rpcParams.p_repeat_weekdays = repeatWeekdays;
+            rpcParams.p_repeat_time = repeatTime;
+          }
           const { data, error } = await sb.rpc('submit_command', rpcParams);
           if (error) throw error;
           results.push({ game, data });
@@ -9439,15 +9527,22 @@ function renderHeatmap() {
       if (typeof showToast === 'function') {
         const schedMsg = scheduledAt ? ' (예약: ' + new Date(scheduledAt).toLocaleString('ko') + ')' : '';
         const platMsg = platform === 'both' ? ' [PC+AOS]' : platform === 'aos' ? ' [AOS]' : '';
+        const DAY_KR = ['','월','화','수','목','금','토','일'];
+        const repeatMsg = (repeatActive && repeatWeekdays)
+          ? ' 🔄 ' + repeatWeekdays.split(',').map(d => DAY_KR[d] || d).join('') + ' ' + repeatTime
+          : '';
         const msg = testType === 'nru'
-          ? 'SCJ NRU 테스트' + platMsg + ' 실행 요청 완료' + schedMsg
-          : games.join(', ') + ' ' + PERSONA_KR_EXEC[persona] + ' ' + levels + '판' + platMsg + ' 실행 요청 완료' + schedMsg;
+          ? 'SCJ NRU 테스트' + platMsg + ' 실행 요청 완료' + schedMsg + repeatMsg
+          : games.join(', ') + ' ' + PERSONA_KR_EXEC[persona] + ' ' + levels + '판' + platMsg + ' 실행 요청 완료' + schedMsg + repeatMsg;
         showToast(msg);
       }
 
-      /* Clear game selection + schedule */
+      /* Clear game selection + schedule + repeat */
       document.querySelectorAll('.exec-game-btn.selected').forEach(b => b.classList.remove('selected'));
       if (scheduleInput) scheduleInput.value = '';
+      const repeatCb = document.getElementById('exec-repeat-checkbox');
+      if (repeatCb) { repeatCb.checked = false; toggleRepeatSelect(false); }
+      document.querySelectorAll('#exec-day-btns .exec-day-btn.on').forEach(b => b.classList.remove('on'));
 
       /* Reload queue */
       loadCommandQueue();
@@ -9596,7 +9691,8 @@ function renderHeatmap() {
         const persona = PERSONA_KR_EXEC[newRow.persona] || newRow.persona || '';
         const statusKr = STATUS_KR[newRow.status] || newRow.status;
         if (typeof showToast === 'function') {
-          showToast(game + ' ' + persona + ' ' + statusKr);
+          const toastDetail = newRow.test_type === 'nru' ? 'NRU' : persona;
+          showToast(game + ' ' + toastDetail + ' ' + statusKr);
         }
       }
     } else if (eventType === 'DELETE') {
@@ -9641,6 +9737,19 @@ function renderHeatmap() {
   renderCommandQueue = function(commands) {
     _origRenderQueue2(commands);
     renderLoadingSummary(commands);
+    /* 게임 요약 탭 로딩 메트릭 갱신 (_gameLoadingCache 우선) */
+    if (typeof _currentGameId !== 'undefined' && _currentGameId) {
+      const el = document.getElementById('loading-metric-' + _currentGameId);
+      if (el) {
+        const cached = (window._gameLoadingCache || {})[_currentGameId];
+        if (cached && cached.length > 0) {
+          _updateLoadingMetricEl(el, cached);
+        } else {
+          const lc = (commands || []).filter(c => c.game === _currentGameId && c.loading_sec > 0);
+          if (lc.length > 0) _updateLoadingMetricEl(el, lc.map(c => c.loading_sec));
+        }
+      }
+    }
   };
 
   /* ── Clear completed/failed/cancelled commands ── */
@@ -9724,11 +9833,13 @@ function renderHeatmap() {
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
       loadCommandQueue();
+      loadGameLoadingData();
       initExecRealtime();
       initBannerRealtime();
     });
   } else {
     loadCommandQueue();
+    loadGameLoadingData();
     initExecRealtime();
     initBannerRealtime();
   }
