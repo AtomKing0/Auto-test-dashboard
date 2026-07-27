@@ -902,6 +902,12 @@ body.edit-mode .merge-btn { display: inline-block; }
 .exec-submit-btn:hover { opacity: .9; }
 .exec-submit-btn:active { transform: scale(.98); }
 .exec-submit-btn:disabled { opacity: .4; cursor: not-allowed; }
+.exec-day-btn {
+  flex: 1; padding: 6px 0; border: 1px solid rgba(99,102,241,0.4); border-radius: 6px;
+  background: transparent; color: #94a3b8; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: background .15s, color .15s, border-color .15s; font-family: inherit;
+}
+.exec-day-btn.on { background: rgba(99,102,241,0.7); color: #fff; border-color: #6366f1; }
 .exec-divider {
   height: 1px; background: var(--border); margin: 4px 0;
 }
@@ -1158,15 +1164,22 @@ body.edit-mode .merge-btn { display: inline-block; }
           <input type="datetime-local" class="exec-select" id="exec-schedule" style="width:100%;margin-bottom:8px">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#e2e8f0;background:rgba(99,102,241,0.15);border-radius:6px;padding:8px 10px;border:1px solid rgba(99,102,241,0.5);margin-top:4px">
             <input type="checkbox" id="exec-repeat-checkbox" onchange="toggleRepeatSelect(this.checked)" style="cursor:pointer;width:15px;height:15px;flex-shrink:0">
-            <span>&#128260; 완료 후 자동 재예약</span>
+            <span>&#128260; 정기 반복 (요일 지정)</span>
           </label>
-          <select class="exec-select" id="exec-repeat-hours" style="width:100%;margin-top:6px;display:none">
-            <option value="6">6시간마다</option>
-            <option value="12">12시간마다</option>
-            <option value="24" selected>24시간마다</option>
-            <option value="48">48시간마다</option>
-            <option value="72">72시간마다</option>
-          </select>
+          <div id="exec-repeat-panel" style="display:none;margin-top:8px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);border-radius:8px;padding:10px">
+            <div style="font-size:12px;color:#94a3b8;margin-bottom:6px">반복 요일</div>
+            <div style="display:flex;gap:4px;margin-bottom:10px" id="exec-day-btns">
+              <button type="button" class="exec-day-btn" data-day="1">월</button>
+              <button type="button" class="exec-day-btn" data-day="2">화</button>
+              <button type="button" class="exec-day-btn" data-day="3">수</button>
+              <button type="button" class="exec-day-btn" data-day="4">목</button>
+              <button type="button" class="exec-day-btn" data-day="5">금</button>
+              <button type="button" class="exec-day-btn" data-day="6">토</button>
+              <button type="button" class="exec-day-btn" data-day="7">일</button>
+            </div>
+            <div style="font-size:12px;color:#94a3b8;margin-bottom:4px">실행 시각 (KST)</div>
+            <input type="time" id="exec-repeat-time" class="exec-select" style="width:100%" value="09:00">
+          </div>
         </div>
         <!-- Submit -->
         <button class="exec-submit-btn" id="exec-submit-btn" onclick="promptExecPassword()">&#128274; 실행</button>
@@ -9401,9 +9414,16 @@ function renderHeatmap() {
   };
 
   window.toggleRepeatSelect = function(checked) {
-    const sel = document.getElementById('exec-repeat-hours');
-    if (sel) sel.style.display = checked ? 'block' : 'none';
+    const panel = document.getElementById('exec-repeat-panel');
+    if (panel) panel.style.display = checked ? 'block' : 'none';
   };
+
+  /* Day-of-week toggle buttons */
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('exec-day-btn')) {
+      e.target.classList.toggle('on');
+    }
+  });
 
   window.closeExecModal = function() {
     document.getElementById('exec-modal-overlay').classList.remove('open');
@@ -9458,9 +9478,16 @@ function renderHeatmap() {
       const scheduleInput = document.getElementById('exec-schedule');
       const scheduledAt = scheduleInput && scheduleInput.value ? new Date(scheduleInput.value).toISOString() : null;
       const repeatCheckbox = document.getElementById('exec-repeat-checkbox');
-      const repeatHours = repeatCheckbox && repeatCheckbox.checked
-        ? parseInt(document.getElementById('exec-repeat-hours').value, 10)
-        : 0;
+      const repeatActive = repeatCheckbox && repeatCheckbox.checked;
+      let repeatWeekdays = null;
+      let repeatTime = null;
+      if (repeatActive) {
+        const activeDays = Array.from(document.querySelectorAll('#exec-day-btns .exec-day-btn.on'))
+          .map(b => b.getAttribute('data-day'));
+        repeatWeekdays = activeDays.length > 0 ? activeDays.join(',') : null;
+        const timeInput = document.getElementById('exec-repeat-time');
+        repeatTime = timeInput && timeInput.value ? timeInput.value : '09:00';
+      }
 
       // PC+AOS면 두 플랫폼 모두 제출
       const platforms = platform === 'both' ? ['pc', 'aos'] : [platform];
@@ -9478,7 +9505,10 @@ function renderHeatmap() {
           };
           if (scheduledAt) rpcParams.p_scheduled_at = scheduledAt;
           if (plat === 'aos' && aosDevices) rpcParams.p_devices = aosDevices;
-          if (repeatHours > 0) rpcParams.p_repeat_hours = repeatHours;
+          if (repeatActive && repeatWeekdays) {
+            rpcParams.p_repeat_weekdays = repeatWeekdays;
+            rpcParams.p_repeat_time = repeatTime;
+          }
           const { data, error } = await sb.rpc('submit_command', rpcParams);
           if (error) throw error;
           results.push({ game, data });
@@ -9497,7 +9527,10 @@ function renderHeatmap() {
       if (typeof showToast === 'function') {
         const schedMsg = scheduledAt ? ' (예약: ' + new Date(scheduledAt).toLocaleString('ko') + ')' : '';
         const platMsg = platform === 'both' ? ' [PC+AOS]' : platform === 'aos' ? ' [AOS]' : '';
-        const repeatMsg = repeatHours > 0 ? ' 🔄' + repeatHours + 'h 반복' : '';
+        const DAY_KR = ['','월','화','수','목','금','토','일'];
+        const repeatMsg = (repeatActive && repeatWeekdays)
+          ? ' 🔄 ' + repeatWeekdays.split(',').map(d => DAY_KR[d] || d).join('') + ' ' + repeatTime
+          : '';
         const msg = testType === 'nru'
           ? 'SCJ NRU 테스트' + platMsg + ' 실행 요청 완료' + schedMsg + repeatMsg
           : games.join(', ') + ' ' + PERSONA_KR_EXEC[persona] + ' ' + levels + '판' + platMsg + ' 실행 요청 완료' + schedMsg + repeatMsg;
@@ -9509,6 +9542,7 @@ function renderHeatmap() {
       if (scheduleInput) scheduleInput.value = '';
       const repeatCb = document.getElementById('exec-repeat-checkbox');
       if (repeatCb) { repeatCb.checked = false; toggleRepeatSelect(false); }
+      document.querySelectorAll('#exec-day-btns .exec-day-btn.on').forEach(b => b.classList.remove('on'));
 
       /* Reload queue */
       loadCommandQueue();
