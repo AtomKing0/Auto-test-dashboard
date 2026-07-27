@@ -7430,12 +7430,13 @@ async function init() {
     overviewEl.style.display = 'none';
 
     // Fast path: View 기반 서버 집계 (소량 데이터만 전송)
-    const [overviewStats, personaStats, dailyTrend, cron, gameConfigs, healthChecks, nruRuns] = await Promise.all([
+    const [overviewStats, personaStats, dailyTrend, cron, gameConfigs, healthChecks, nruRuns, serverLogs] = await Promise.all([
       fetchOverviewStats(), fetchPersonaStats(), fetchDailyTrend(),
-      fetchCronHistory(), fetchGameConfigs(), fetchHealthChecks(), fetchNruRuns()
+      fetchCronHistory(), fetchGameConfigs(), fetchHealthChecks(), fetchNruRuns(), fetchServerLogs()
     ]);
     _gameConfigs = gameConfigs;
     _nruRuns = nruRuns;
+    _serverLogs = serverLogs;
     _lastFetchTime = new Date().toISOString();
 
     const games = buildOverviewFromViews(overviewStats, personaStats, dailyTrend);
