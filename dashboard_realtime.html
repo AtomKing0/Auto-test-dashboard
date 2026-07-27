@@ -1020,9 +1020,9 @@ body.edit-mode .merge-btn { display: inline-block; }
           <span class="sidebar-item-text">Health Check</span>
           <span class="drag-grip">⋮⋮</span>
         </div>
-        <div class="sidebar-item" data-id="cron" onclick="sidebarSystemNav('cron')" id="sidebar-cron" title="크론 이력">
-          <span class="sidebar-item-icon">⏰</span>
-          <span class="sidebar-item-text">크론 이력</span>
+        <div class="sidebar-item" data-id="cron" onclick="sidebarSystemNav('cron')" id="sidebar-cron" title="정기 반복">
+          <span class="sidebar-item-icon">🔄</span>
+          <span class="sidebar-item-text">정기 반복</span>
           <span class="drag-grip">⋮⋮</span>
         </div>
         <div class="sidebar-item" data-id="runs" onclick="sidebarSystemNav('runs')" id="sidebar-runs" title="런 관리">
@@ -1431,10 +1431,12 @@ function buildOverviewFromViews(overviewStats, personaStats, dailyTrend) {
 
 async function fetchCronHistory() {
   const { data, error } = await sb
-    .from('cron_history')
+    .from('freeplay_commands')
     .select('*')
-    .order('run_date', { ascending: false })
-    .limit(30);
+    .not('repeat_weekdays', 'is', null)
+    .in('status', ['completed', 'failed', 'running', 'pending'])
+    .order('requested_at', { ascending: false })
+    .limit(50);
   if (error) throw error;
   return data || [];
 }
@@ -2680,52 +2682,48 @@ function toggleCronSummary() {
 }
 
 function renderCronHistory(cron) {
-  if (!cron || !cron.length) return;
   const section = document.getElementById('cron-section');
+  if (!section) return;
 
-  // 모든 게임 ID 수집
-  const gameIds = new Set();
-  for (const c of cron) {
-    for (const g of Object.keys(c.results || {})) gameIds.add(g);
+  const DAY_KR = ['','월','화','수','목','금','토','일'];
+  const STATUS_COLOR = { completed: 'var(--status-ok)', failed: 'var(--status-err)', running: '#3b82f6', pending: '#f59e0b' };
+  const STATUS_LABEL = { completed: '완료', failed: '실패', running: '실행중', pending: '예약됨' };
+
+  if (!cron || !cron.length) {
+    section.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:20px 0;text-align:center">정기 반복 이력이 없습니다</div>';
+    return;
   }
-  const games = [...gameIds].sort();
 
-  const gameHeaders = games.map(g => `<th>${g}</th>`).join('');
   const rows = cron.map(c => {
-    const res = c.results || {};
-    const startTime = c.started_at ? new Date(c.started_at).toLocaleTimeString('ko', {hour:'2-digit', minute:'2-digit'}) : '-';
-    const endTime = c.finished_at ? new Date(c.finished_at).toLocaleTimeString('ko', {hour:'2-digit', minute:'2-digit'}) : '-';
-    const gameCells = games.map(g => {
-      const r = res[g];
-      if (!r) return '<td style="color:var(--text-muted)">-</td>';
-      const ok = r.exit_code === 0;
-      const color = ok ? 'var(--status-ok)' : 'var(--status-err)';
-      const label = ok ? 'OK' : 'FAIL';
-      const errText = (!ok && r.error) ? r.error.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
-      const errHtml = errText ? `<div style="font-size:10px;color:var(--text-muted);margin-top:2px;max-width:220px;word-break:break-word">${errText}</div>` : '';
-      return `<td style="color:${color}">${label}${errHtml}</td>`;
-    }).join('');
+    const gc = GAME_COLORS[c.game] || '#3b82f6';
+    const days = (c.repeat_weekdays || '').split(',').map(d => DAY_KR[d] || d).join('');
+    const time = c.repeat_time || '-';
+    const persona = PERSONA_KR_EXEC[c.persona] || c.persona || '-';
+    const status = c.status || 'pending';
+    const isFuture = status === 'pending' && c.scheduled_at && new Date(c.scheduled_at) > new Date();
+    const statusLabel = isFuture ? '예약됨' : (STATUS_LABEL[status] || status);
+    const statusColor = isFuture ? '#a78bfa' : (STATUS_COLOR[status] || 'var(--text-muted)');
+    const reqAt = c.requested_at ? new Date(c.requested_at).toLocaleString('ko', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-';
+    const schedAt = c.scheduled_at ? new Date(c.scheduled_at).toLocaleString('ko', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-';
+    const durationMin = (c.started_at && c.completed_at)
+      ? Math.round((new Date(c.completed_at) - new Date(c.started_at)) / 60000) + '분'
+      : '-';
+    const plat = c.platform === 'aos' ? ' <span style="font-size:10px;background:#ef4444;color:#fff;padding:1px 4px;border-radius:3px">AOS</span>' : '';
     return `<tr>
-      <td><input type="checkbox" class="cron-check" value="${c.id}"></td>
-      <td>${c.run_date}</td>
-      <td>${startTime}</td>
-      <td>${endTime}</td>
-      <td>${c.levels_target || '-'}</td>
-      ${gameCells}
-      <td>${c.duration_min || '-'}분</td>
+      <td style="color:${gc};font-weight:700">${c.game}${plat}</td>
+      <td>${persona} ${c.levels || '-'}판</td>
+      <td style="font-weight:600;color:#a78bfa">${days} ${time}</td>
+      <td style="color:var(--text-muted);font-size:11px">${schedAt}</td>
+      <td>${durationMin}</td>
+      <td style="color:${statusColor};font-weight:700">${statusLabel}</td>
     </tr>`;
   }).join('');
 
   section.innerHTML = `
     <div class="tbl-wrap">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-        <h4 style="margin:0">크론 실행 이력</h4>
-        <label style="font-size:11px;color:var(--text-muted);margin-left:auto"><input type="checkbox" id="cron-select-all" onclick="document.querySelectorAll('.cron-check').forEach(c=>c.checked=this.checked)"> 전체 선택</label>
-        <button class="rm-btn rm-btn-danger" onclick="deleteSelectedCron()" style="font-size:11px;padding:3px 10px">선택 삭제</button>
-        <span id="cron-status" style="font-size:11px;color:var(--text-muted)"></span>
-      </div>
+      <h4 style="margin:0 0 12px">🔄 정기 반복 실행 이력</h4>
       <table>
-        <thead><tr><th style="width:30px"></th><th>날짜</th><th>시작</th><th>종료</th><th>목표</th>${gameHeaders}<th>소요</th></tr></thead>
+        <thead><tr><th>게임</th><th>설정</th><th>반복 패턴</th><th>예약 시각</th><th>소요</th><th>결과</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
