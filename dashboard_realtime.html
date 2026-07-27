@@ -9767,7 +9767,7 @@ function renderHeatmap() {
     try {
       const { data, error } = await sb.rpc('clear_finished_commands');
       if (error) throw error;
-      if (typeof showToast === 'function') showToast(ids.length + '건 삭제 완료');
+      if (typeof showToast === 'function') showToast(finished.length + '건 삭제 완료');
       loadCommandQueue();
     } catch (err) {
       if (typeof showToast === 'function') showToast('삭제 실패: ' + (err.message || ''));
