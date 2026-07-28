@@ -1114,6 +1114,7 @@ body.edit-mode .merge-btn { display: inline-block; }
             <button class="exec-game-btn" data-game="CTZ" style="--exec-gc:#10b981" onclick="toggleExecGame(this)">CTZ</button>
             <button class="exec-game-btn" data-game="PBM" style="--exec-gc:#f59e0b" onclick="toggleExecGame(this)">PBM</button>
             <button class="exec-game-btn" data-game="MJG" style="--exec-gc:#8b5cf6" onclick="toggleExecGame(this)">MJG</button>
+            <button class="exec-game-btn" data-game="CM" style="--exec-gc:#F44336" onclick="toggleExecGame(this)">CM</button>
           </div>
           <!-- 동적 버튼은 renderExecGameButtons()가 game_config 로드 후 교체 -->
         </div>
@@ -2741,7 +2742,7 @@ function renderCronHistory(cron) {
 /* ── 게임 탭 (사이드바 메뉴) ── */
 
 const GAME_ICONS = { SCJ: '🃏', CTZ: '🧩', PBM: '🧱', MJG: '🀄', CM: '🎮' };
-const GAME_NAMES = { SCJ: 'Solitaire City', CTZ: 'Cozy Tiles', PBM: 'Block Blast', MJG: 'Mahjong World Tour' };
+const GAME_NAMES = { SCJ: 'Solitaire City', CTZ: 'Cozy Tiles', PBM: 'Block Blast', MJG: 'Mahjong World Tour', CM: 'Coin Match' };
 const GAME_COLORS = { SCJ: '#3b82f6', CTZ: '#10b981', PBM: '#f59e0b', MJG: '#8b5cf6', CM: '#F44336' };
 
 function renderGameTabs(gameIds) {
@@ -4086,9 +4087,60 @@ const CHART_RENDERERS = {
   rounds: (id, stages, runs) => renderRoundCharts(id, stages, runs),
 };
 
+const DEFAULT_CATS = {
+  SCJ: [
+    { id: 'summary',  label: '📊 요약' },
+    { id: 'economy',  label: '💰 경제' },
+    { id: 'balance',  label: '⚖️ 밸런스' },
+    { id: 'gimmick',  label: '🎲 기믹' },
+    { id: 'stages',   label: '🗺️ 스테이지' },
+    { id: 'nru',      label: '🎓 NRU' },
+    { id: 'security', label: '🔒 보안' },
+    { id: 'logapi',   label: '📋 로그&API' },
+    { id: 'perf',     label: '⚡ 성능' },
+  ],
+  CTZ: [
+    { id: 'summary',       label: '📊 요약' },
+    { id: 'tiles',         label: '🧩 타일' },
+    { id: 'items',         label: '🎒 아이템' },
+    { id: 'time_analysis', label: '⏱️ 시간' },
+    { id: 'stages',        label: '🗺️ 스테이지' },
+    { id: 'security',      label: '🔒 보안' },
+    { id: 'logapi',        label: '📋 로그&API' },
+    { id: 'perf',          label: '⚡ 성능' },
+  ],
+  PBM: [
+    { id: 'summary',  label: '📊 요약' },
+    { id: 'rounds',   label: '🧱 라운드' },
+    { id: 'stages',   label: '🗺️ 스테이지' },
+    { id: 'security', label: '🔒 보안' },
+    { id: 'logapi',   label: '📋 로그&API' },
+    { id: 'perf',     label: '⚡ 성능' },
+  ],
+  MJG: [
+    { id: 'summary',       label: '📊 요약' },
+    { id: 'tiles',         label: '🀄 타일' },
+    { id: 'items',         label: '🎒 아이템' },
+    { id: 'time_analysis', label: '⏱️ 시간' },
+    { id: 'stages',        label: '🗺️ 스테이지' },
+    { id: 'security',      label: '🔒 보안' },
+    { id: 'logapi',        label: '📋 로그&API' },
+    { id: 'perf',          label: '⚡ 성능' },
+  ],
+  CM: [
+    { id: 'summary',  label: '📊 요약' },
+    { id: 'stages',   label: '🗺️ 스테이지' },
+    { id: 'security', label: '🔒 보안' },
+    { id: 'logapi',   label: '📋 로그&API' },
+    { id: 'perf',     label: '⚡ 성능' },
+  ],
+};
+
 function renderGameDetail(gameId, stages, runs) {
   const config = _gameConfigs.find(c => c.game_id === gameId);
-  const baseCats = config ? config.config.categories : [{ id: 'summary', label: '📊 요약' }];
+  const baseCats = (config && config.config && config.config.categories)
+    ? config.config.categories
+    : (DEFAULT_CATS[gameId] || [{ id: 'summary', label: '📊 요약' }]);
 
   // Auto(RL) 런이 있으면 summary 탭 바로 뒤에 탭 자동 삽입
   const hasAutoRuns = runs.some(r => r.selection_mode === 'auto');
@@ -4563,6 +4615,26 @@ function renderCatSummary(gameId, stages, runs) {
       <div class="metric-box"><div class="label">판당 평균 시간</div><div class="value">${avgTime}초</div></div>
       <div class="metric-box"><div class="label">총 플레이</div><div class="value">${totalPlayed.toLocaleString()}판</div></div>
       <div class="metric-box"><div class="label">총 런</div><div class="value">${runs.length}</div></div>`;
+  } else if (gameId === 'CM') {
+    const avgScore = totalPlayed ? Math.round(totalScore / totalPlayed).toLocaleString() : '-';
+    const maxScore = Math.max(0, ...runs.map(r => (r.metrics || {}).max_score || 0));
+    let totalMoves = 0, moveCount = 0, totalComboCM = 0;
+    for (const r of runs) {
+      const am = (r.metrics || {}).avg_moves;
+      if (am) { totalMoves += am * (r.levels_played || 1); moveCount += r.levels_played || 1; }
+      totalComboCM += (r.metrics || {}).max_combo || 0;
+    }
+    const avgMoves = moveCount ? (totalMoves / moveCount).toFixed(1) : '-';
+    const avgTime = totalPlayed ? (totalTime / totalPlayed).toFixed(1) : '-';
+    const maxComboCM = Math.max(0, ...runs.map(r => (r.metrics || {}).max_combo || 0));
+    topMetrics = `
+      <div class="metric-box"><div class="label">평균 점수/판</div><div class="value">${avgScore}</div></div>
+      <div class="metric-box"><div class="label">최고 점수</div><div class="value">${maxScore.toLocaleString()}</div></div>
+      <div class="metric-box"><div class="label">최대 콤보</div><div class="value">${maxComboCM}</div></div>
+      <div class="metric-box"><div class="label">평균 수</div><div class="value">${avgMoves}</div></div>
+      <div class="metric-box"><div class="label">판당 평균 시간</div><div class="value">${avgTime}초</div></div>
+      <div class="metric-box"><div class="label">총 플레이</div><div class="value">${totalPlayed.toLocaleString()}판</div></div>
+      <div class="metric-box"><div class="label">총 런</div><div class="value">${runs.length}</div></div>`;
   } else {
     const goldPerGame = totalPlayed ? Math.round(totalGoldPnl / totalPlayed).toLocaleString() : '-';
     const goldColor = totalGoldPnl >= 0 ? 'var(--status-ok)' : 'var(--status-err)';
@@ -4593,6 +4665,12 @@ function renderCatSummary(gameId, stages, runs) {
         <div class="stat"><span class="stat-label">이어하기</span><span class="stat-value">${d.continues}</span></div>
         <div class="stat"><span class="stat-label">평균 시간</span><span class="stat-value">${avgTime}초</span></div>`;
     } else if (gameId === 'MJG') {
+      const pScore = d.played ? Math.round(d.score / d.played).toLocaleString() : '-';
+      statsHtml = `
+        <div class="stat"><span class="stat-label">판 수</span><span class="stat-value">${d.played}판 (${d.runs}런)</span></div>
+        <div class="stat"><span class="stat-label">평균 점수</span><span class="stat-value">${pScore}</span></div>
+        <div class="stat"><span class="stat-label">평균 시간</span><span class="stat-value">${avgTime}초</span></div>`;
+    } else if (gameId === 'CM') {
       const pScore = d.played ? Math.round(d.score / d.played).toLocaleString() : '-';
       statsHtml = `
         <div class="stat"><span class="stat-label">판 수</span><span class="stat-value">${d.played}판 (${d.runs}런)</span></div>
@@ -4741,6 +4819,19 @@ function renderRadarChart(gameId, stages, runs) {
         v1: d.played ? Math.max(0, 100 - (d.time / d.played)) : 0,
         v2: Math.min(100, avgScore / 50),
         v3: Math.min(100, itemRate * 100),
+        v4: Math.min(100, d.played * 2),
+      };
+    });
+  } else if (gameId === 'CM' || gameId === 'PBM' || gameId === 'MJG') {
+    radarLabels = ['속도', '점수', '클리어율', '볼륨'];
+    metrics = pKeys.map(p => {
+      const d = personas[p];
+      const avgScore = d.played ? d.score / d.played : 0;
+      const crRate = d.played ? d.cleared / d.played * 100 : 0;
+      return {
+        v1: d.played ? Math.max(0, 100 - (d.time / d.played)) : 0,
+        v2: Math.min(100, avgScore / 50),
+        v3: Math.min(100, crRate),
         v4: Math.min(100, d.played * 2),
       };
     });
@@ -10262,6 +10353,7 @@ function renderGameMgmt() {
     { id: 'CTZ', name: 'Cozy Tiles',             icon: '🧩', color: '#10b981', port: 9223, status: 'active' },
     { id: 'PBM', name: 'Block Blast',             icon: '🧱', color: '#f59e0b', port: 9224, status: 'active' },
     { id: 'MJG', name: 'Mahjong World Tour',      icon: '🀄', color: '#8b5cf6', port: 9225, status: 'active' },
+    { id: 'CM',  name: 'Coin Match',              icon: '🎮', color: '#F44336', port: 9226, status: 'active' },
   ];
   const REGISTERED = (_gameConfigs && _gameConfigs.length)
     ? _gameConfigs.map(g => ({
