@@ -1342,7 +1342,7 @@ function filterRunsByDateRange(runs, start, end) {
 async function fetchRuns() {
   const { data, error } = await sb
     .from('freeplay_runs')
-    .select('id,game_id,persona,run_date,uid,client_ver,levels_played,levels_cleared,clear_rate,total_time_sec,source_path,created_at,platform')
+    .select('id,game_id,persona,run_date,uid,client_ver,levels_played,levels_cleared,clear_rate,total_time_sec,source_path,created_at,platform,selection_mode')
     .order('run_date', { ascending: false });
   if (error) throw error;
   return data || [];
@@ -1352,7 +1352,7 @@ async function fetchGameRuns(gameId) {
   // 기본 정보 + 경량 metrics를 병렬 fetch
   const [basicRes, metricsRes] = await Promise.all([
     sb.from('freeplay_runs')
-      .select('id,game_id,persona,run_date,uid,client_ver,levels_played,levels_cleared,clear_rate,total_time_sec,source_path,created_at,platform')
+      .select('id,game_id,persona,run_date,uid,client_ver,levels_played,levels_cleared,clear_rate,total_time_sec,source_path,created_at,platform,selection_mode')
       .eq('game_id', gameId)
       .order('run_date', { ascending: false }),
     sb.rpc('get_light_metrics', { p_game_id: gameId })
@@ -4039,6 +4039,7 @@ function renderRoundCharts(gameId, stages, runs) {
 const CATEGORY_RENDERERS = {
   // 공통
   summary: (gid, stages, runs) => renderCatSummary(gid, stages, runs),
+  auto_rl: (gid, stages, runs) => renderCatAutoRL(gid, stages, runs),
   stages: (gid, stages, runs) => renderCatStages(gid, stages),
   security: (gid, stages, runs) => renderCatSecurity(gid, runs),
   logapi: (gid, stages, runs) => renderCatLogApi(gid, runs),
@@ -4059,6 +4060,7 @@ const CATEGORY_RENDERERS = {
 
 const CHART_RENDERERS = {
   summary: (id, stages, runs) => { renderSummaryCharts(id, stages, runs); renderRadarChart(id, stages, runs); },
+  auto_rl: (id, stages, runs) => renderAutoRLCharts(id, stages, runs),
   economy: (id, stages, runs) => renderEconomyCharts(id, stages, runs),
   balance: (id, stages, runs) => renderBalanceCharts(id, stages, runs),
   gimmick: (id, stages, runs) => renderGimmickCharts(id, stages),
@@ -4086,7 +4088,13 @@ const CHART_RENDERERS = {
 
 function renderGameDetail(gameId, stages, runs) {
   const config = _gameConfigs.find(c => c.game_id === gameId);
-  const cats = config ? config.config.categories : [{ id: 'summary', label: '📊 요약' }];
+  const baseCats = config ? config.config.categories : [{ id: 'summary', label: '📊 요약' }];
+
+  // Auto(RL) 런이 있으면 summary 탭 바로 뒤에 탭 자동 삽입
+  const hasAutoRuns = runs.some(r => r.selection_mode === 'auto');
+  const cats = hasAutoRuns && !baseCats.find(c => c.id === 'auto_rl')
+    ? [baseCats[0], { id: 'auto_rl', label: '🤖 Auto (RL)' }, ...baseCats.slice(1)]
+    : baseCats;
 
   const tabsHtml = cats.map((c, i) =>
     `<button class="cat-tab${i === 0 ? ' active' : ''}" onclick="switchCat('${gameId}','${c.id}',this)">${c.label}</button>`
@@ -4188,6 +4196,275 @@ function _aggregatePersonaStages(stages) {
 /* ══════════════════════════════════════════════
    카테고리: 요약
    ══════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════
+   Auto (RL) 탭 — Thompson Sampling 페르소나 선택 분석
+   ══════════════════════════════════════════════ */
+
+function renderCatAutoRL(gameId, stages, runs) {
+  const autoRuns = runs.filter(r => r.selection_mode === 'auto');
+  const manualRuns = runs.filter(r => r.selection_mode !== 'auto');
+
+  if (!autoRuns.length) {
+    return `<div class="state-msg" style="min-height:200px">
+      <div class="icon" style="font-size:36px">🤖</div>
+      <div style="color:var(--text-muted);font-size:14px">Auto(RL) 데이터 없음</div>
+      <div style="color:var(--text-muted);font-size:12px;margin-top:4px">--persona auto 로 실행하면 여기에 표시됩니다</div>
+    </div>`;
+  }
+
+  // ── KPI 집계 ──
+  const totalAutoRuns = autoRuns.length;
+  const totalAutoPlayed = autoRuns.reduce((a, r) => a + (r.levels_played || 0), 0);
+  const totalAutoCleared = autoRuns.reduce((a, r) => a + (r.levels_cleared || 0), 0);
+  const autoCR = totalAutoPlayed ? (totalAutoCleared / totalAutoPlayed * 100) : 0;
+
+  // 페르소나 선택 집계
+  const personaCount = {};
+  for (const r of autoRuns) {
+    const p = r.persona || 'unknown';
+    personaCount[p] = (personaCount[p] || 0) + 1;
+  }
+  const topPersona = Object.entries(personaCount).sort((a, b) => b[1] - a[1])[0];
+  const topPersonaName = topPersona ? (PERSONA_KO[topPersona[0]] || topPersona[0]) : '-';
+  const topPersonaColor = topPersona ? (PERSONA_COLORS[topPersona[0]] || '#94a3b8') : '#94a3b8';
+  const topPersonaPct = topPersona ? (topPersona[1] / totalAutoRuns * 100).toFixed(0) : 0;
+
+  // ── Manual 비교용 클리어율 ──
+  const manualPlayed = manualRuns.reduce((a, r) => a + (r.levels_played || 0), 0);
+  const manualCleared = manualRuns.reduce((a, r) => a + (r.levels_cleared || 0), 0);
+  const manualCR = manualPlayed ? (manualCleared / manualPlayed * 100) : null;
+
+  const crColor = autoCR >= 90 ? '#10b981' : autoCR >= 50 ? '#f59e0b' : '#ef4444';
+  const crDiff = manualCR !== null ? (autoCR - manualCR) : null;
+  const crDiffHtml = crDiff !== null
+    ? `<div class="sub" style="color:${crDiff >= 0 ? 'var(--status-ok)' : 'var(--status-err)'}">${crDiff >= 0 ? '▲' : '▼'} ${Math.abs(crDiff).toFixed(1)}%p vs Manual</div>`
+    : '';
+
+  // ── 페르소나별 클리어율 (Auto 런 기준) ──
+  const personaStats = {};
+  for (const r of autoRuns) {
+    const p = r.persona || 'unknown';
+    if (!personaStats[p]) personaStats[p] = { played: 0, cleared: 0, runs: 0 };
+    personaStats[p].played += r.levels_played || 0;
+    personaStats[p].cleared += r.levels_cleared || 0;
+    personaStats[p].runs++;
+  }
+
+  const personaStatCards = _sortPersona(Object.entries(personaStats)).map(([p, d]) => {
+    const pCR = d.played ? (d.cleared / d.played * 100) : 0;
+    const pCRColor = pCR >= 90 ? '#10b981' : pCR >= 50 ? '#f59e0b' : '#ef4444';
+    const pPct = totalAutoRuns ? (d.runs / totalAutoRuns * 100).toFixed(0) : 0;
+    return `<div class="persona-card">
+      <h5 style="color:${PERSONA_COLORS[p] || '#94a3b8'}">${PERSONA_KO[p] || p}</h5>
+      <div class="stat"><span class="stat-label">선택 횟수</span><span class="stat-value">${d.runs}회 (${pPct}%)</span></div>
+      <div class="stat"><span class="stat-label">클리어율</span><span class="stat-value" style="color:${pCRColor}">${pCR.toFixed(1)}%</span></div>
+      <div class="stat"><span class="stat-label">판 수</span><span class="stat-value">${d.played}판</span></div>
+    </div>`;
+  }).join('');
+
+  return `
+    <!-- KPI 카드 3종 -->
+    <div class="metric-row">
+      <div class="metric-box">
+        <div class="label">Auto 총 실행</div>
+        <div class="value">${totalAutoRuns}런</div>
+        <div class="sub">${totalAutoPlayed.toLocaleString()}판 플레이</div>
+      </div>
+      <div class="metric-box">
+        <div class="label">Auto 평균 클리어율</div>
+        <div class="value" style="color:${crColor}">${autoCR.toFixed(1)}%</div>
+        ${crDiffHtml}
+      </div>
+      <div class="metric-box">
+        <div class="label">최다 선택 페르소나</div>
+        <div class="value" style="color:${topPersonaColor}">${topPersonaName}</div>
+        <div class="sub">${topPersonaPct}% 선택됨</div>
+      </div>
+    </div>
+
+    <!-- 페르소나별 선택 통계 카드 -->
+    <div style="margin-bottom:16px">
+      <h4 style="font-size:calc(14px * var(--fs-scale));color:var(--text-secondary);margin-bottom:10px">페르소나별 선택 현황</h4>
+      <div class="persona-grid">${personaStatCards}</div>
+    </div>
+
+    <!-- Chart A: 페르소나 선택 분포 (도넛) | Chart B: 선택 페르소나별 클리어율 시계열 -->
+    <div class="chart-grid">
+      <div class="chart-box">
+        <h4>페르소나 선택 분포 (Thompson Sampling)</h4>
+        <canvas id="chart-autorl-dist-${gameId}"></canvas>
+      </div>
+      <div class="chart-box">
+        <h4>Auto 선택 페르소나별 클리어율 추이</h4>
+        <canvas id="chart-autorl-trend-${gameId}"></canvas>
+      </div>
+    </div>
+
+    <!-- Chart C: Auto vs Manual 클리어율 비교 -->
+    <div class="chart-grid">
+      <div class="chart-box">
+        <h4>Auto vs Manual 클리어율 비교</h4>
+        <canvas id="chart-autorl-cmp-${gameId}"></canvas>
+      </div>
+      <div class="chart-box">
+        <h4>Auto 런 일별 페르소나 선택 추이</h4>
+        <canvas id="chart-autorl-daily-${gameId}"></canvas>
+      </div>
+    </div>
+  `;
+}
+
+function renderAutoRLCharts(gameId, stages, runs) {
+  const autoRuns = runs.filter(r => r.selection_mode === 'auto');
+  const manualRuns = runs.filter(r => r.selection_mode !== 'auto');
+  if (!autoRuns.length) return;
+
+  const textSecondary = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary') || '#c8d1da';
+  const textMuted = getComputedStyle(document.documentElement).getPropertyValue('--text-muted') || '#8b9bb0';
+
+  // ── Chart A: 페르소나 선택 분포 (도넛) ──
+  const personaCount = {};
+  for (const r of autoRuns) {
+    const p = r.persona || 'unknown';
+    personaCount[p] = (personaCount[p] || 0) + 1;
+  }
+  const sorted = _sortPersona(Object.entries(personaCount));
+  const distKey = `autorl-dist-${gameId}`;
+  if (_charts[distKey]) _charts[distKey].destroy();
+  const distCanvas = document.getElementById(`chart-autorl-dist-${gameId}`);
+  if (distCanvas && sorted.length) {
+    _charts[distKey] = new Chart(distCanvas, {
+      type: 'doughnut',
+      data: {
+        labels: sorted.map(([p]) => PERSONA_KO[p] || p),
+        datasets: [{
+          data: sorted.map(([, n]) => n),
+          backgroundColor: sorted.map(([p]) => (PERSONA_COLORS[p] || '#94a3b8') + 'cc'),
+          borderColor: sorted.map(([p]) => PERSONA_COLORS[p] || '#94a3b8'),
+          borderWidth: 2,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right', labels: { color: textSecondary, font: { size: 12 } } },
+          tooltip: { callbacks: { label: c => `${c.label}: ${c.raw}회 (${(c.raw / autoRuns.length * 100).toFixed(1)}%)` } },
+        },
+      },
+    });
+  }
+
+  // ── Chart B: 선택 페르소나별 클리어율 시계열 ──
+  const dailyPersonaCR = {};
+  for (const r of autoRuns) {
+    const d = r.run_date, p = r.persona || 'unknown';
+    if (!dailyPersonaCR[d]) dailyPersonaCR[d] = {};
+    if (!dailyPersonaCR[d][p]) dailyPersonaCR[d][p] = { played: 0, cleared: 0 };
+    dailyPersonaCR[d][p].played += r.levels_played || 0;
+    dailyPersonaCR[d][p].cleared += r.levels_cleared || 0;
+  }
+  const trendDates = Object.keys(dailyPersonaCR).sort();
+  const trendPersonas = [...new Set(autoRuns.map(r => r.persona || 'unknown'))];
+  const trendKey = `autorl-trend-${gameId}`;
+  if (_charts[trendKey]) _charts[trendKey].destroy();
+  const trendCanvas = document.getElementById(`chart-autorl-trend-${gameId}`);
+  if (trendCanvas && trendDates.length) {
+    const datasets = _sortPersona(trendPersonas.map(p => [p, null])).map(([p]) => ({
+      label: PERSONA_KO[p] || p,
+      data: trendDates.map(d => {
+        const s = (dailyPersonaCR[d] || {})[p];
+        return s && s.played ? +(s.cleared / s.played * 100).toFixed(1) : null;
+      }),
+      borderColor: PERSONA_COLORS[p] || '#94a3b8',
+      backgroundColor: (PERSONA_COLORS[p] || '#94a3b8') + '22',
+      tension: 0.3, spanGaps: true, pointRadius: 4,
+    }));
+    _charts[trendKey] = new Chart(trendCanvas, {
+      type: 'line',
+      data: { labels: trendDates.map(d => d.slice(5)), datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } } },
+        plugins: { legend: { labels: { color: textSecondary, font: { size: 11 } } } },
+      },
+    });
+  }
+
+  // ── Chart C: Auto vs Manual 페르소나별 클리어율 비교 ──
+  const cmpKey = `autorl-cmp-${gameId}`;
+  if (_charts[cmpKey]) _charts[cmpKey].destroy();
+  const cmpCanvas = document.getElementById(`chart-autorl-cmp-${gameId}`);
+  if (cmpCanvas) {
+    // Auto: 페르소나별 집계
+    const autoPCR = {};
+    for (const r of autoRuns) {
+      const p = r.persona || 'unknown';
+      if (!autoPCR[p]) autoPCR[p] = { played: 0, cleared: 0 };
+      autoPCR[p].played += r.levels_played || 0;
+      autoPCR[p].cleared += r.levels_cleared || 0;
+    }
+    // Manual: 페르소나별 집계
+    const manPCR = {};
+    for (const r of manualRuns) {
+      const p = r.persona || 'unknown';
+      if (!manPCR[p]) manPCR[p] = { played: 0, cleared: 0 };
+      manPCR[p].played += r.levels_played || 0;
+      manPCR[p].cleared += r.levels_cleared || 0;
+    }
+    const cmpPersonas = _sortPersona([...new Set([...Object.keys(autoPCR), ...Object.keys(manPCR)]).values()].map(p => [p, null])).map(([p]) => p);
+    const autoVals = cmpPersonas.map(p => autoPCR[p] && autoPCR[p].played ? +(autoPCR[p].cleared / autoPCR[p].played * 100).toFixed(1) : null);
+    const manVals = cmpPersonas.map(p => manPCR[p] && manPCR[p].played ? +(manPCR[p].cleared / manPCR[p].played * 100).toFixed(1) : null);
+    _charts[cmpKey] = new Chart(cmpCanvas, {
+      type: 'bar',
+      data: {
+        labels: cmpPersonas.map(p => PERSONA_KO[p] || p),
+        datasets: [
+          { label: 'Auto (RL)', data: autoVals, backgroundColor: '#6366f1cc', borderColor: '#6366f1', borderWidth: 1.5, borderRadius: 6 },
+          { label: 'Manual',    data: manVals,  backgroundColor: '#94a3b844', borderColor: '#94a3b8', borderWidth: 1.5, borderRadius: 6 },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } } },
+        plugins: {
+          legend: { labels: { color: textSecondary } },
+          tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.raw !== null ? c.raw + '%' : '데이터 없음'}` } },
+        },
+      },
+    });
+  }
+
+  // ── Chart D: Auto 런 일별 페르소나 선택 수 추이 ──
+  const dailySelKey = `autorl-daily-${gameId}`;
+  if (_charts[dailySelKey]) _charts[dailySelKey].destroy();
+  const dailyCanvas = document.getElementById(`chart-autorl-daily-${gameId}`);
+  if (dailyCanvas && trendDates.length) {
+    const allPersonas = [...new Set(autoRuns.map(r => r.persona || 'unknown'))];
+    const dailyCountMap = {};
+    for (const r of autoRuns) {
+      const d = r.run_date, p = r.persona || 'unknown';
+      if (!dailyCountMap[d]) dailyCountMap[d] = {};
+      dailyCountMap[d][p] = (dailyCountMap[d][p] || 0) + 1;
+    }
+    const selDatasets = _sortPersona(allPersonas.map(p => [p, null])).map(([p]) => ({
+      label: PERSONA_KO[p] || p,
+      data: trendDates.map(d => (dailyCountMap[d] || {})[p] || 0),
+      borderColor: PERSONA_COLORS[p] || '#94a3b8',
+      backgroundColor: (PERSONA_COLORS[p] || '#94a3b8') + '33',
+      tension: 0.3, fill: true,
+    }));
+    _charts[dailySelKey] = new Chart(dailyCanvas, {
+      type: 'line',
+      data: { labels: trendDates.map(d => d.slice(5)), datasets: selDatasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+        plugins: { legend: { labels: { color: textSecondary, font: { size: 11 } } } },
+      },
+    });
+  }
+}
+
 function renderCatSummary(gameId, stages, runs) {
   const personas = {};
   let totalGoldPnl = 0, totalHammerDelta = 0, totalTurns = 0, turnCount = 0;
