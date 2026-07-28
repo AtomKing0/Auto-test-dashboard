@@ -2740,9 +2740,9 @@ function renderCronHistory(cron) {
 
 /* ── 게임 탭 (사이드바 메뉴) ── */
 
-const GAME_ICONS = { SCJ: '🃏', CTZ: '🧩', PBM: '🧱', MJG: '🀄' };
+const GAME_ICONS = { SCJ: '🃏', CTZ: '🧩', PBM: '🧱', MJG: '🀄', CM: '🎮' };
 const GAME_NAMES = { SCJ: 'Solitaire City', CTZ: 'Cozy Tiles', PBM: 'Block Blast', MJG: 'Mahjong World Tour' };
-const GAME_COLORS = { SCJ: '#3b82f6', CTZ: '#10b981', PBM: '#f59e0b', MJG: '#8b5cf6' };
+const GAME_COLORS = { SCJ: '#3b82f6', CTZ: '#10b981', PBM: '#f59e0b', MJG: '#8b5cf6', CM: '#F44336' };
 
 function renderGameTabs(gameIds) {
   const container = document.getElementById('sidebar-games');
@@ -10214,7 +10214,7 @@ window.renderExecGameButtons = function() {
   if (!grid) return;
   const configs = (_gameConfigs && _gameConfigs.length)
     ? _gameConfigs
-    : [{game_id:'SCJ'},{game_id:'CTZ'},{game_id:'PBM'},{game_id:'MJG'}];
+    : [{game_id:'SCJ'},{game_id:'CTZ'},{game_id:'PBM'},{game_id:'MJG'},{game_id:'CM'}];
   grid.innerHTML = configs.map(g => {
     const id = g.game_id || g.id || '';
     const color = GAME_COLORS[id] || '#3b82f6';
