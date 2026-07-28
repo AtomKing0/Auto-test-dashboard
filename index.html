@@ -10232,7 +10232,7 @@ window.addNewGame = async function() {
   if (!gameId)  { resultEl.innerHTML = '<div style="color:#ef4444;font-size:12px">게임 ID를 입력하세요</div>'; return; }
   if (!gameUrl) { resultEl.innerHTML = '<div style="color:#ef4444;font-size:12px">게임 URL을 입력하세요</div>'; return; }
 
-  const cliCmd = `python3 add_game.py --game ${gameId} --url "${gameUrl}"${gameName ? ` --name "${gameName}"` : ''}`;
+  const cliCmd = `python3 src/game_onboard.py --game ${gameId} --url "${gameUrl}"${gameName ? ` --port 9227` : ''}`;
 
   // game_config INSERT 시도
   let dbMsg = '';
