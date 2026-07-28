@@ -7573,7 +7573,14 @@ function playNotifSound() {
 
 /* ── 알림 패널 ── */
 
-let _notifItems = [];
+let _notifItems = (function() {
+  try { return JSON.parse(localStorage.getItem('notif_items') || '[]'); }
+  catch(e) { return []; }
+})();
+
+function _saveNotifItems() {
+  try { localStorage.setItem('notif_items', JSON.stringify(_notifItems)); } catch(e) {}
+}
 
 function toggleNotifPanel() {
   document.getElementById('notif-panel').classList.toggle('open');
@@ -7584,18 +7591,21 @@ function addNotifItem(game, persona, detail) {
   const pName = PERSONA_KO[persona] || persona;
   _notifItems.unshift({ game, persona: pName, detail, ts, id: Date.now() });
   if (_notifItems.length > 50) _notifItems.pop();
+  _saveNotifItems();
   renderNotifList();
   updateNotifBadge();
 }
 
 function removeNotifItem(id) {
   _notifItems = _notifItems.filter(n => n.id !== id);
+  _saveNotifItems();
   renderNotifList();
   updateNotifBadge();
 }
 
 function clearAllNotifs() {
   _notifItems = [];
+  _saveNotifItems();
   renderNotifList();
   updateNotifBadge();
 }
@@ -7817,7 +7827,10 @@ async function init() {
     renderOverview(games);
     renderHealthCheck(healthChecks);
     renderCronHistory(cron);
-    renderGameTabs(Object.keys(games));
+    // game_config 등록 게임도 포함 (결과 없어도 탭 표시)
+    const _configGameIds = (_gameConfigs || []).map(g => g.game_id || g.id).filter(Boolean);
+    const _allGameIds = [...new Set([...Object.keys(games), ..._configGameIds])].sort();
+    renderGameTabs(_allGameIds);
     updateSidebarBadges();
     restoreGridCols();
 
