@@ -159,6 +159,30 @@ tr:hover td { background: rgba(59,130,246,.05); }
 .metric-box .value { font-size: 22px; font-weight: 700; }
 .metric-box .sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 
+/* ── Hero KPI ── */
+.kpi-hero {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 16px 20px; margin-bottom: 16px; display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
+}
+.kpi-hero-main { min-width: 140px; }
+.kpi-hero-main .kpi-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .5px; }
+.kpi-hero-main .kpi-value { font-size: 40px; font-weight: 800; line-height: 1; }
+.kpi-hero-main .kpi-sub { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+.kpi-bar { height: 6px; background: rgba(255,255,255,.1); border-radius: 3px; margin-top: 8px; width: 100%; }
+.kpi-bar-fill { height: 6px; border-radius: 3px; transition: width .5s ease; }
+.kpi-hero-stats { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.kpi-hero-stats .hs-label { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
+.kpi-hero-stats .hs-value { font-size: 20px; font-weight: 700; }
+/* ── Persona Compare Table ── */
+.persona-cmp .pc-bar-wrap { display: flex; align-items: center; gap: 8px; }
+.persona-cmp .pc-bar { flex: 1; height: 6px; background: rgba(255,255,255,.1); border-radius: 3px; min-width: 60px; }
+.persona-cmp .pc-bar-fill { height: 6px; border-radius: 3px; }
+/* ── Game Card CR ── */
+.gc-cr { margin: 8px 0 4px; padding-top: 8px; border-top: 1px solid var(--border); }
+.gc-cr-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 12px; }
+.gc-cr-bar-bg { height: 4px; background: rgba(255,255,255,.1); border-radius: 2px; }
+.gc-cr-bar-fill { height: 4px; border-radius: 2px; transition: width .4s; }
+
 /* ── Gold Flow Card ── */
 .gold-flow { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
 .gold-flow-col {
@@ -1507,16 +1531,18 @@ function aggregateOverview(runs) {
   const games = {};
   for (const r of runs) {
     if (!games[r.game_id]) {
-      games[r.game_id] = { runs: 0, levels: 0, time: 0, personas: {}, dailyMap: {}, issueCount: 0, issueDetails: [], events: [] };
+      games[r.game_id] = { runs: 0, levels: 0, cleared: 0, time: 0, personas: {}, dailyMap: {}, issueCount: 0, issueDetails: [], events: [] };
     }
     const g = games[r.game_id];
     g.runs++;
     g.levels += r.levels_played || 0;
+    g.cleared += r.levels_cleared || 0;
     g.time += r.total_time_sec || 0;
 
     const p = r.persona;
-    if (!g.personas[p]) g.personas[p] = { played: 0, runs: 0, lastDate: '' };
+    if (!g.personas[p]) g.personas[p] = { played: 0, cleared: 0, runs: 0, lastDate: '' };
     g.personas[p].played += r.levels_played || 0;
+    g.personas[p].cleared += r.levels_cleared || 0;
     g.personas[p].runs++;
     if (r.run_date > g.personas[p].lastDate) g.personas[p].lastDate = r.run_date;
 
@@ -1994,15 +2020,28 @@ function renderGameCard(gid, g) {
     ? `${(g.time / 3600).toFixed(1)}시간`
     : `${Math.round(g.time / 60)}분`;
 
+  const crPct = g.levels ? (g.cleared / g.levels * 100) : 0;
+  const crColor = crPct >= 90 ? '#10b981' : crPct >= 70 ? '#f59e0b' : crPct > 0 ? '#ef4444' : '#64748b';
+  const gcBorder = crPct >= 90 ? '#10b981' : crPct >= 70 ? '#f59e0b' : crPct > 0 ? '#ef4444' : '#3b82f6';
+
   const personaRows = Object.entries(g.personas)
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => (PERSONA_ORDER.indexOf(a)===-1?99:PERSONA_ORDER.indexOf(a)) - (PERSONA_ORDER.indexOf(b)===-1?99:PERSONA_ORDER.indexOf(b)))
     .map(([p, d]) => {
-      return `<div class="stat"><span class="stat-label">${PERSONA_KO[p] || p}</span><span class="stat-value">${d.played}판 (${d.runs}런)</span></div>`;
+      const pCr = d.played ? (d.cleared / d.played * 100) : 0;
+      const pCrClr = pCr >= 90 ? '#10b981' : pCr >= 70 ? '#f59e0b' : pCr > 0 ? '#ef4444' : 'var(--text-muted)';
+      return `<div class="stat"><span class="stat-label" style="color:${PERSONA_COLORS[p]||'var(--text-muted)'}">${PERSONA_KO[p] || p}</span><span class="stat-value">${d.played}판 (${d.runs}런) <span style="color:${pCrClr};font-size:11px">${pCr > 0 ? pCr.toFixed(0)+'%' : ''}</span></span></div>`;
     }).join('');
 
   return `
-    <div class="game-card" style="--gc:${PERSONA_COLORS.hardcore}">
+    <div class="game-card" style="--gc:${gcBorder}">
       <h3>${gid}</h3>
+      <div class="gc-cr">
+        <div class="gc-cr-header">
+          <span style="color:var(--text-muted)">클리어율</span>
+          <span style="font-weight:700;color:${crColor}">${crPct > 0 ? crPct.toFixed(1)+'%' : '-'}</span>
+        </div>
+        <div class="gc-cr-bar-bg"><div class="gc-cr-bar-fill" style="width:${Math.min(100,crPct).toFixed(0)}%;background:${crColor}"></div></div>
+      </div>
       <div class="stat"><span class="stat-label">테스트 UID</span><span class="stat-value" style="font-size:11px">${((_serverLogs[gid]||[])[0]||{}).uid || '-'}</span></div>
       <div class="stat"><span class="stat-label">빌드</span><span class="stat-value">${((_serverLogs[gid]||[])[0]||{}).client_ver || '-'}</span></div>
       <div class="stat"><span class="stat-label">총 런/판</span><span class="stat-value">${g.runs}런 / ${g.levels.toLocaleString()}판</span></div>
@@ -4573,7 +4612,22 @@ function renderCatSummary(gameId, stages, runs) {
     const good = val >= 0;
     return `<div class="sub" style="color:${good ? 'var(--status-ok)' : 'var(--status-err)'}">${val >= 0 ? '▲' : '▼'} ${Math.abs(val).toFixed(1)}${unit} vs 이전</div>`;
   };
-  const crMetricHtml = totalPlayed > 0 ? `<div class="metric-box"><div class="label">클리어율</div><div class="value" style="color:${crColor}">${crPct.toFixed(1)}%</div><div class="sub">${totalCleared.toLocaleString()} / ${totalPlayed.toLocaleString()}판</div>${_trendHtml(trendCR, '%p')}</div>` : '';
+  const trendText = trendCR !== null ? ` · ${trendCR >= 0 ? '▲' : '▼'} ${Math.abs(trendCR).toFixed(1)}%p vs 이전` : '';
+  const totalTimeStr = totalTime >= 3600 ? `${(totalTime/3600).toFixed(1)}시간` : `${Math.round(totalTime/60)}분`;
+  const crHeroHtml = totalPlayed > 0 ? `
+    <div class="kpi-hero">
+      <div class="kpi-hero-main">
+        <div class="kpi-label">전체 클리어율</div>
+        <div class="kpi-value" style="color:${crColor}">${crPct.toFixed(1)}%</div>
+        <div class="kpi-bar"><div class="kpi-bar-fill" style="width:${Math.min(100,crPct).toFixed(0)}%;background:${crColor}"></div></div>
+        <div class="kpi-sub">${totalCleared.toLocaleString()} / ${totalPlayed.toLocaleString()}판${trendText}</div>
+      </div>
+      <div class="kpi-hero-stats">
+        <div><div class="hs-label">총 런</div><div class="hs-value">${runs.length}</div></div>
+        <div><div class="hs-label">총 플레이</div><div class="hs-value">${totalPlayed.toLocaleString()}</div></div>
+        <div><div class="hs-label">소요 시간</div><div class="hs-value">${totalTimeStr}</div></div>
+      </div>
+    </div>` : '';
 
   /* 게임별 상단 메트릭 */
   let topMetrics;
@@ -4700,6 +4754,46 @@ function renderCatSummary(gameId, stages, runs) {
     </div>`;
   }).join('');
 
+  // 페르소나 비교 테이블
+  let keyMetricHead, keyMetricCell;
+  if (gameId === 'SCJ') {
+    keyMetricHead = '<th>골드/판</th><th>평균 턴</th>';
+    keyMetricCell = (d) => {
+      const v = d.played ? Math.round(d.goldPnl / d.played).toLocaleString() : '-';
+      const vc = d.goldPnl >= 0 ? 'var(--status-ok)' : 'var(--status-err)';
+      const t = d.turnLevels ? (d.turns / d.turnLevels).toFixed(1) : '-';
+      return `<td style="color:${vc};font-weight:600">${v}</td><td>${t}</td>`;
+    };
+  } else {
+    keyMetricHead = '<th>평균 점수</th>';
+    keyMetricCell = (d) => {
+      const v = d.played ? Math.round(d.score / d.played).toLocaleString() : '-';
+      return `<td>${v}</td>`;
+    };
+  }
+  const personaTableRows = Object.entries(personas)
+    .sort(([a],[b]) => (PERSONA_ORDER.indexOf(a)===-1?99:PERSONA_ORDER.indexOf(a)) - (PERSONA_ORDER.indexOf(b)===-1?99:PERSONA_ORDER.indexOf(b)))
+    .map(([p, d]) => {
+      const pCr = d.played ? (d.cleared / d.played * 100) : 0;
+      const pCrClr = pCr >= 90 ? '#10b981' : pCr >= 50 ? '#f59e0b' : '#ef4444';
+      const avgTime = d.played ? (d.time / d.played).toFixed(1) : '-';
+      return `<tr>
+        <td><span style="color:${PERSONA_COLORS[p]||'#999'};font-weight:600">${PERSONA_KO[p]||p}</span></td>
+        <td><div class="pc-bar-wrap"><div class="pc-bar"><div class="pc-bar-fill" style="width:${Math.min(100,pCr).toFixed(0)}%;background:${pCrClr}"></div></div><span style="color:${pCrClr};font-weight:700;font-size:13px;min-width:42px;text-align:right">${pCr.toFixed(1)}%</span></div></td>
+        <td>${d.played}판 / ${d.runs}런</td>
+        ${keyMetricCell(d)}
+        <td>${avgTime}초</td>
+      </tr>`;
+    }).join('');
+  const personaTableHtml = `
+    <div class="tbl-wrap" style="margin-bottom:16px">
+      <h4>페르소나별 비교</h4>
+      <table class="persona-cmp">
+        <thead><tr><th>페르소나</th><th style="min-width:160px">클리어율</th><th>판 / 런</th>${keyMetricHead}<th>평균 시간</th></tr></thead>
+        <tbody>${personaTableRows}</tbody>
+      </table>
+    </div>`;
+
   // 최근 런 결과 미니 테이블 (최근 5개)
   const recentSorted = [...runs].sort((a, b) => (b.created_at || b.run_date || '').localeCompare(a.created_at || a.run_date || '')).slice(0, 5);
   const recentRunsHtml = recentSorted.length ? `
@@ -4739,8 +4833,9 @@ function renderCatSummary(gameId, stages, runs) {
   const loadingMetric = `<span id="loading-metric-${gameId}">${loadingMetricInner}</span>`;
 
   return `
-    <div class="metric-row">${crMetricHtml}${topMetrics}${loadingMetric}</div>
-    <div class="persona-grid">${personaCards}</div>
+    ${crHeroHtml}
+    <div class="metric-row">${topMetrics}${loadingMetric}</div>
+    ${personaTableHtml}
     ${recentRunsHtml}
     <div class="chart-grid">
       <div class="chart-box"><h4>일별 런 수 추이</h4><canvas id="chart-summary-dailyruns-${gameId}"></canvas></div>
