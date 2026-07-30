@@ -16,12 +16,20 @@
   --bg-card: #0f1a2e;
   --bg-topbar: #0f1a2e;
   --border: #1e3a5f;
+  --border-faint: rgba(255,255,255,.06);
+  --bg-subtle: rgba(255,255,255,.08);
   --text-primary: #e2e8f0;
   --text-secondary: #c8d1da;
   --text-muted: #8b9bb0;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
   --status-ok: #10b981;
   --status-warn: #f59e0b;
   --status-err: #ef4444;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-pill: 20px;
   --fs-scale: 1;
 }
 [data-theme="light"] {
@@ -29,9 +37,16 @@
   --bg-card: #ffffff;
   --bg-topbar: #ffffff;
   --border: #e2e8f0;
+  --border-faint: rgba(0,0,0,.06);
+  --bg-subtle: rgba(0,0,0,.04);
   --text-primary: #1e293b;
   --text-secondary: #475569;
   --text-muted: #94a3b8;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --status-ok: #059669;
+  --status-warn: #d97706;
+  --status-err: #dc2626;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -52,12 +67,12 @@ a { color: #60a5fa; text-decoration: none; }
 }
 .logo { font-weight: 700; font-size: calc(15px * var(--fs-scale)); white-space: nowrap; }
 .gtab {
-  padding: 6px 18px; border: 1.5px solid var(--gc, #3b82f6); border-radius: 20px;
-  background: transparent; color: var(--gc, #3b82f6);
+  padding: 6px 18px; border: 1.5px solid var(--gc, var(--accent)); border-radius: 20px;
+  background: transparent; color: var(--gc, var(--accent));
   font-size: calc(13px * var(--fs-scale)); font-weight: 600; cursor: pointer;
   transition: background .15s, color .15s; opacity: .55;
 }
-.gtab.active { background: var(--gc, #3b82f6); color: #fff; opacity: 1; }
+.gtab.active { background: var(--gc, var(--accent)); color: #fff; opacity: 1; }
 .gtab:hover:not(.active) { opacity: .9; }
 .ctrl-group { margin-left: auto; display: flex; align-items: center; gap: 6px; }
 .ctrl-btn {
@@ -81,7 +96,7 @@ a { color: #60a5fa; text-decoration: none; }
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-bottom: 16px; }
 .game-card {
   background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
-  padding: 16px; border-left: 3px solid var(--gc, #3b82f6);
+  padding: 16px; border-left: 3px solid var(--gc, var(--accent));
 }
 .game-card h3 { font-size: calc(16px * var(--fs-scale)); margin-bottom: 8px; }
 .game-card .stat { display: flex; justify-content: space-between; padding: 4px 0; font-size: calc(13px * var(--fs-scale)); }
@@ -144,7 +159,7 @@ tr:hover td { background: rgba(59,130,246,.05); }
   font-size: calc(13px * var(--fs-scale)); font-weight: 600; cursor: pointer;
   transition: background .15s, color .15s;
 }
-.cat-tab.active { background: var(--bg-card); color: var(--text-primary); border-bottom: 2px solid #3b82f6; }
+.cat-tab.active { background: var(--bg-card); color: var(--text-primary); border-bottom: 2px solid var(--accent); }
 .cat-tab:hover:not(.active) { color: var(--text-secondary); }
 .cat-panel { display: none; }
 .cat-panel.active { display: block; }
@@ -292,7 +307,7 @@ tr:hover td { background: rgba(59,130,246,.05); }
 }
 .toast {
   padding: 12px 24px; border-radius: 10px;
-  background: #1d4ed8; border: 1px solid #3b82f6;
+  background: var(--accent-hover); border: 1px solid var(--accent);
   color: #fff; font-size: 14px; font-weight: 600;
   box-shadow: 0 6px 20px rgba(29,78,216,.4);
   animation: toastIn .3s ease;
@@ -366,11 +381,11 @@ tr:hover td { background: rgba(59,130,246,.05); }
   transition: all .15s;
 }
 .cap-picker-actions button:hover { color: var(--text-primary); border-color: var(--text-secondary); }
-.cap-picker-actions .cap-go { background: #3b82f6; color: #fff; border-color: #3b82f6; }
-.cap-picker-actions .cap-go:hover { background: #2563eb; }
+.cap-picker-actions .cap-go { background: var(--accent); color: #fff; border-color: var(--accent); }
+.cap-picker-actions .cap-go:hover { background: var(--accent-hover); }
 .cap-picker-actions .cap-go:disabled { background: #6b7280; border-color: #6b7280; cursor: not-allowed; opacity: .6; }
 .cap-highlight-outline {
-  outline: 2px solid #3b82f6 !important;
+  outline: 2px solid var(--accent) !important;
   outline-offset: 2px;
   background-color: rgba(59,130,246,.06) !important;
   transition: outline .2s, background-color .2s;
@@ -542,7 +557,7 @@ tr:hover td { background: rgba(59,130,246,.05); }
 }
 .sidebar-item:hover { background: rgba(59,130,246,.08); }
 .sidebar-item.active {
-  border-left-color: #3b82f6;
+  border-left-color: var(--accent);
   background: rgba(59,130,246,.12);
   color: var(--text-primary);
 }
@@ -560,7 +575,7 @@ tr:hover td { background: rgba(59,130,246,.05); }
 .sidebar-sortable-ghost { opacity: 0.3; background: rgba(59,130,246,.15) !important; }
 .sidebar-sortable-chosen { background: rgba(59,130,246,.08) !important; cursor: grabbing; }
 .sidebar-sortable-drag {
-  background: var(--bg-topbar) !important; border: 1px solid #3b82f6;
+  background: var(--bg-topbar) !important; border: 1px solid var(--accent);
   border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,.3); opacity: 0.95;
 }
 .sidebar-item .drag-grip {
@@ -634,7 +649,7 @@ body.edit-mode .grid-col-selector { display: flex; }
   background: var(--bg-card); color: var(--text-muted);
   font-size: 10px; font-weight: 600; cursor: pointer;
 }
-.grid-col-btn.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+.grid-col-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 .grid-col-btn:hover:not(.active) { color: var(--text-primary); }
 .grid-col-label { font-size: 10px; color: var(--text-muted); margin-right: 2px; }
 
@@ -774,14 +789,14 @@ body.edit-mode .merge-btn { display: inline-block; }
   padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px;
   background: var(--bg-body); color: var(--text-primary); font-size: 12px; font-family: inherit;
 }
-.cmp-date-input:focus { outline: none; border-color: #3b82f6; }
+.cmp-date-input:focus { outline: none; border-color: var(--accent); }
 .cmp-preset-btn { padding: 4px 12px; border: 1px solid var(--border); border-radius: 16px; background: transparent; color: var(--text-secondary); font-size: 11px; cursor: pointer; transition: all .15s; font-family: inherit; }
-.cmp-preset-btn.active, .cmp-preset-btn:hover { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+.cmp-preset-btn.active, .cmp-preset-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
 
 /* ── 크로스게임 ── */
 .cg-filter-group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 16px; }
 .cg-period-btn { padding: 4px 12px; border: 1px solid var(--border); border-radius: 16px; background: transparent; color: var(--text-secondary); font-size: 12px; cursor: pointer; transition: all .15s; font-family: inherit; }
-.cg-period-btn.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+.cg-period-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 .cg-persona-select { padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-card); color: var(--text-primary); font-size: 12px; }
 .cg-matrix { width: 100%; border-collapse: collapse; font-size: 12px; }
 .cg-matrix th { text-align: left; padding: 8px 10px; border-bottom: 2px solid var(--border); color: var(--text-muted); font-weight: 600; }
@@ -808,13 +823,13 @@ body.edit-mode .merge-btn { display: inline-block; }
 .hm-toggle-group { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin-left: 12px; }
 .hm-toggle-btn { padding: 3px 10px; font-size: 11px; font-weight: 600; cursor: pointer; background: transparent; color: var(--text-secondary); border: none; border-right: 1px solid var(--border); font-family: inherit; transition: background .15s, color .15s; }
 .hm-toggle-btn:last-child { border-right: none; }
-.hm-toggle-btn.active { background: #3b82f6; color: #fff; }
+.hm-toggle-btn.active { background: var(--accent); color: #fff; }
 
 /* ── Overview 필터 ── */
 .ov-filter-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 16px; margin-bottom: 12px; }
 .ov-filter-label { font-size: 11px; color: var(--text-muted); font-weight: 600; }
 .ov-filter-chip { padding: 3px 10px; border: 1px solid var(--border); border-radius: 14px; background: transparent; color: var(--text-secondary); font-size: 11px; cursor: pointer; transition: all .15s; font-family: inherit; }
-.ov-filter-chip.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+.ov-filter-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 .ov-filter-chip:hover:not(.active) { border-color: var(--text-secondary); }
 .ov-filter-sep { width: 1px; height: 20px; background: var(--border); }
 
@@ -849,12 +864,12 @@ body.edit-mode .merge-btn { display: inline-block; }
 .exec-banner-game { font-weight: 700; font-size: 14px; }
 .exec-banner-detail { color: var(--text-secondary); }
 .exec-banner-status { font-weight: 700; font-size: 12px; padding: 2px 8px; border-radius: 6px; }
-.exec-banner-status.running { color: #fff; background: #3b82f6; }
+.exec-banner-status.running { color: #fff; background: var(--accent); }
 .exec-banner-status.pending { color: #fff; background: #f59e0b; }
 .exec-banner-scheduled { color: var(--text-muted); font-size: 11px; }
 @keyframes execPulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
 .exec-banner-dot {
-  width: 10px; height: 10px; border-radius: 50%; background: #3b82f6;
+  width: 10px; height: 10px; border-radius: 50%; background: var(--accent);
   animation: execPulse 1.2s infinite;
 }
 .exec-banner-dot.pending { background: var(--status-warn); animation: none; }
@@ -901,14 +916,14 @@ body.edit-mode .merge-btn { display: inline-block; }
   display: flex; flex-wrap: wrap; gap: 8px;
 }
 .exec-game-btn {
-  padding: 7px 16px; border: 1.5px solid var(--exec-gc, #3b82f6); border-radius: 20px;
-  background: transparent; color: var(--exec-gc, #3b82f6);
+  padding: 7px 16px; border: 1.5px solid var(--exec-gc, var(--accent)); border-radius: 20px;
+  background: transparent; color: var(--exec-gc, var(--accent));
   font-size: 13px; font-weight: 600; cursor: pointer;
   transition: background .15s, color .15s; opacity: .55;
   font-family: inherit;
 }
 .exec-game-btn.selected {
-  background: var(--exec-gc, #3b82f6); color: #fff; opacity: 1;
+  background: var(--exec-gc, var(--accent)); color: #fff; opacity: 1;
 }
 .exec-game-btn:hover:not(.selected) { opacity: .85; }
 .exec-select {
@@ -916,10 +931,10 @@ body.edit-mode .merge-btn { display: inline-block; }
   background: var(--bg-body); color: var(--text-primary);
   font-size: 13px; font-family: inherit; cursor: pointer; appearance: auto;
 }
-.exec-select:focus { outline: none; border-color: #3b82f6; }
+.exec-select:focus { outline: none; border-color: var(--accent); }
 .exec-submit-btn {
   width: 100%; padding: 12px; border: none; border-radius: 10px;
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
   color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;
   font-family: inherit; transition: opacity .15s, transform .1s;
 }
@@ -955,7 +970,7 @@ body.edit-mode .merge-btn { display: inline-block; }
 }
 .exec-queue-status.pending { background: rgba(245,158,11,.15); color: #f59e0b; }
 .exec-queue-status.scheduled { background: rgba(139,92,246,.15); color: #a78bfa; }
-.exec-queue-status.running { background: rgba(59,130,246,.15); color: #3b82f6; }
+.exec-queue-status.running { background: rgba(59,130,246,.15); color: var(--accent); }
 .exec-queue-status.completed { background: rgba(16,185,129,.15); color: #10b981; }
 .exec-queue-status.failed { background: rgba(239,68,68,.15); color: #ef4444; }
 .exec-queue-status.cancelled { background: rgba(139,147,160,.15); color: #8b93a0; }
@@ -993,7 +1008,7 @@ body.edit-mode .merge-btn { display: inline-block; }
   background: var(--bg-body); color: var(--text-primary);
   font-size: 14px; font-family: inherit; box-sizing: border-box;
 }
-.exec-modal-input:focus { outline: none; border-color: #3b82f6; }
+.exec-modal-input:focus { outline: none; border-color: var(--accent); }
 .exec-modal-error {
   font-size: 12px; color: var(--status-err); margin-top: 6px; min-height: 18px;
 }
@@ -1009,7 +1024,7 @@ body.edit-mode .merge-btn { display: inline-block; }
   background: transparent; border: 1px solid var(--border); color: var(--text-secondary);
 }
 .exec-modal-confirm {
-  background: linear-gradient(135deg, #3b82f6, #2563eb); border: none; color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover)); border: none; color: #fff;
 }
 .exec-modal-confirm:disabled { opacity: .4; cursor: not-allowed; }
 
@@ -4076,6 +4091,79 @@ function renderRoundCharts(gameId, stages, runs) {
   }
 }
 
+/* ── Chart.js 인스턴스 관리 헬퍼 ── */
+function _ensureChart(key, canvasId, config) {
+  if (_charts[key]) _charts[key].destroy();
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return null;
+  _charts[key] = new Chart(canvas, config);
+  return _charts[key];
+}
+
+/* ── 게임별 메트릭 정의 (새 게임 추가 시 여기만 등록) ── */
+const GAME_METRIC_DEFS = {
+  SCJ: { type: 'economy' },
+  PBM: { type: 'score', hasMaxScore: true, hasMoves: true },
+  CTZ: { type: 'score', hasContinues: true },
+  MJG: { type: 'score', scoreLabel: '평균 점수/판', hasCombo: true, hasDeadlocks: true },
+  CM:  { type: 'score', scoreLabel: '평균 점수/판', hasMaxScore: true, hasMoves: true, hasCombo: true },
+};
+
+function _computeTopMetrics(gameId, runs, totalPlayed, totalTime, totalScore, totalGoldPnl, totalHammerDelta, totalExternal, totalContinues, avgTurns) {
+  const def = GAME_METRIC_DEFS[gameId] || { type: 'score' };
+  const avgTime = totalPlayed ? (totalTime / totalPlayed).toFixed(1) : '-';
+  const avgScore = totalPlayed ? Math.round(totalScore / totalPlayed).toLocaleString() : '-';
+  const items = [];
+  if (def.type === 'economy') {
+    const gp = totalPlayed ? Math.round(totalGoldPnl / totalPlayed).toLocaleString() : '-';
+    const gc = totalGoldPnl >= 0 ? 'var(--status-ok)' : 'var(--status-err)';
+    const ext = totalExternal ? `<div class="label" style="font-size:.7em;color:#ffc107;margin-top:2px">외부 +${totalExternal.toLocaleString()} 별도</div>` : '';
+    items.push({ label: '골드 손익/판', value: gp, style: `color:${gc}`, extra: ext });
+    items.push({ label: '평균 턴수', value: avgTurns });
+    items.push({ label: '해머 변동', value: `${totalHammerDelta >= 0 ? '+' : ''}${totalHammerDelta}` });
+  } else {
+    items.push({ label: def.scoreLabel || '평균 점수', value: avgScore });
+    if (def.hasMaxScore) items.push({ label: '최고 점수', value: Math.max(0, ...runs.map(r => (r.metrics||{}).max_score||0)).toLocaleString() });
+    if (def.hasCombo) items.push({ label: '최대 콤보', value: Math.max(0, ...runs.map(r => (r.metrics||{}).max_combo||0)) });
+    if (def.hasDeadlocks) { let dl = 0; for (const r of runs) dl += (r.metrics||{}).total_deadlocks||0; items.push({ label: '교착 상태', value: dl }); }
+    if (def.hasMoves) { let tm = 0, mc = 0; for (const r of runs) { const am = (r.metrics||{}).avg_moves; if (am) { tm += am*(r.levels_played||1); mc += r.levels_played||1; } } items.push({ label: '평균 수', value: mc ? (tm/mc).toFixed(1) : '-' }); }
+    if (def.hasContinues) items.push({ label: '이어하기', value: totalContinues });
+  }
+  items.push({ label: '판당 평균 시간', value: `${avgTime}초` });
+  items.push({ label: '총 플레이', value: `${totalPlayed.toLocaleString()}판` });
+  items.push({ label: '총 런', value: runs.length });
+  return items;
+}
+
+function _computePersonaStats(gameId, d) {
+  const def = GAME_METRIC_DEFS[gameId] || { type: 'score' };
+  const avgTime = d.played ? (d.time / d.played).toFixed(1) : 0;
+  const stats = [{ label: '판 수', value: `${d.played}판 (${d.runs}런)` }];
+  if (def.type === 'economy') {
+    const pg = d.played ? Math.round(d.goldPnl / d.played).toLocaleString() : '-';
+    const pgc = d.goldPnl >= 0 ? 'var(--status-ok)' : 'var(--status-err)';
+    stats.push({ label: '골드 손익/판', value: pg, style: `color:${pgc}` });
+    if (d.goldExternal) stats.push({ label: '외부 골드', value: `+${d.goldExternal.toLocaleString()}`, style: 'color:#ffc107' });
+    stats.push({ label: '평균 턴수', value: d.turnLevels ? (d.turns / d.turnLevels).toFixed(1) : '-' });
+    stats.push({ label: '평균 시간', value: `${avgTime}초` });
+    stats.push({ label: '해머 변동', value: `${d.hammer >= 0 ? '+' : ''}${d.hammer}` });
+  } else {
+    stats.push({ label: '평균 점수', value: d.played ? Math.round(d.score / d.played).toLocaleString() : '-' });
+    if (def.hasContinues) stats.push({ label: '이어하기', value: d.continues });
+    stats.push({ label: '평균 시간', value: `${avgTime}초` });
+  }
+  return stats;
+}
+
+function _getKeyMetricDef(gameId) {
+  const def = GAME_METRIC_DEFS[gameId] || { type: 'score' };
+  if (def.type === 'economy') return {
+    head: '<th>골드/판</th><th>평균 턴</th>',
+    cell: d => { const v = d.played ? Math.round(d.goldPnl/d.played).toLocaleString() : '-'; const c = d.goldPnl >= 0 ? 'var(--status-ok)' : 'var(--status-err)'; const t = d.turnLevels ? (d.turns/d.turnLevels).toFixed(1) : '-'; return `<td style="color:${c};font-weight:600">${v}</td><td>${t}</td>`; }
+  };
+  return { head: '<th>평균 점수</th>', cell: d => `<td>${d.played ? Math.round(d.score/d.played).toLocaleString() : '-'}</td>` };
+}
+
 /* ── 카테고리별 렌더러 매핑 ── */
 const CATEGORY_RENDERERS = {
   // 공통
@@ -4631,148 +4719,24 @@ function renderCatSummary(gameId, stages, runs) {
       </div>
     </div>` : '';
 
-  /* 게임별 상단 메트릭 */
-  let topMetrics;
-  if (gameId === 'PBM') {
-    const avgScore = totalPlayed ? Math.round(totalScore / totalPlayed).toLocaleString() : '-';
-    const maxScore = Math.max(0, ...runs.map(r => (r.metrics || {}).max_score || 0));
-    let totalMoves = 0, moveCount = 0;
-    for (const r of runs) {
-      const am = (r.metrics || {}).avg_moves;
-      if (am) { totalMoves += am * (r.levels_played || 1); moveCount += r.levels_played || 1; }
-    }
-    const avgMoves = moveCount ? (totalMoves / moveCount).toFixed(1) : '-';
-    const avgTime = totalPlayed ? (totalTime / totalPlayed).toFixed(1) : '-';
-    topMetrics = `
-      <div class="metric-box"><div class="label">평균 점수</div><div class="value">${avgScore}</div></div>
-      <div class="metric-box"><div class="label">최고 점수</div><div class="value">${maxScore.toLocaleString()}</div></div>
-      <div class="metric-box"><div class="label">평균 수</div><div class="value">${avgMoves}</div></div>
-      <div class="metric-box"><div class="label">판당 평균 시간</div><div class="value">${avgTime}초</div></div>
-      <div class="metric-box"><div class="label">총 플레이</div><div class="value">${totalPlayed.toLocaleString()}판</div></div>
-      <div class="metric-box"><div class="label">총 런</div><div class="value">${runs.length}</div></div>`;
-  } else if (gameId === 'CTZ') {
-    const avgScore = totalPlayed ? Math.round(totalScore / totalPlayed).toLocaleString() : '-';
-    const avgTime = totalPlayed ? (totalTime / totalPlayed).toFixed(1) : '-';
-    topMetrics = `
-      <div class="metric-box"><div class="label">평균 점수</div><div class="value">${avgScore}</div></div>
-      <div class="metric-box"><div class="label">이어하기</div><div class="value">${totalContinues}</div></div>
-      <div class="metric-box"><div class="label">판당 평균 시간</div><div class="value">${avgTime}초</div></div>
-      <div class="metric-box"><div class="label">총 플레이</div><div class="value">${totalPlayed.toLocaleString()}판</div></div>
-      <div class="metric-box"><div class="label">총 런</div><div class="value">${runs.length}</div></div>`;
-  } else if (gameId === 'MJG') {
-    const avgScore = totalPlayed ? Math.round(totalScore / totalPlayed).toLocaleString() : '-';
-    const avgTime = totalPlayed ? (totalTime / totalPlayed).toFixed(1) : '-';
-    let maxCombo = 0, totalDeadlocks = 0;
-    for (const r of runs) { const m = r.metrics || {}; maxCombo = Math.max(maxCombo, m.max_combo || 0); totalDeadlocks += m.total_deadlocks || 0; }
-    topMetrics = `
-      <div class="metric-box"><div class="label">평균 점수/판</div><div class="value">${avgScore}</div></div>
-      <div class="metric-box"><div class="label">최대 콤보</div><div class="value">${maxCombo}</div></div>
-      <div class="metric-box"><div class="label">교착 상태</div><div class="value">${totalDeadlocks}</div></div>
-      <div class="metric-box"><div class="label">판당 평균 시간</div><div class="value">${avgTime}초</div></div>
-      <div class="metric-box"><div class="label">총 플레이</div><div class="value">${totalPlayed.toLocaleString()}판</div></div>
-      <div class="metric-box"><div class="label">총 런</div><div class="value">${runs.length}</div></div>`;
-  } else if (gameId === 'CM') {
-    const avgScore = totalPlayed ? Math.round(totalScore / totalPlayed).toLocaleString() : '-';
-    const maxScore = Math.max(0, ...runs.map(r => (r.metrics || {}).max_score || 0));
-    let totalMoves = 0, moveCount = 0, totalComboCM = 0;
-    for (const r of runs) {
-      const am = (r.metrics || {}).avg_moves;
-      if (am) { totalMoves += am * (r.levels_played || 1); moveCount += r.levels_played || 1; }
-      totalComboCM += (r.metrics || {}).max_combo || 0;
-    }
-    const avgMoves = moveCount ? (totalMoves / moveCount).toFixed(1) : '-';
-    const avgTime = totalPlayed ? (totalTime / totalPlayed).toFixed(1) : '-';
-    const maxComboCM = Math.max(0, ...runs.map(r => (r.metrics || {}).max_combo || 0));
-    topMetrics = `
-      <div class="metric-box"><div class="label">평균 점수/판</div><div class="value">${avgScore}</div></div>
-      <div class="metric-box"><div class="label">최고 점수</div><div class="value">${maxScore.toLocaleString()}</div></div>
-      <div class="metric-box"><div class="label">최대 콤보</div><div class="value">${maxComboCM}</div></div>
-      <div class="metric-box"><div class="label">평균 수</div><div class="value">${avgMoves}</div></div>
-      <div class="metric-box"><div class="label">판당 평균 시간</div><div class="value">${avgTime}초</div></div>
-      <div class="metric-box"><div class="label">총 플레이</div><div class="value">${totalPlayed.toLocaleString()}판</div></div>
-      <div class="metric-box"><div class="label">총 런</div><div class="value">${runs.length}</div></div>`;
-  } else {
-    const goldPerGame = totalPlayed ? Math.round(totalGoldPnl / totalPlayed).toLocaleString() : '-';
-    const goldColor = totalGoldPnl >= 0 ? 'var(--status-ok)' : 'var(--status-err)';
-    const extNote = totalExternal ? `<div class="label" style="font-size:.7em;color:#ffc107;margin-top:2px">외부 +${totalExternal.toLocaleString()} 별도</div>` : '';
-    topMetrics = `
-      <div class="metric-box"><div class="label">골드 손익/판</div><div class="value" style="color:${goldColor}">${goldPerGame}</div>${extNote}</div>
-      <div class="metric-box"><div class="label">평균 턴수</div><div class="value">${avgTurns}</div></div>
-      <div class="metric-box"><div class="label">해머 변동</div><div class="value">${totalHammerDelta >= 0 ? '+' : ''}${totalHammerDelta}</div></div>
-      <div class="metric-box"><div class="label">총 플레이</div><div class="value">${totalPlayed.toLocaleString()}판</div></div>
-      <div class="metric-box"><div class="label">총 런</div><div class="value">${runs.length}</div></div>`;
-  }
+  /* 게임별 상단 메트릭 — GAME_METRIC_DEFS 기반 */
+  const _metricItems = _computeTopMetrics(gameId, runs, totalPlayed, totalTime, totalScore, totalGoldPnl, totalHammerDelta, totalExternal, totalContinues, avgTurns);
+  const topMetrics = _metricItems.map(m => `<div class="metric-box"><div class="label">${m.label}</div><div class="value"${m.style ? ` style="${m.style}"` : ''}>${m.value}</div>${m.extra || ''}</div>`).join('');
 
-  /* 게임별 페르소나 카드 */
+  /* 게임별 페르소나 카드 — GAME_METRIC_DEFS 기반 */
   const personaCards = Object.entries(personas).sort(([a],[b]) => (PERSONA_ORDER.indexOf(a)===-1?99:PERSONA_ORDER.indexOf(a)) - (PERSONA_ORDER.indexOf(b)===-1?99:PERSONA_ORDER.indexOf(b))).map(([p, d]) => {
-    const avgTime = d.played ? (d.time / d.played).toFixed(1) : 0;
-    let statsHtml;
-    if (gameId === 'PBM') {
-      const pScore = d.played ? Math.round(d.score / d.played).toLocaleString() : '-';
-      statsHtml = `
-        <div class="stat"><span class="stat-label">판 수</span><span class="stat-value">${d.played}판 (${d.runs}런)</span></div>
-        <div class="stat"><span class="stat-label">평균 점수</span><span class="stat-value">${pScore}</span></div>
-        <div class="stat"><span class="stat-label">평균 시간</span><span class="stat-value">${avgTime}초</span></div>`;
-    } else if (gameId === 'CTZ') {
-      const pScore = d.played ? Math.round(d.score / d.played).toLocaleString() : '-';
-      statsHtml = `
-        <div class="stat"><span class="stat-label">판 수</span><span class="stat-value">${d.played}판 (${d.runs}런)</span></div>
-        <div class="stat"><span class="stat-label">평균 점수</span><span class="stat-value">${pScore}</span></div>
-        <div class="stat"><span class="stat-label">이어하기</span><span class="stat-value">${d.continues}</span></div>
-        <div class="stat"><span class="stat-label">평균 시간</span><span class="stat-value">${avgTime}초</span></div>`;
-    } else if (gameId === 'MJG') {
-      const pScore = d.played ? Math.round(d.score / d.played).toLocaleString() : '-';
-      statsHtml = `
-        <div class="stat"><span class="stat-label">판 수</span><span class="stat-value">${d.played}판 (${d.runs}런)</span></div>
-        <div class="stat"><span class="stat-label">평균 점수</span><span class="stat-value">${pScore}</span></div>
-        <div class="stat"><span class="stat-label">평균 시간</span><span class="stat-value">${avgTime}초</span></div>`;
-    } else if (gameId === 'CM') {
-      const pScore = d.played ? Math.round(d.score / d.played).toLocaleString() : '-';
-      statsHtml = `
-        <div class="stat"><span class="stat-label">판 수</span><span class="stat-value">${d.played}판 (${d.runs}런)</span></div>
-        <div class="stat"><span class="stat-label">평균 점수</span><span class="stat-value">${pScore}</span></div>
-        <div class="stat"><span class="stat-label">평균 시간</span><span class="stat-value">${avgTime}초</span></div>`;
-    } else {
-      const pGold = d.played ? Math.round(d.goldPnl / d.played).toLocaleString() : '-';
-      const pGoldColor = d.goldPnl >= 0 ? 'var(--status-ok)' : 'var(--status-err)';
-      const pTurns = d.turnLevels ? (d.turns / d.turnLevels).toFixed(1) : '-';
-      const pHammer = d.hammer >= 0 ? `+${d.hammer}` : d.hammer;
-      const pExt = d.goldExternal ? `<div class="stat"><span class="stat-label">외부 골드</span><span class="stat-value" style="color:#ffc107">+${d.goldExternal.toLocaleString()}</span></div>` : '';
-      statsHtml = `
-        <div class="stat"><span class="stat-label">판 수</span><span class="stat-value">${d.played}판 (${d.runs}런)</span></div>
-        <div class="stat"><span class="stat-label">골드 손익/판</span><span class="stat-value" style="color:${pGoldColor}">${pGold}</span></div>
-        ${pExt}
-        <div class="stat"><span class="stat-label">평균 턴수</span><span class="stat-value">${pTurns}</span></div>
-        <div class="stat"><span class="stat-label">평균 시간</span><span class="stat-value">${avgTime}초</span></div>
-        <div class="stat"><span class="stat-label">해머 변동</span><span class="stat-value">${pHammer}</span></div>`;
-    }
-    // 페르소나별 클리어율 (공통)
+    const stats = _computePersonaStats(gameId, d);
+    const statsHtml = stats.map(s => `<div class="stat"><span class="stat-label">${s.label}</span><span class="stat-value"${s.style ? ` style="${s.style}"` : ''}>${s.value}</span></div>`).join('');
     const pCrPct = d.played ? (d.cleared / d.played * 100) : 0;
     const pCrClr = pCrPct >= 90 ? '#10b981' : pCrPct >= 50 ? '#f59e0b' : '#ef4444';
-    statsHtml = `<div class="stat"><span class="stat-label">클리어율</span><span class="stat-value" style="color:${pCrClr}">${pCrPct.toFixed(1)}% <span style="font-size:11px;font-weight:normal;color:var(--text-muted)">(${d.cleared}/${d.played})</span></span></div>` + statsHtml;
-    return `<div class="persona-card">
-      <h5 style="color:${PERSONA_COLORS[p] || '#999'}">${PERSONA_KO[p] || p}</h5>
-      ${statsHtml}
-    </div>`;
+    const crRow = `<div class="stat"><span class="stat-label">클리어율</span><span class="stat-value" style="color:${pCrClr}">${pCrPct.toFixed(1)}% <span style="font-size:11px;font-weight:normal;color:var(--text-muted)">(${d.cleared}/${d.played})</span></span></div>`;
+    return `<div class="persona-card"><h5 style="color:${PERSONA_COLORS[p] || '#999'}">${PERSONA_KO[p] || p}</h5>${crRow}${statsHtml}</div>`;
   }).join('');
 
-  // 페르소나 비교 테이블
-  let keyMetricHead, keyMetricCell;
-  if (gameId === 'SCJ') {
-    keyMetricHead = '<th>골드/판</th><th>평균 턴</th>';
-    keyMetricCell = (d) => {
-      const v = d.played ? Math.round(d.goldPnl / d.played).toLocaleString() : '-';
-      const vc = d.goldPnl >= 0 ? 'var(--status-ok)' : 'var(--status-err)';
-      const t = d.turnLevels ? (d.turns / d.turnLevels).toFixed(1) : '-';
-      return `<td style="color:${vc};font-weight:600">${v}</td><td>${t}</td>`;
-    };
-  } else {
-    keyMetricHead = '<th>평균 점수</th>';
-    keyMetricCell = (d) => {
-      const v = d.played ? Math.round(d.score / d.played).toLocaleString() : '-';
-      return `<td>${v}</td>`;
-    };
-  }
+  // 페르소나 비교 테이블 — GAME_METRIC_DEFS 기반
+  const _km = _getKeyMetricDef(gameId);
+  const keyMetricHead = _km.head;
+  const keyMetricCell = _km.cell;
   const personaTableRows = Object.entries(personas)
     .sort(([a],[b]) => (PERSONA_ORDER.indexOf(a)===-1?99:PERSONA_ORDER.indexOf(a)) - (PERSONA_ORDER.indexOf(b)===-1?99:PERSONA_ORDER.indexOf(b)))
     .map(([p, d]) => {
@@ -4889,9 +4853,10 @@ function renderRadarChart(gameId, stages, runs) {
   const personas = {};
   for (const r of runs) {
     const m = r.metrics || {};
-    if (!personas[r.persona]) personas[r.persona] = { played: 0, time: 0, goldPnl: 0, turns: 0, turnLevels: 0, score: 0, continues: 0 };
+    if (!personas[r.persona]) personas[r.persona] = { played: 0, cleared: 0, time: 0, goldPnl: 0, turns: 0, turnLevels: 0, score: 0, continues: 0 };
     const p = personas[r.persona];
     p.played += r.levels_played || 0;
+    p.cleared += r.levels_cleared || 0;
     p.time += r.total_time_sec || 0;
     p.goldPnl += m.gold_pnl || 0;
     p.score += m.total_score || 0;
@@ -4902,71 +4867,42 @@ function renderRadarChart(gameId, stages, runs) {
     if (t && personas[s.persona]) { personas[s.persona].turns += t; personas[s.persona].turnLevels++; }
   }
 
-  const pKeys = Object.keys(personas).sort();
+  const pKeys = _sortPersona(Object.entries(personas)).map(([k]) => k);
   if (!pKeys.length) return;
 
-  let radarLabels, metrics;
-  if (gameId === 'CTZ') {
-    radarLabels = ['속도', '점수', '아이템 활용', '볼륨'];
-    metrics = pKeys.map(p => {
-      const d = personas[p];
-      const avgScore = d.played ? d.score / d.played : 0;
-      const itemRate = d.played ? d.continues / d.played : 0;
-      return {
-        v1: d.played ? Math.max(0, 100 - (d.time / d.played)) : 0,
-        v2: Math.min(100, avgScore / 50),
-        v3: Math.min(100, itemRate * 100),
-        v4: Math.min(100, d.played * 2),
-      };
-    });
-  } else if (gameId === 'CM' || gameId === 'PBM' || gameId === 'MJG') {
-    radarLabels = ['속도', '점수', '클리어율', '볼륨'];
-    metrics = pKeys.map(p => {
-      const d = personas[p];
-      const avgScore = d.played ? d.score / d.played : 0;
-      const crRate = d.played ? d.cleared / d.played * 100 : 0;
-      return {
-        v1: d.played ? Math.max(0, 100 - (d.time / d.played)) : 0,
-        v2: Math.min(100, avgScore / 50),
-        v3: Math.min(100, crRate),
-        v4: Math.min(100, d.played * 2),
-      };
-    });
-  } else {
-    radarLabels = ['속도', '턴 효율', '경제성', '볼륨'];
-    metrics = pKeys.map(p => {
-      const d = personas[p];
-      return {
-        v1: d.played ? Math.max(0, 100 - (d.time / d.played)) : 0,
-        v2: d.turnLevels ? Math.max(0, 100 - (d.turns / d.turnLevels - 20)) : 0,
-        v3: d.played ? Math.min(100, Math.max(0, 50 + d.goldPnl / d.played / 200)) : 50,
-        v4: Math.min(100, d.played * 2),
-      };
-    });
-  }
+  const def = GAME_METRIC_DEFS[gameId] || { type: 'score' };
+  const RADAR_AXES = {
+    economy:  { labels: ['속도', '턴 효율', '경제성', '볼륨'], compute: d => [d.played ? d.time/d.played : 0, d.turnLevels ? d.turns/d.turnLevels : 0, d.played ? d.goldPnl/d.played : 0, d.played], invert: [true, true, false, false] },
+    score_ct: { labels: ['속도', '점수', '아이템 활용', '볼륨'], compute: d => [d.played ? d.time/d.played : 0, d.played ? d.score/d.played : 0, d.played ? d.continues/d.played : 0, d.played], invert: [true, false, false, false] },
+    score:    { labels: ['속도', '점수', '클리어율', '볼륨'], compute: d => [d.played ? d.time/d.played : 0, d.played ? d.score/d.played : 0, d.played ? d.cleared/d.played*100 : 0, d.played], invert: [true, false, false, false] },
+  };
+  const rKey = def.type === 'economy' ? 'economy' : (def.hasContinues ? 'score_ct' : 'score');
+  const rDef = RADAR_AXES[rKey];
 
-  const datasets = pKeys.map((p, i) => ({
+  const raw = pKeys.map(p => rDef.compute(personas[p]));
+  const normalized = rDef.labels.map((_, ax) => {
+    const vals = raw.map(r => r[ax]);
+    const mn = Math.min(...vals), mx = Math.max(...vals), range = mx - mn || 1;
+    return raw.map(r => { const n = (r[ax] - mn) / range * 100; return rDef.invert[ax] ? 100 - n : n; });
+  });
+
+  const datasets = pKeys.map((p, pi) => ({
     label: PERSONA_KO[p] || p,
-    data: [metrics[i].v1, metrics[i].v2, metrics[i].v3, metrics[i].v4],
+    data: rDef.labels.map((_, ax) => normalized[ax][pi]),
     borderColor: PERSONA_COLORS[p] || '#999',
     backgroundColor: (PERSONA_COLORS[p] || '#999') + '22',
     pointBackgroundColor: PERSONA_COLORS[p] || '#999',
   }));
 
-  const key = `radar-${gameId}`;
-  if (_charts[key]) _charts[key].destroy();
-  const radarCanvas = document.getElementById(`chart-radar-${gameId}`);
-  if (radarCanvas) {
-    _charts[key] = new Chart(radarCanvas, {
-      type: 'radar',
-      data: { labels: radarLabels, datasets },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        scales: { r: { beginAtZero: true, max: 100, ticks: { display: false }, grid: { color: 'rgba(255,255,255,.1)' } } },
-        plugins: { legend: { labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary') } } },
-      },
-    });
-  }
+  _ensureChart(`radar-${gameId}`, `chart-radar-${gameId}`, {
+    type: 'radar',
+    data: { labels: rDef.labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { r: { beginAtZero: true, max: 100, ticks: { display: false }, grid: { color: 'rgba(255,255,255,.1)' } } },
+      plugins: { legend: { labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary') } } },
+    },
+  });
 }
 
 /* ══════════════════════════════════════════════
