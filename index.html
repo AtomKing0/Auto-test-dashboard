@@ -1967,7 +1967,7 @@ function renderOverview(games) {
 
 function renderAvgTimeChart(games) {
   const gameIds = Object.keys(games);
-  const colors = gameIds.map((_, i) => Object.values(PERSONA_COLORS)[i % 4]);
+  const colors = gameIds.map(gid => GAME_COLORS[gid] || '#64748b');
   const data = gameIds.map(gid => {
     const g = games[gid];
     return g.levels ? +(g.time / g.levels).toFixed(1) : 0;
@@ -1999,7 +1999,7 @@ function renderDailyRunsChart(games) {
       const dd = games[gid].dailyMap[d];
       return dd ? dd.runs : 0;
     }),
-    borderColor: Object.values(PERSONA_COLORS)[i % 4],
+    borderColor: GAME_COLORS[gid] || '#64748b',
     tension: 0.3, fill: false, spanGaps: true,
   }));
 
@@ -2782,7 +2782,7 @@ function renderCronHistory(cron) {
 
 const GAME_ICONS = { SCJ: '🃏', CTZ: '🧩', PBM: '🧱', MJG: '🀄', CM: '🎮' };
 const GAME_NAMES = { SCJ: 'Solitaire City', CTZ: 'Cozy Tiles', PBM: 'Block Blast', MJG: 'Mahjong World Tour', CM: 'Coin Match' };
-const GAME_COLORS = { SCJ: '#3b82f6', CTZ: '#10b981', PBM: '#f59e0b', MJG: '#8b5cf6', CM: '#F44336' };
+const GAME_COLORS = { SCJ: '#3b82f6', CTZ: '#10b981', PBM: '#f59e0b', MJG: '#8b5cf6', CM: '#F44336', G6: '#06b6d4', G7: '#ec4899', G8: '#84cc16', G9: '#f97316', G10: '#6366f1' };
 
 function renderGameTabs(gameIds) {
   const container = document.getElementById('sidebar-games');
@@ -2901,7 +2901,8 @@ async function switchTab(id, _btn) {
     _updateUrlHash();
     _saveLastTab();
   } catch (e) {
-    panels.innerHTML = `<div class="state-msg"><div class="icon">⚠️</div><div>${id} 데이터 로딩 실패: ${e.message}</div></div>`;
+    panels.innerHTML = `<div class="state-msg"><div class="icon">⚠️</div><div>${id} 데이터 로딩 실패</div></div>`;
+    console.warn(`${id} 로딩 실패:`, e.message);
   }
 }
 
@@ -4119,7 +4120,8 @@ const CHART_RENDERERS = {
       panel.innerHTML = renderCatPerf(id, perfRuns);
       renderPerfCharts(id, perfRuns);
     } catch (e) {
-      panel.innerHTML = `<div style="color:var(--text-muted);padding:20px">성능 데이터 로딩 실패: ${e.message}</div>`;
+      panel.innerHTML = `<div style="color:var(--text-muted);padding:20px">성능 데이터 로딩 실패</div>`;
+      console.warn('성능 데이터 로딩 실패:', e.message);
     }
   },
   // PBM
@@ -7941,8 +7943,8 @@ async function init() {
       renderCronSummary(data);
     }).catch(e => { console.warn('cronSummary fetch 실패:', e.message); });
 
-    // Background: server_logs fetch (최신 런 서버 로그)
-    _serverLogsPromise = fetchServerLogs().then(logs => { _serverLogs = logs; return logs; }).catch(e => { console.warn('server_logs fetch 실패:', e.message); return {}; });
+    // _serverLogs는 이미 Fast path에서 로드됨 (L7912) — 이중 호출 제거
+    _serverLogsPromise = Promise.resolve(_serverLogs);
 
     // Background: runs fetch (런 관리자 + 이슈 카운트 + 게임 상세 탭용)
     _runsPromise = fetchRuns().then(runs => {
@@ -7972,9 +7974,10 @@ async function init() {
     errorEl.innerHTML = `
       <div class="icon">⚠️</div>
       <div style="font-size:16px;font-weight:600;">데이터 로딩 실패</div>
-      <div style="font-size:13px;">${e.message}</div>
+      <div style="font-size:13px;" id="init-error-msg"></div>
       <button onclick="init()">재시도</button>
     `;
+    document.getElementById('init-error-msg').textContent = e.message;
   }
 }
 
