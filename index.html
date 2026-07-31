@@ -1272,6 +1272,13 @@ body.edit-mode .merge-btn { display: inline-block; }
             </div>
           </div>
         </div>
+        <!-- Options -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#94a3b8;cursor:pointer">
+            <input type="checkbox" id="exec-hard-screenshots" checked style="width:14px;height:14px;cursor:pointer">
+            하드/슈퍼하드 스크린샷
+          </label>
+        </div>
         <!-- Submit + Deploy -->
         <div style="display:flex;gap:8px">
           <button class="exec-submit-btn" id="exec-submit-btn" onclick="promptExecPassword()" style="flex:1">&#128274; 실행</button>
@@ -10014,6 +10021,9 @@ function renderHeatmap() {
     const platform = getSelectedPlatform();
     const testType = getSelectedTestType();
     const gameUrl = (document.getElementById('exec-game-url') || {}).value?.trim() || null;
+    const hardScreenshots = document.getElementById('exec-hard-screenshots')?.checked !== false;
+    const options = {};
+    if (!hardScreenshots) options.hard_screenshots = false;
 
     confirmBtn.disabled = true;
     errEl.textContent = '';
@@ -10050,6 +10060,7 @@ function renderHeatmap() {
             p_test_type: testType
           };
           if (gameUrl) rpcParams.p_game_url = gameUrl;
+          if (Object.keys(options).length > 0) rpcParams.p_options = options;
           if (scheduledAt) rpcParams.p_scheduled_at = scheduledAt;
           if (plat === 'aos' && aosDevices) rpcParams.p_devices = aosDevices;
               if (repeatActive && repeatWeekdays) {
