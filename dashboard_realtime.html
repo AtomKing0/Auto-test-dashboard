@@ -1144,6 +1144,7 @@ body.edit-mode .merge-btn { display: inline-block; }
         <button class="ctrl-btn" id="notifBtn" onclick="toggleNotifPermission()" title="데스크톱 알림">🔔</button>
         <button class="ctrl-btn" style="position:relative" onclick="toggleNotifPanel()" title="알림 내역">📋<span class="notif-badge" id="notif-badge" style="display:none">0</span></button>
         <button class="ctrl-btn" id="execBtn" onclick="toggleExecPanel()" title="프리플레이 실행" style="position:relative">&#9654;<span class="notif-badge" id="exec-badge" style="display:none">0</span></button>
+        <button class="ctrl-btn" onclick="promptDeployPassword()" title="GitHub Pages 대시보드 배포" style="font-size:12px">&#128640;</button>
         <span class="cap-wrap">
           <button class="ctrl-btn" id="captureBtn" onclick="captureViewport()" title="현재 화면 캡처">📷</button>
           <button class="ctrl-btn cap-arrow" onclick="toggleCapMenu()" title="캡처 옵션">▾</button>
@@ -1222,6 +1223,7 @@ body.edit-mode .merge-btn { display: inline-block; }
           <div class="exec-section-label">페르소나</div>
           <select class="exec-select" id="exec-persona">
             <option value="all">All (4종 전체)</option>
+            <option value="all5">All+Auto (5종 전체)</option>
             <option value="auto">Auto (AI 자동 선택)</option>
             <option value="hardcore">Hardcore (고수)</option>
             <option value="average">Average (중수)</option>
@@ -1279,11 +1281,8 @@ body.edit-mode .merge-btn { display: inline-block; }
             하드/슈퍼하드 스크린샷
           </label>
         </div>
-        <!-- Submit + Deploy -->
-        <div style="display:flex;gap:8px">
-          <button class="exec-submit-btn" id="exec-submit-btn" onclick="promptExecPassword()" style="flex:1">&#128274; 실행</button>
-          <button class="exec-deploy-btn" id="exec-deploy-btn" onclick="promptDeployPassword()" title="GitHub Pages 배포">&#128640; 배포</button>
-        </div>
+        <!-- Submit -->
+        <button class="exec-submit-btn" id="exec-submit-btn" onclick="promptExecPassword()">&#128274; 실행</button>
         <!-- Queue -->
         <div>
           <div class="exec-section-label" style="display:flex;align-items:center;justify-content:space-between">대기열 <button class="exec-queue-clear-btn" onclick="clearOldCommands()" title="완료/실패 항목 삭제">정리</button></div>
@@ -1342,9 +1341,9 @@ const SUPABASE_URL = 'https://lxkvjwnhrqbtaglwkgmf.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_d_sWb1OmWgs0oKrWPCxr5g_ARo_7kq7';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const PERSONA_ORDER = ['hardcore', 'average', 'casual', 'struggling'];
-const PERSONA_KO = { hardcore: '고수', average: '중수', casual: '하수', struggling: '초보' };
-const PERSONA_COLORS = { hardcore: '#3b82f6', average: '#10b981', casual: '#f59e0b', struggling: '#ef4444' };
+const PERSONA_ORDER = ['hardcore', 'average', 'casual', 'struggling', 'auto'];
+const PERSONA_KO = { hardcore: '고수', average: '중수', casual: '하수', struggling: '초보', auto: 'AI선택' };
+const PERSONA_COLORS = { hardcore: '#3b82f6', average: '#10b981', casual: '#f59e0b', struggling: '#ef4444', auto: '#8b5cf6' };
 function _sortPersona(entries) { return entries.sort(([a],[b]) => (PERSONA_ORDER.indexOf(a)===-1?99:PERSONA_ORDER.indexOf(a)) - (PERSONA_ORDER.indexOf(b)===-1?99:PERSONA_ORDER.indexOf(b))); }
 const DIFF_TIERS = { 1: '튜토리얼', 2: '노말', 3: '하드', 4: '슈퍼하드' };
 const DIFF_COLORS = { 1: '#10b981', 2: '#10b981', 3: '#f59e0b', 4: '#ef4444' };
@@ -2796,7 +2795,7 @@ function renderCronHistory(cron) {
   if (!section) return;
 
   const DAY_KR = ['','월','화','수','목','금','토','일'];
-  const PERSONA_KR_EXEC = { all: '전체', auto: 'AI 선택', hardcore: '고수', average: '중수', casual: '하수', struggling: '초보' };
+  const PERSONA_KR_EXEC = { all: '전체', all5: '전체+AI', auto: 'AI 선택', hardcore: '고수', average: '중수', casual: '하수', struggling: '초보' };
   const STATUS_COLOR = { completed: 'var(--status-ok)', failed: 'var(--status-err)', running: '#3b82f6', pending: '#f59e0b' };
   const STATUS_LABEL = { completed: '완료', failed: '실패', running: '실행중', pending: '예약됨' };
 
@@ -4217,7 +4216,7 @@ const CATEGORY_RENDERERS = {
   // 공통
   summary: (gid, stages, runs) => renderCatSummary(gid, stages, runs),
   auto_rl: (gid, stages, runs) => renderCatAutoRL(gid, stages, runs),
-  stages: (gid, stages, runs) => renderCatStages(gid, stages),
+  stages: (gid, stages, runs) => renderCatStages(gid, stages, runs),
   security: (gid, stages, runs) => renderCatSecurity(gid, runs),
   logapi: (gid, stages, runs) => renderCatLogApi(gid, runs),
   perf: (gid, stages, runs) => '<div class="state-msg"><div class="icon">⏳</div><div>성능 데이터 로딩 중...</div></div>',
@@ -6057,13 +6056,18 @@ function renderCatStagesMJG(gameId, stages) {
   </table></div>`;
 }
 
-function renderCatStages(gameId, stages) {
+function renderCatStages(gameId, stages, runs) {
   if (gameId === 'CTZ') return renderCatStagesCTZ(gameId, stages);
   if (gameId === 'MJG') return renderCatStagesMJG(gameId, stages);
+  const runBuildMap = {};
+  const runMeta = {};
+  if (runs) for (const r of runs) {
+    if (r.id) { if (r.client_ver) runBuildMap[r.id] = r.client_ver; runMeta[r.id] = { persona: r.persona, date: r.run_date || r.created_at }; }
+  }
   const byStage = {};
   for (const s of stages) {
     const key = s.stage_number || s.game_level || '?';
-    if (!byStage[key]) byStage[key] = { played: 0, cleared: 0, failed: 0, times: [], level: s.game_level, levels: [], mapScores: [], mapDetails: [], turns: [], goldPnl: 0, difficulty: s.difficulty || 0, bets: [], personas: new Set(), dates: [] };
+    if (!byStage[key]) byStage[key] = { played: 0, cleared: 0, failed: 0, times: [], level: s.game_level, levels: [], mapScores: [], mapDetails: [], turns: [], goldPnl: 0, difficulty: s.difficulty || 0, bets: [], personas: new Set(), dates: [], builds: new Set() };
     byStage[key].played++;
     if (s.result === 'clear') byStage[key].cleared++;
     else byStage[key].failed++;
@@ -6112,7 +6116,46 @@ function renderCatStages(gameId, stages) {
     byStage[key].goldPnl += d.gold_pnl || 0;
     byStage[key].bets.push(d.betting_multiplier || 1);
     if (s.difficulty) byStage[key].difficulty = s.difficulty;
+    if (s.run_id && runBuildMap[s.run_id]) byStage[key].builds.add(runBuildMap[s.run_id]);
   }
+
+  // ── 런별 티어 배열 ──
+  const byRun = {};
+  for (const s of stages) {
+    if (!s.run_id) continue;
+    if (!byRun[s.run_id]) {
+      const rm = runMeta[s.run_id] || {};
+      byRun[s.run_id] = { stages: [], persona: rm.persona || s.persona, date: rm.date || s.created_at, build: runBuildMap[s.run_id] || null };
+    }
+    byRun[s.run_id].stages.push(s);
+  }
+  for (const rd of Object.values(byRun)) rd.stages.sort((a,b) => (a.game_level||0) - (b.game_level||0));
+  const runEntries = Object.entries(byRun).sort(([,a],[,b]) => (b.date||'').localeCompare(a.date||''));
+  const tierArrayHtml = runEntries.length ? runEntries.map(([rid, rd]) => {
+    const pName = PERSONA_KO[rd.persona] || rd.persona || '-';
+    const pColor = PERSONA_COLORS[rd.persona] || '#999';
+    const dateStr = rd.date ? _fmtStageDate(rd.date) : '-';
+    const bld = rd.build || '-';
+    const blocks = rd.stages.map(s => {
+      const tier = s.difficulty || 0;
+      const color = tier === 4 ? '#ef4444' : tier === 3 ? '#f59e0b' : tier === 2 ? '#10b981' : '#94a3b8';
+      const tName = DIFF_TIERS[tier] || '?';
+      return `<div style="width:10px;height:16px;background:${color};border-radius:2px;flex-shrink:0" title="Lv${s.game_level||'?'} ${tName}"></div>`;
+    }).join('');
+    const tiers = rd.stages.reduce((acc, s) => { const t = s.difficulty||0; acc[t]=(acc[t]||0)+1; return acc; }, {});
+    const distStr = [4,3,2,1].filter(t=>tiers[t]).map(t => {
+      const c = t===4?'#ef4444':t===3?'#f59e0b':t===2?'#10b981':'#94a3b8';
+      return `<span style="color:${c}">${DIFF_TIERS[t]}${tiers[t]}</span>`;
+    }).join(' ');
+    return `<div style="display:flex;align-items:center;gap:8px;padding:3px 0">
+      <span style="min-width:72px;color:var(--text-muted);font-size:10px;flex-shrink:0">${dateStr}</span>
+      <span style="min-width:36px;color:${pColor};font-weight:600;flex-shrink:0;font-size:11px">${pName}</span>
+      <span style="min-width:32px;color:var(--text-muted);flex-shrink:0;font-size:10px">v${bld}</span>
+      <div style="display:flex;gap:1px;flex-shrink:0">${blocks}</div>
+      <span style="color:var(--text-muted);font-size:10px;white-space:nowrap">${rd.stages.length}판 ${distStr}</span>
+    </div>`;
+  }).join('') : '<div style="color:var(--text-muted);font-size:11px">런 데이터 없음</div>';
+
   const rows = Object.entries(byStage)
     .sort(([,a],[,b]) => (a.level||0) - (b.level||0))
     .map(([st, v], idx) => {
@@ -6154,7 +6197,8 @@ function renderCatStages(gameId, stages) {
       const latestDate = v.dates.length ? _fmtStageDate(v.dates.reduce((a,b) => a > b ? a : b)) : '-';
       const lvs = [...new Set(v.levels)].sort((a,b) => a-b);
       const lvStr = lvs.length === 0 ? '?' : lvs.length === 1 ? `Lv${lvs[0]}` : `Lv${lvs[0]}~${lvs[lvs.length-1]}`;
-      return `<tr style="cursor:pointer" data-personas="${personaList}" data-dates="${v.dates.map(d => d.slice(0,10)).join(',')}" onclick="var d=document.getElementById('${rowId}');d.style.display=d.style.display==='none'?'table-row':'none'">
+      const buildList = [...v.builds].join(',');
+      return `<tr style="cursor:pointer" data-personas="${personaList}" data-builds="${buildList}" data-dates="${v.dates.map(d => d.slice(0,10)).join(',')}" onclick="var d=document.getElementById('${rowId}');d.style.display=d.style.display==='none'?'table-row':'none'">
         <td style="color:var(--text-muted)">${idx + 1}</td><td>${st}</td><td>${lvStr}</td><td>${v.played}</td>
         <td style="color:#10b981">${v.cleared}</td>
         <td style="color:${v.failed ? '#ef4444' : 'var(--text-muted)'};font-weight:${v.failed ? '600' : 'normal'}">${v.failed}</td>
@@ -6205,6 +6249,10 @@ function renderCatStages(gameId, stages) {
   const diffOptions = [...new Set(Object.values(byStage).map(v => v.difficulty))].sort();
   const diffFilterOpts = diffOptions.map(d => `<option value="${d}">${DIFF_TIERS[d] || 'Tier '+d}</option>`).join('');
 
+  // 빌드 필터 옵션
+  const allBuilds = [...new Set(Object.values(byStage).flatMap(v => [...v.builds]))].filter(Boolean).sort();
+  const buildFilterOpts = allBuilds.map(b => `<option value="${b}">v${b}</option>`).join('');
+
   // 모드(페르소나) 필터 옵션
   const stgPersonas = [...new Set(stages.map(s => s.persona).filter(Boolean))].sort((a, b) =>
     (PERSONA_ORDER.indexOf(a)===-1?99:PERSONA_ORDER.indexOf(a)) - (PERSONA_ORDER.indexOf(b)===-1?99:PERSONA_ORDER.indexOf(b))
@@ -6213,13 +6261,20 @@ function renderCatStages(gameId, stages) {
 
   return `
     <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;padding:4px 8px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px">
-      색상 규칙 — 난이도: <span style="color:#10b981">노말</span> · <span style="color:#f59e0b">하드</span> · <span style="color:#ef4444">슈퍼하드</span>
+      색상 규칙 — 난이도: <span style="color:#94a3b8">튜토리얼</span> · <span style="color:#10b981">노말</span> · <span style="color:#f59e0b">하드</span> · <span style="color:#ef4444">슈퍼하드</span>
       &nbsp;|&nbsp; 맵스코어: <span style="color:#10b981">1~700</span> · <span style="color:#f59e0b">701~900</span> · <span style="color:#ef4444">901+</span>
       &nbsp;|&nbsp; 턴수: <span style="color:#10b981">&lt;40</span> · <span style="color:#f59e0b">40~50</span> · <span style="color:#ef4444">&gt;50</span>
       &nbsp;|&nbsp; 행 클릭 → 맵스코어 상세 펼침
     </div>
+    ${runEntries.length ? `<details style="margin-bottom:12px;border:1px solid var(--border);border-radius:6px;padding:8px 10px;background:var(--bg-card)">
+      <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--text-secondary)">런별 티어 분포 (${runEntries.length}런)</summary>
+      <div style="margin-top:6px;max-height:240px;overflow-y:auto">${tierArrayHtml}</div>
+    </details>` : ''}
     <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center;font-size:12px">
       <span style="color:var(--text-muted)">필터:</span>
+      ${allBuilds.length > 1 ? `<select id="stg-build-${gameId}" onchange="filterStages('${gameId}')" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-secondary);font-size:12px">
+        <option value="">전체 빌드</option>${buildFilterOpts}
+      </select>` : ''}
       <select id="stg-diff-${gameId}" onchange="filterStages('${gameId}')" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-secondary);font-size:12px">
         <option value="">전체 난이도</option>${diffFilterOpts}
       </select>
@@ -7028,6 +7083,7 @@ function filterStages(gameId) {
   const goldVal = document.getElementById(`stg-gold-${gameId}`)?.value || '';
   const msVal = document.getElementById(`stg-ms-${gameId}`)?.value || '';
   const turnsVal = document.getElementById(`stg-turns-${gameId}`)?.value || '';
+  const buildVal = document.getElementById(`stg-build-${gameId}`)?.value || '';
   const table = document.getElementById(`stg-table-${gameId}`);
   if (!table) return;
 
@@ -7041,6 +7097,11 @@ function filterStages(gameId) {
     const diffText = cells[11].textContent.trim();
 
     let show = true;
+    // 빌드 필터
+    if (buildVal) {
+      const rowBuilds = (row.getAttribute('data-builds') || '').split(',');
+      if (!rowBuilds.includes(buildVal)) show = false;
+    }
     // 난이도 필터
     if (diffVal && DIFF_TIERS[diffVal] !== diffText) show = false;
     // 골드 필터
@@ -7107,7 +7168,7 @@ function filterStagesCTZ(gameId) {
 }
 
 function resetStageFilters(gameId) {
-  ['diff', 'gold', 'ms', 'turns', 'bet', 'persona', 'tk', 'datefrom', 'dateto'].forEach(f => {
+  ['diff', 'gold', 'ms', 'turns', 'bet', 'persona', 'build', 'tk', 'datefrom', 'dateto'].forEach(f => {
     const el = document.getElementById(`stg-${f}-${gameId}`);
     if (el) el.value = '';
   });
@@ -9787,7 +9848,7 @@ function renderHeatmap() {
 (function() {
   'use strict';
 
-  const PERSONA_KR_EXEC = { all: '전체', auto: 'AI 선택', hardcore: '고수', average: '중수', casual: '하수', struggling: '초보' };
+  const PERSONA_KR_EXEC = { all: '전체', all5: '전체+AI', auto: 'AI 선택', hardcore: '고수', average: '중수', casual: '하수', struggling: '초보' };
   const STATUS_KR = { pending: '대기', running: '실행중', completed: '완료', failed: '실패', cancelled: '취소' };
 
   window._execCommandsCache = window._execCommandsCache || [];
