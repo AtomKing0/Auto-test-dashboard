@@ -7024,8 +7024,9 @@ function sortStageTable(gameId, colIdx, type) {
     const aText = a.querySelectorAll('td')[colIdx]?.textContent.trim() || '';
     const bText = b.querySelectorAll('td')[colIdx]?.textContent.trim() || '';
     if (type === 'num') {
-      const aNum = parseFloat(aText.replace(/[^0-9.\-]/g, '')) || 0;
-      const bNum = parseFloat(bText.replace(/[^0-9.\-]/g, '')) || 0;
+      // "Lv42~805" 같은 범위 표시는 첫 숫자(최소값) 기준으로 정렬 — 콤마 제거 후 첫 숫자 토큰만 추출
+      const aNum = parseFloat((aText.replace(/,/g, '').match(/-?\d+(\.\d+)?/) || ['0'])[0]);
+      const bNum = parseFloat((bText.replace(/,/g, '').match(/-?\d+(\.\d+)?/) || ['0'])[0]);
       return asc ? aNum - bNum : bNum - aNum;
     }
     return asc ? aText.localeCompare(bText) : bText.localeCompare(aText);
