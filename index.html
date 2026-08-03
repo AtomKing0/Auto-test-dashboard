@@ -92,6 +92,47 @@ a { color: #60a5fa; text-decoration: none; }
 }
 .ov-summary b { color: var(--text-primary); }
 
+/* ── 상황판 (Status Board) ── */
+.status-board { margin-bottom: 16px; }
+.sb-alerts {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-left: 3px solid var(--status-err); border-radius: var(--radius-lg);
+  margin-bottom: 10px; overflow: hidden;
+}
+.sb-alerts.all-clear { border-left-color: var(--status-ok); }
+.sb-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 14px; border-bottom: 1px solid var(--border-faint);
+  font-size: calc(12px * var(--fs-scale)); font-weight: 700; color: var(--text-primary);
+}
+.sb-head .sb-count { margin-left: auto; font-weight: 500; color: var(--text-muted); font-size: calc(11px * var(--fs-scale)); }
+.sb-row {
+  display: flex; align-items: center; gap: 10px; padding: 7px 14px;
+  font-size: calc(12px * var(--fs-scale)); cursor: pointer;
+  border-bottom: 1px solid var(--border-faint); transition: background .12s;
+}
+.sb-row:last-child { border-bottom: none; }
+.sb-row:hover { background: var(--bg-subtle); }
+.sb-sev { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.sb-sev.crit { background: var(--status-err); box-shadow: 0 0 0 3px rgba(239,68,68,.15); }
+.sb-sev.warn { background: var(--status-warn); box-shadow: 0 0 0 3px rgba(245,158,11,.15); }
+.sb-game { font-weight: 700; min-width: 38px; color: var(--text-primary); }
+.sb-msg { color: var(--text-secondary); flex: 1; min-width: 0; }
+.sb-meta { color: var(--text-muted); font-size: calc(11px * var(--fs-scale)); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.sb-empty { padding: 12px 14px; font-size: calc(12px * var(--fs-scale)); color: var(--status-ok); font-weight: 600; }
+
+.sb-lights { display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 8px; }
+.sb-light {
+  background: var(--bg-card); border: 1px solid var(--border); border-top: 2px solid var(--sbc, var(--text-muted));
+  border-radius: var(--radius-md); padding: 9px 11px; cursor: pointer; transition: border-color .12s, transform .12s;
+}
+.sb-light:hover { transform: translateY(-1px); border-color: var(--sbc, var(--text-muted)); }
+.sb-light-top { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+.sb-light-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sbc); flex-shrink: 0; }
+.sb-light-name { font-weight: 700; font-size: calc(13px * var(--fs-scale)); color: var(--text-primary); }
+.sb-light-cr { margin-left: auto; font-weight: 700; font-size: calc(12px * var(--fs-scale)); color: var(--sbc); font-variant-numeric: tabular-nums; }
+.sb-light-sub { font-size: calc(10px * var(--fs-scale)); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
 /* ── Cards ── */
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-bottom: 16px; }
 .game-card {
@@ -1349,6 +1390,7 @@ const DIFF_TIERS = { 1: '튜토리얼', 2: '노말', 3: '하드', 4: '슈퍼하�
 const DIFF_COLORS = { 1: '#10b981', 2: '#10b981', 3: '#f59e0b', 4: '#ef4444' };
 
 let _allRuns = [];
+let _healthChecks = [];
 let _nruRuns = [];
 let _nruSelectedRunId = null;
 let _nruCompareRunId = null;
@@ -1496,7 +1538,9 @@ function buildOverviewFromViews(overviewStats, personaStats, dailyTrend) {
     games[o.game_id] = {
       runs: Number(o.total_runs) || 0,
       levels: Number(o.total_levels) || 0,
+      cleared: Number(o.total_cleared) || 0,
       time: Number(o.total_time_sec) || 0,
+      lastDate: o.last_run_date || '',
       personas: {},
       dailyMap: {},
       issueCount: 0,
@@ -1507,6 +1551,7 @@ function buildOverviewFromViews(overviewStats, personaStats, dailyTrend) {
     if (!games[p.game_id]) continue;
     games[p.game_id].personas[p.persona] = {
       played: Number(p.levels_played) || 0,
+      cleared: Number(p.levels_cleared) || 0,
       runs: Number(p.runs) || 0,
       lastDate: p.last_run_date || '',
     };
@@ -1969,6 +2014,163 @@ function renderGuide() {
 
 /* ── 렌더링: 종합 탭 ── */
 
+/* ══════════════════════════════════════════════
+   상황판 — "지금 조치가 필요한 것"을 최상단에 노출
+   ══════════════════════════════════════════════ */
+
+// sev: 체크 항목 중요도(renderHealthCheck의 imp)와 동일 기준 — 필수/중요=crit, 관찰/참고=warn
+const SB_CHECK_NAMES = {
+  GAME_LOOP:      { name: '게임 루프',   sev: 'crit' },
+  GOLD_INTEGRITY: { name: '골드 정합성', sev: 'crit' },
+  MATCH3_VALID:   { name: '3매치 유효',  sev: 'crit' },
+  TIMEOUT:        { name: '타임아웃',    sev: 'crit' },
+  SECURITY:       { name: '보안 등급',   sev: 'crit' },
+  BETTING_UNLOCK: { name: '베팅 해금',   sev: 'crit' },
+  API_ERROR:      { name: 'API 에러',    sev: 'warn' },
+  PERF_HEAP:      { name: '메모리(힙)',  sev: 'warn' },
+  PERF_DOM:       { name: 'DOM 노드',    sev: 'warn' },
+  SLOTFULL:       { name: '슬롯풀',      sev: 'warn' },
+};
+const SB_DEPRECATED = new Set(['CLEAR_RATE', 'CONSECUTIVE_FAIL', 'STAGE_TIMEOUT']);
+const SB_METRIC_NAMES = { clear_rate: '클리어율', avg_time: '평균 시간', error_rate: '에러 발생률' };
+
+function _sbDaysSince(dateStr) {
+  if (!dateStr) return 999;
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d)) return 999;
+  return Math.floor((new Date().setHours(0,0,0,0) - d.setHours(0,0,0,0)) / 86400000);
+}
+
+function buildStatusItems(games) {
+  const items = [];
+
+  // 1) Health Check 실패 — 게임별 "최신 실행일"의 결과만 평가.
+  //    과거 실패가 이후 런에서 해결됐는데도 계속 뜨는 오탐을 막는다.
+  const latestDateByGame = {};
+  for (const c of (_healthChecks || [])) {
+    if (SB_DEPRECATED.has(c.check_id)) continue;
+    if (!latestDateByGame[c.game_id] || c.run_date > latestDateByGame[c.game_id]) {
+      latestDateByGame[c.game_id] = c.run_date;
+    }
+  }
+  const seenFail = new Set();
+  for (const c of (_healthChecks || [])) {
+    if (c.status !== 'FAIL' || SB_DEPRECATED.has(c.check_id)) continue;
+    if (c.run_date !== latestDateByGame[c.game_id]) continue;   // 최신 런이 아니면 스킵
+    const key = `${c.game_id}:${c.check_id}`;
+    if (seenFail.has(key)) continue;
+    seenFail.add(key);
+    const meta = SB_CHECK_NAMES[c.check_id] || { name: c.check_id, sev: 'warn' };
+    items.push({
+      sev: meta.sev, game: c.game_id, sort: meta.sev === 'crit' ? 1 : 4,
+      msg: `${meta.name} 실패`,
+      meta: (c.run_date || '').slice(5),
+      action: `switchTab('${c.game_id}')`,
+    });
+  }
+
+  // 2) 리그레션 — _allRuns가 백그라운드 로드되므로 없으면 스킵
+  if ((_allRuns || []).length) {
+    const { recent, previous } = splitByPeriod(_allRuns);
+    if (previous.length) {
+      for (const a of detectRegressions(calcPeriodMetrics(recent), calcPeriodMetrics(previous))) {
+        const nm = SB_METRIC_NAMES[a.metric] || a.metric;
+        const unit = a.metric === 'clear_rate' ? '%p' : '%';
+        const sign = a.delta > 0 ? '+' : '';
+        items.push({
+          sev: a.severity === 'critical' ? 'crit' : 'warn',
+          game: a.game_id, sort: a.severity === 'critical' ? 2 : 4,
+          msg: `${nm} 회귀 ${sign}${a.delta.toFixed(1)}${unit}`,
+          meta: '최근 7일',
+          action: `switchTrendTab('regression')`,
+        });
+      }
+    }
+  }
+
+  // 3) 미실행 경고 — 같은 일수는 한 줄로 묶어 노이즈를 줄인다
+  const staleByDays = {};
+  for (const [gid, g] of Object.entries(games)) {
+    const days = _sbDaysSince(g.lastDate);
+    if (days < 3) continue;
+    (staleByDays[days] = staleByDays[days] || []).push(gid);
+  }
+  for (const [daysStr, gids] of Object.entries(staleByDays)) {
+    const days = Number(daysStr);
+    const sev = days >= 7 ? 'crit' : 'warn';
+    const many = gids.length > 1;
+    const label = days >= 999 ? '실행 기록 없음' : `${days}일간 미실행`;
+    items.push({
+      sev, game: many ? `${gids.length}개` : gids[0],
+      sort: sev === 'crit' ? 3 : 5,
+      msg: many ? `${gids.join(' · ')} — ${label}` : label,
+      meta: days >= 999 ? '-' : `최근 ${games[gids[0]].lastDate.slice(5)}`,
+      action: `switchTab('${gids[0]}')`,
+    });
+  }
+
+  // 4) 클리어율 이상 (표본 10판 이상일 때만)
+  for (const [gid, g] of Object.entries(games)) {
+    if (g.levels < 10) continue;
+    const cr = g.cleared / g.levels * 100;
+    if (cr === 0) {
+      items.push({ sev: 'crit', game: gid, sort: 2, msg: `클리어율 0% (${g.levels}판) — 자동화 점검 필요`, meta: '누적', action: `switchTab('${gid}')` });
+    } else if (cr < 50) {
+      items.push({ sev: 'warn', game: gid, sort: 6, msg: `클리어율 ${cr.toFixed(0)}% (${g.levels}판)`, meta: '누적', action: `switchTab('${gid}')` });
+    }
+  }
+
+  return items.sort((a, b) => a.sort - b.sort || a.game.localeCompare(b.game));
+}
+
+function renderStatusBoard(games) {
+  const el = document.getElementById('status-board');
+  if (!el || !games) return;
+
+  const items = buildStatusItems(games);
+  const critN = items.filter(i => i.sev === 'crit').length;
+  const warnN = items.length - critN;
+
+  const alertsHtml = items.length
+    ? `<div class="sb-head">
+         <span>${critN ? '🔴' : '⚠️'}</span><span>조치 필요 ${items.length}건</span>
+         <span class="sb-count">${critN ? `위험 ${critN}` : ''}${critN && warnN ? ' · ' : ''}${warnN ? `주의 ${warnN}` : ''}</span>
+       </div>
+       ${items.map(i => `<div class="sb-row" onclick="${i.action}">
+         <span class="sb-sev ${i.sev}"></span>
+         <span class="sb-game">${i.game}</span>
+         <span class="sb-msg">${i.msg}</span>
+         <span class="sb-meta">${i.meta}</span>
+       </div>`).join('')}`
+    : `<div class="sb-empty">✅ 조치가 필요한 항목이 없습니다</div>`;
+
+  // 게임별 신호등 — 알림 목록과 동일 기준으로 판정
+  const sevByGame = {};
+  for (const i of items) {
+    if (sevByGame[i.game] !== 'crit') sevByGame[i.game] = i.sev;
+  }
+  const lightsHtml = Object.entries(games).sort(([a],[b]) => a.localeCompare(b)).map(([gid, g]) => {
+    const sev = sevByGame[gid];
+    const color = sev === 'crit' ? 'var(--status-err)' : sev === 'warn' ? 'var(--status-warn)' : 'var(--status-ok)';
+    const cr = g.levels ? (g.cleared / g.levels * 100) : 0;
+    const days = _sbDaysSince(g.lastDate);
+    const ago = days === 0 ? '오늘' : days >= 999 ? '기록 없음' : `${days}일 전`;
+    return `<div class="sb-light" style="--sbc:${color}" onclick="switchTab('${gid}')" title="${gid} 상세 보기">
+      <div class="sb-light-top">
+        <span class="sb-light-dot"></span>
+        <span class="sb-light-name">${gid}</span>
+        <span class="sb-light-cr">${g.levels ? cr.toFixed(0) + '%' : '-'}</span>
+      </div>
+      <div class="sb-light-sub">${g.runs}런 · ${ago}</div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="sb-alerts${items.length ? '' : ' all-clear'}">${alertsHtml}</div>
+    <div class="sb-lights">${lightsHtml}</div>
+  `;
+}
+
 function renderOverview(games) {
   const panel = document.getElementById('overview-panel');
   const totalLevels = Object.values(games).reduce((a, g) => a + g.levels, 0);
@@ -1996,6 +2198,7 @@ function renderOverview(games) {
 
   panel.innerHTML = `
     <div id="ov-filter-bar"></div>
+    <div id="status-board" class="status-board"></div>
     <div class="ov-summary" style="display:flex;align-items:center;flex-wrap:wrap;gap:8px">
       <div style="flex:1">
         <b>전체 현황</b> &nbsp;·&nbsp;
@@ -2022,6 +2225,7 @@ function renderOverview(games) {
   if (_allRuns.length) renderRunManager(_allRuns);
   renderDbUsage();
 
+  renderStatusBoard(games);
   renderDailyRunsChart(games);
   renderTrendAnalysis();
   renderOverviewFilterBar();
@@ -7823,7 +8027,9 @@ function subscribeRealtime() {
       async () => {
         try {
           const checks = await fetchHealthChecks();
+          _healthChecks = checks;
           renderHealthCheck(checks);
+          renderStatusBoard(_overviewGames);
         } catch (e) { console.warn('health_checks 갱신 실패:', e.message); }
       }
     )
@@ -7970,6 +8176,7 @@ async function init() {
 
     const games = buildOverviewFromViews(overviewStats, personaStats, dailyTrend);
     _overviewGames = games;
+    _healthChecks = healthChecks;   // 상황판이 참조하므로 renderOverview 이전에 저장
     renderOverview(games);
     renderHealthCheck(healthChecks);
     renderCronHistory(cron);
@@ -7999,6 +8206,7 @@ async function init() {
     _runsPromise = fetchRuns().then(runs => {
       _allRuns = runs;
       renderRunManager(runs);
+      renderStatusBoard(_overviewGames);   // 리그레션 항목은 _allRuns 로드 후 반영
       // 이슈 카운트 업데이트
       for (const r of runs) {
         const issues = ((r.metrics || {}).issues || []);
