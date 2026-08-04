@@ -4420,6 +4420,7 @@ const CATEGORY_RENDERERS = {
   // 공통
   summary: (gid, stages, runs) => renderCatSummary(gid, stages, runs),
   auto_rl: (gid, stages, runs) => renderCatAutoRL(gid, stages, runs),
+  shadow_chase: (gid, stages, runs) => renderCatShadowChase(gid, stages, runs),
   stages: (gid, stages, runs) => renderCatStages(gid, stages, runs),
   security: (gid, stages, runs) => renderCatSecurity(gid, runs),
   logapi: (gid, stages, runs) => renderCatLogApi(gid, runs),
@@ -4524,9 +4525,16 @@ function renderGameDetail(gameId, stages, runs) {
 
   // Auto(RL) 런이 있으면 summary 탭 바로 뒤에 탭 자동 삽입
   const hasAutoRuns = runs.some(r => r.selection_mode === 'auto');
-  const cats = hasAutoRuns && !baseCats.find(c => c.id === 'auto_rl')
+  let cats = hasAutoRuns && !baseCats.find(c => c.id === 'auto_rl')
     ? [baseCats[0], { id: 'auto_rl', label: '🤖 Auto (RL)' }, ...baseCats.slice(1)]
     : baseCats;
+
+  // 이벤트(그림자 냥이 추격전) 데이터가 있는 런이 있으면 탭 자동 삽입.
+  // 이벤트 미진행 시에는 탭 자체가 나타나지 않는다.
+  const hasShadowChase = runs.some(r => (r.metrics || {}).shadow_chase);
+  if (hasShadowChase && !cats.find(c => c.id === 'shadow_chase')) {
+    cats = [cats[0], { id: 'shadow_chase', label: '🐈‍⬛ 추격전' }, ...cats.slice(1)];
+  }
 
   const tabsHtml = cats.map((c, i) =>
     `<button class="cat-tab${i === 0 ? ' active' : ''}" onclick="switchCat('${gameId}','${c.id}',this)">${c.label}</button>`
@@ -6533,6 +6541,92 @@ function renderCatStages(gameId, stages, runs) {
         <th class="sortable" onclick="sortStageTable('${gameId}',13,'str')">최근 플레이</th>
       </tr></thead>
       <tbody>${rows}</tbody></table></div>
+  `;
+}
+
+/* ══════════════════════════════════════════════
+   카테고리: 이벤트 — 그림자 냥이 추격전 (spec-027)
+   15분 내 8판 완주 스프린트. metrics.shadow_chase 가 있는 런만 집계.
+   ══════════════════════════════════════════════ */
+function renderCatShadowChase(gameId, stages, runs) {
+  const cycles = (runs || [])
+    .map(r => ({ sc: (r.metrics || {}).shadow_chase, run: r }))
+    .filter(x => x.sc && typeof x.sc === 'object');
+
+  if (!cycles.length) {
+    return `<div class="state-msg"><div class="icon">🐈‍⬛</div><div>그림자 냥이 추격전 데이터가 없습니다</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:6px">이벤트 진행 중 프리플레이를 실행하면 자동 수집됩니다</div></div>`;
+  }
+
+  const done = cycles.filter(c => c.sc.completed);
+  const failed = cycles.filter(c => c.sc.failed);
+  const extended = cycles.filter(c => c.sc.extended);
+  const rate = cycles.length ? (done.length / cycles.length * 100) : 0;
+  const rateColor = rate >= 60 ? 'var(--status-ok)' : rate >= 30 ? 'var(--status-warn)' : 'var(--status-err)';
+  const avgCleared = cycles.reduce((a, c) => a + (c.sc.rounds_cleared || 0), 0) / cycles.length;
+  const target = cycles[0].sc.target_rounds || 8;
+  const windowSec = cycles[0].sc.window_sec || 900;
+  const remainList = done.map(c => c.sc.remain_sec_end).filter(v => v != null);
+  const avgRemain = remainList.length ? remainList.reduce((a, b) => a + b, 0) / remainList.length : null;
+
+  // 라운드별 소요시간 (완주율 튜닝 게이트용 — duration_sec/total_rounds 조정 근거)
+  const byRound = {};
+  for (const c of cycles) for (const r of (c.sc.rounds || [])) {
+    if (!r.idx) continue;
+    (byRound[r.idx] = byRound[r.idx] || []).push(r.elapsed_sec || 0);
+  }
+  const roundRows = Object.keys(byRound).map(Number).sort((a, b) => a - b).map(idx => {
+    const arr = byRound[idx];
+    const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
+    const pct = windowSec ? Math.min(100, avg / windowSec * 100) : 0;
+    return `<tr><td>${idx}판</td><td>${arr.length}</td>
+      <td style="font-variant-numeric:tabular-nums">${avg.toFixed(0)}초</td>
+      <td><div style="height:6px;width:${pct.toFixed(0)}%;min-width:2px;background:var(--accent);border-radius:3px"></div></td></tr>`;
+  }).join('');
+
+  const cycleRows = cycles.sort((a, b) => (b.run.run_date || '').localeCompare(a.run.run_date || '')).map(c => {
+    const s = c.sc;
+    const ok = s.completed;
+    const statusHtml = ok
+      ? '<span style="color:var(--status-ok);font-weight:600">완주</span>'
+      : s.failed ? '<span style="color:var(--status-err);font-weight:600">실패</span>'
+      : '<span style="color:var(--text-muted)">진행/미상</span>';
+    const pName = PERSONA_KO[c.run.persona] || c.run.persona || '-';
+    const pColor = PERSONA_COLORS[c.run.persona] || 'var(--text-muted)';
+    const prog = target ? (s.rounds_cleared || 0) / target * 100 : 0;
+    return `<tr>
+      <td style="color:var(--text-muted);font-size:11px">${(c.run.run_date || '').slice(5)}</td>
+      <td style="color:${pColor};font-weight:600">${pName}</td>
+      <td><div style="display:flex;align-items:center;gap:6px">
+        <div style="height:6px;width:${Math.round(prog * 0.5)}px;min-width:2px;background:${ok ? 'var(--status-ok)' : 'var(--status-warn)'};border-radius:3px"></div>
+        <span style="font-variant-numeric:tabular-nums">${s.rounds_cleared || 0}/${target}</span></div></td>
+      <td>${statusHtml}</td>
+      <td style="font-variant-numeric:tabular-nums">${s.remain_sec_end != null ? s.remain_sec_end + '초' : '-'}</td>
+      <td>${s.extended ? '<span style="color:var(--status-warn)">사용</span>' : '-'}</td>
+      <td style="color:var(--text-muted);font-size:11px">${s.chest_tier || '-'}</td>
+      <td style="color:var(--text-muted);font-size:10px">${s.cycle_id || '-'}</td>
+    </tr>`;
+  }).join('');
+
+  return `
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;padding:6px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px">
+      <b style="color:var(--text-secondary)">그림자 냥이 추격전</b> — ${Math.round(windowSec / 60)}분 내 ${target}판 완주 시 루나 체스트 획득.
+      계측 코드 5440~5449를 네트워크 로그에서 자동 수집합니다.
+    </div>
+    <div class="metric-row">
+      <div class="metric"><div class="metric-label">사이클</div><div class="metric-value">${cycles.length}</div></div>
+      <div class="metric"><div class="metric-label">완주율</div><div class="metric-value" style="color:${rateColor}">${rate.toFixed(0)}%</div></div>
+      <div class="metric"><div class="metric-label">평균 클리어</div><div class="metric-value">${avgCleared.toFixed(1)}/${target}</div></div>
+      <div class="metric"><div class="metric-label">완주 시 평균 잔여</div><div class="metric-value">${avgRemain != null ? avgRemain.toFixed(0) + '초' : '-'}</div></div>
+      <div class="metric"><div class="metric-label">RV 연장 사용</div><div class="metric-value">${extended.length}건</div></div>
+      <div class="metric"><div class="metric-label">실패</div><div class="metric-value" style="color:${failed.length ? 'var(--status-err)' : 'var(--text-muted)'}">${failed.length}</div></div>
+    </div>
+    ${roundRows ? `<div class="tbl-wrap"><h4>판별 평균 소요시간 (duration/total_rounds 튜닝 근거)</h4>
+      <table><thead><tr><th>판</th><th>표본</th><th>평균 소요</th><th>창 대비 비중</th></tr></thead>
+      <tbody>${roundRows}</tbody></table></div>` : ''}
+    <div class="tbl-wrap"><h4>사이클별 상세 (${cycles.length}건)</h4>
+      <table><thead><tr><th>날짜</th><th>모드</th><th>진행</th><th>결과</th><th>잔여</th><th>RV연장</th><th>체스트</th><th>cycle_id</th></tr></thead>
+      <tbody>${cycleRows}</tbody></table></div>
   `;
 }
 
