@@ -7825,13 +7825,49 @@ async function captureViewport() {
   finally { btn.textContent = orig; btn.disabled = false; }
 }
 
-function openSectionPicker() {
+const CAP_SECTION_SEL = '.metric-row, .persona-grid, .chart-grid, .tbl-wrap, .gold-flow, .check-grid, .perf-gauge, .ov-summary, .cards';
+/* NRU/게임비교/가이드/게임관리는 .game-detail 밖의 독립 시스템 페이지로 렌더링된다.
+   이 페이지들이 열려 있으면 그 컨테이너만 스캔해야 숨겨진 페이지 섹션이 섞이지 않는다. */
+const CAP_SYSTEM_PAGES = ['nru-system-section', 'cross-game-section', 'game-mgmt-section', 'guide-section'];
+
+function _capIsVisible(el) {
+  if (!el) return false;
+  const st = getComputedStyle(el);
+  if (st.display === 'none' || st.visibility === 'hidden') return false;
+  return el.getBoundingClientRect().height > 4;
+}
+
+function _capScanRoot() {
   const content = document.querySelector('.content');
-  const activePanel = content.querySelector('.game-detail.active') || content;
-  const activeCat = activePanel.querySelector('.cat-panel.active');
-  const scanRoot = activeCat || activePanel;
+  for (const id of CAP_SYSTEM_PAGES) {
+    const el = document.getElementById(id);
+    if (_capIsVisible(el)) return el;
+  }
+  const activePanel = content.querySelector('.game-detail.active')
+    || (_capIsVisible(document.getElementById('overview-panel')) ? document.getElementById('overview-panel') : null)
+    || content;
+  return activePanel.querySelector('.cat-panel.active') || activePanel;
+}
+
+/* 클래스 기반 셀렉터로 잡히지 않는 블록(NRU 상세 카드 등)까지 문서 순서대로 수집 */
+function _capCollectSections(root, out) {
+  for (const ch of root.children) {
+    if (ch.tagName === 'STYLE' || ch.tagName === 'SCRIPT') continue;
+    if (!_capIsVisible(ch)) continue;
+    if (ch.matches(CAP_SECTION_SEL)) { out.push(ch); continue; }
+    if (ch.querySelector(CAP_SECTION_SEL)) { _capCollectSections(ch, out); continue; }
+    /* 제목 + 실제 콘텐츠를 가진 카드 블록은 그 자체를 하나의 섹션으로 취급 */
+    if (ch.querySelector('h3, h4') && ch.querySelector('table, canvas, .metric-box')) { out.push(ch); continue; }
+    _capCollectSections(ch, out);
+  }
+}
+
+function openSectionPicker() {
+  const scanRoot = _capScanRoot();
+  const found = [];
+  _capCollectSections(scanRoot, found);
   const sections = [];
-  scanRoot.querySelectorAll('.metric-row, .persona-grid, .chart-grid, .tbl-wrap, .gold-flow, .check-grid, .perf-gauge, .ov-summary, .cards').forEach((el, i) => {
+  found.forEach((el, i) => {
     let label = _getSectionLabel(el);
     if (sections.some(s => s.label === label)) label += ` (${i + 1})`;
     sections.push({ el, label, idx: i });
@@ -7910,6 +7946,35 @@ function _cleanupCapPicker(overlay) {
   overlay.remove();
 }
 
+/* cloneNode는 canvas 비트맵을 복사하지 않으므로(차트가 빈 칸으로 캡처됨)
+   원본 canvas 픽셀을 <img>로 구워서 클론에 끼워넣는다. */
+function _inlineClonedCanvases(srcEl, cloneEl) {
+  const pick = el => (el.tagName === 'CANVAS' ? [el] : [...el.querySelectorAll('canvas')]);
+  const srcList = pick(srcEl);
+  const dstList = pick(cloneEl);
+  const pending = [];
+  srcList.forEach((src, i) => {
+    const dst = dstList[i];
+    if (!dst) return;
+    let dataUrl;
+    try { dataUrl = src.toDataURL('image/png'); } catch (e) { return; }  // tainted canvas는 그대로 둠
+    const rect = src.getBoundingClientRect();
+    const img = document.createElement('img');
+    img.src = dataUrl;
+    img.style.cssText = `display:block;max-width:none;width:${rect.width}px;height:${rect.height}px;`;
+    dst.replaceWith(img);
+    pending.push(img.decode ? img.decode().catch(() => {}) : Promise.resolve());
+  });
+  return pending;
+}
+
+/* overflow:auto 스크롤 영역(넓은 표)은 잘린 채 캡처되므로 실제 콘텐츠 폭을 구한다. */
+function _sectionFullWidth(el) {
+  let w = el.scrollWidth;
+  el.querySelectorAll('.tbl-wrap, .chart-grid, table').forEach(n => { w = Math.max(w, n.scrollWidth); });
+  return w;
+}
+
 async function execSectionCapture(overlay) {
   const sections = overlay._sections;
   const checked = [...overlay.querySelectorAll('.cap-sec-chk:checked')].map(c => +c.dataset.idx);
@@ -7918,23 +7983,39 @@ async function execSectionCapture(overlay) {
 
   const btn = document.getElementById('captureBtn');
   const orig = btn.textContent; btn.textContent = '⏳'; btn.disabled = true;
+  let tmp = null;
   try {
     const bgColor = getComputedStyle(document.body).getPropertyValue('background-color');
-    const tmp = document.createElement('div');
-    tmp.style.cssText = `position:absolute;left:-9999px;top:0;width:${document.querySelector('.content').offsetWidth}px;background:${bgColor};padding:16px;`;
+    const contentW = document.querySelector('.content').offsetWidth;
+    let needW = contentW;
+    for (const idx of checked) needW = Math.max(needW, _sectionFullWidth(sections.find(s => s.idx === idx).el) + 32);
+
+    tmp = document.createElement('div');
+    tmp.style.cssText = `position:absolute;left:-9999px;top:0;width:${needW}px;background:${bgColor};padding:16px;`;
     document.body.appendChild(tmp);
+
+    const decoding = [];
     for (const idx of checked) {
-      const clone = sections.find(s => s.idx === idx).el.cloneNode(true);
+      const src = sections.find(s => s.idx === idx).el;
+      const clone = src.cloneNode(true);
       clone.style.marginBottom = '12px';
+      decoding.push(..._inlineClonedCanvases(src, clone));
+      /* 스크롤 컨테이너를 펼쳐 전체 데이터가 보이도록 함 */
+      [clone, ...clone.querySelectorAll('.tbl-wrap, .chart-grid')].forEach(n => {
+        n.style.overflow = 'visible';
+        n.style.maxHeight = 'none';
+      });
       tmp.appendChild(clone);
     }
+    await Promise.all(decoding);
+
     const canvas = await html2canvas(tmp, {
       backgroundColor: bgColor, scale: 2, useCORS: true, logging: false,
+      width: needW, windowWidth: Math.max(needW, document.documentElement.clientWidth),
     });
-    tmp.remove();
     await _saveCapture(canvas, `${checked.length}sec`);
   } catch (e) { console.error('capture error', e); showToast('캡처 실패: ' + e.message); }
-  finally { btn.textContent = orig; btn.disabled = false; }
+  finally { if (tmp) tmp.remove(); btn.textContent = orig; btn.disabled = false; }
 }
 
 /* ── 브라우저 데스크톱 알림 ── */
@@ -8433,6 +8514,9 @@ function _getSectionLabel(el) {
   if (cls.includes('gold-flow')) return '골드 흐름';
   if (cls.includes('check-grid')) return '검증 체크';
   if (cls.includes('perf-gauge')) return '성능 게이지';
+  /* NRU 상세처럼 클래스 없이 인라인 스타일로 만든 카드 블록: 내부 제목을 라벨로 사용 */
+  const anyTitle = el.querySelector('h3, h4');
+  if (anyTitle && anyTitle.textContent.trim()) return anyTitle.textContent.trim().slice(0, 60);
   return el.tagName.toLowerCase();
 }
 
