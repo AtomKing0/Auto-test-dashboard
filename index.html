@@ -1334,11 +1334,11 @@ body.edit-mode .merge-btn { display: inline-block; }
       </div>
     </div>
 
-    <!-- ── Password Modal ── -->
+    <!-- ── Confirm Modal (v18: 실행 암호 제거 — 오클릭 방지용 확인 단계만 유지) ── -->
     <div class="exec-modal-overlay" id="exec-modal-overlay">
       <div class="exec-modal">
-        <h4>실행 암호 입력</h4>
-        <input type="password" class="exec-modal-input" id="exec-modal-pw" placeholder="암호를 입력하세요" autocomplete="off">
+        <h4 id="exec-modal-title">실행 확인</h4>
+        <div id="exec-modal-desc" style="font-size:12px;color:var(--text-muted);margin-bottom:10px"></div>
         <div class="exec-modal-error" id="exec-modal-error"></div>
         <div class="exec-modal-btns">
           <button class="exec-modal-cancel" onclick="closeExecModal()">취소</button>
@@ -10362,45 +10362,40 @@ function renderHeatmap() {
     return Array.from(document.querySelectorAll('#exec-game-grid .exec-game-btn.selected')).map(b => b.dataset.game);
   }
 
-  /* ── Password modal ── */
+  /* ── 실행 확인 모달 (v18: 암호 입력 제거) ── */
+  function openExecConfirm(mode, desc) {
+    const overlay = document.getElementById('exec-modal-overlay');
+    const errEl = document.getElementById('exec-modal-error');
+    const descEl = document.getElementById('exec-modal-desc');
+    const confirmBtn = document.getElementById('exec-modal-confirm');
+    errEl.textContent = '';
+    if (descEl) descEl.textContent = desc || '';
+    if (mode) overlay.dataset.mode = mode; else delete overlay.dataset.mode;
+    overlay.classList.add('open');
+    if (confirmBtn) { confirmBtn.disabled = false; setTimeout(() => confirmBtn.focus(), 100); }
+  }
+
   window.promptExecPassword = function() {
     const games = getSelectedGames();
     if (games.length === 0) {
       if (typeof showToast === 'function') showToast('게임을 1개 이상 선택하세요');
       return;
     }
-    const overlay = document.getElementById('exec-modal-overlay');
-    const pwInput = document.getElementById('exec-modal-pw');
-    const errEl = document.getElementById('exec-modal-error');
-    errEl.textContent = '';
-    pwInput.value = '';
-    delete overlay.dataset.mode;
-    overlay.classList.add('open');
-    setTimeout(() => pwInput.focus(), 100);
+    openExecConfirm(null, `${games.join(', ')} 실행을 요청합니다.`);
   };
 
   /* ── Deploy via command queue ── */
   window.promptDeployPassword = function() {
-    const overlay = document.getElementById('exec-modal-overlay');
-    const pwInput = document.getElementById('exec-modal-pw');
-    const errEl = document.getElementById('exec-modal-error');
-    errEl.textContent = '';
-    pwInput.value = '';
-    overlay.classList.add('open');
-    overlay.dataset.mode = 'deploy';
-    setTimeout(() => pwInput.focus(), 100);
+    openExecConfirm('deploy', 'GitHub Pages 대시보드 배포를 요청합니다.');
   };
 
   window.submitDeployCommand = async function() {
-    const password = document.getElementById('exec-modal-pw').value.trim();
     const errEl = document.getElementById('exec-modal-error');
     const confirmBtn = document.getElementById('exec-modal-confirm');
-    if (!password) { errEl.textContent = '암호를 입력하세요'; return; }
     confirmBtn.disabled = true;
     errEl.textContent = '';
     try {
       const { data, error } = await sb.rpc('submit_command', {
-        p_password: password,
         p_game: 'DASHBOARD',
         p_test_type: 'deploy',
         p_persona: 'all',
@@ -10432,21 +10427,20 @@ function renderHeatmap() {
     const overlay = document.getElementById('exec-modal-overlay');
     overlay.classList.remove('open');
     delete overlay.dataset.mode;
-    document.getElementById('exec-modal-pw').value = '';
     document.getElementById('exec-modal-error').textContent = '';
   };
 
-  /* Enter key in password field */
-  document.addEventListener('DOMContentLoaded', function() {
-    const pwInput = document.getElementById('exec-modal-pw');
-    if (pwInput) {
-      pwInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          const isDeploy = document.getElementById('exec-modal-overlay').dataset.mode === 'deploy';
-          isDeploy ? submitDeployCommand() : submitExecCommand();
-        }
-      });
+  /* 모달이 열려 있을 때 Enter=확인, Esc=취소 (암호 입력칸이 없어져 문서 레벨로 옮김) */
+  document.addEventListener('keydown', function(e) {
+    const overlay = document.getElementById('exec-modal-overlay');
+    if (!overlay || !overlay.classList.contains('open')) return;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const isDeploy = overlay.dataset.mode === 'deploy';
+      isDeploy ? submitDeployCommand() : submitExecCommand();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      closeExecModal();
     }
   });
 
@@ -10460,14 +10454,8 @@ function renderHeatmap() {
 
   /* ── Submit command via Supabase RPC ── */
   window.submitExecCommand = async function() {
-    const password = document.getElementById('exec-modal-pw').value.trim();
     const errEl = document.getElementById('exec-modal-error');
     const confirmBtn = document.getElementById('exec-modal-confirm');
-
-    if (!password) {
-      errEl.textContent = '암호를 입력하세요';
-      return;
-    }
 
     const games = getSelectedGames();
     const persona = document.getElementById('exec-persona').value;
@@ -10507,7 +10495,6 @@ function renderHeatmap() {
       for (const game of games) {
         for (const plat of platforms) {
           const rpcParams = {
-            p_password: password,
             p_game: game,
             p_persona: persona,
             p_levels: levels,
