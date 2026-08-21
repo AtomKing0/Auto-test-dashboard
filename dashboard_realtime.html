@@ -829,6 +829,81 @@ body.edit-mode .merge-btn { display: inline-block; }
   .guide-hc-grid { grid-template-columns: 1fr; }
 }
 
+/* ── Architecture Page ── */
+.arch-stack { display: flex; flex-direction: column; gap: 6px; margin: 16px 0; }
+.arch-layer {
+  display: flex; align-items: stretch; gap: 0;
+  border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden;
+  background: var(--bg-card);
+}
+.arch-layer-tag {
+  flex-shrink: 0; width: 116px; padding: 12px 10px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  border-right: 1px solid var(--border);
+  background: color-mix(in srgb, var(--al-color) 12%, transparent);
+}
+.arch-layer-tag .alt-icon { font-size: 20px; }
+.arch-layer-tag .alt-name { font-size: 11px; font-weight: 700; color: var(--al-color); text-align: center; line-height: 1.35; }
+.arch-layer-body { flex: 1; padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.arch-layer-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+.arch-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.arch-chip {
+  font-size: 10.5px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 2.5px 7px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--bg-subtle); color: var(--text-secondary);
+  white-space: nowrap;
+}
+.arch-chip.hi { border-color: var(--al-color); color: var(--al-color); background: color-mix(in srgb, var(--al-color) 10%, transparent); }
+.arch-stack-arrow { text-align: center; color: var(--text-muted); font-size: 13px; line-height: 1; margin: -2px 0; }
+
+.arch-steps { counter-reset: archstep; margin: 14px 0; }
+.arch-step {
+  position: relative; padding: 0 0 16px 40px; border-left: 2px solid var(--border); margin-left: 12px;
+}
+.arch-step:last-child { border-left-color: transparent; padding-bottom: 0; }
+.arch-step::before {
+  counter-increment: archstep; content: counter(archstep);
+  position: absolute; left: -13px; top: 0;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--bg-card); border: 2px solid var(--accent); color: var(--accent);
+  font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+}
+.arch-step .as-title { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 3px; padding-top: 3px; }
+.arch-step .as-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.7; }
+.arch-step .as-code {
+  display: inline-block; margin-top: 5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10.5px;
+  color: var(--text-muted); background: var(--border-faint);
+  border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 2px 7px;
+}
+.arch-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; }
+.arch-panel {
+  border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px;
+  background: var(--border-faint);
+}
+.arch-panel h4 { font-size: 12.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.arch-panel ul { padding-left: 18px; margin: 0; }
+.arch-panel li { font-size: 12px; color: var(--text-secondary); line-height: 1.7; }
+.arch-note {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 11px 14px; border-radius: var(--radius-md); margin-top: 12px;
+  background: rgba(239,68,68,.07); border: 1px solid rgba(239,68,68,.25);
+}
+.arch-note.ok { background: rgba(16,185,129,.07); border-color: rgba(16,185,129,.25); }
+.arch-note.warn { background: rgba(245,158,11,.07); border-color: rgba(245,158,11,.25); }
+.arch-note .an-icon { font-size: 15px; flex-shrink: 0; line-height: 1.5; }
+.arch-note .an-text { font-size: 12px; color: var(--text-secondary); line-height: 1.7; }
+.arch-note .an-text b { color: var(--text-primary); }
+.arch-code-path {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px;
+  color: var(--accent); white-space: nowrap;
+}
+@media (max-width: 640px) {
+  .arch-grid-2 { grid-template-columns: 1fr; }
+  .arch-layer { flex-direction: column; }
+  .arch-layer-tag { width: 100%; flex-direction: row; border-right: none; border-bottom: 1px solid var(--border); padding: 8px 12px; }
+}
+
 /* ── 기간 비교 입력 ── */
 .cmp-date-input {
   padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm);
@@ -1147,6 +1222,11 @@ body.edit-mode .merge-btn { display: inline-block; }
         <div class="sidebar-item" data-id="game-mgmt" onclick="sidebarSystemNav('game-mgmt')" id="sidebar-game-mgmt" title="게임 관리">
           <span class="sidebar-item-icon">🎮</span>
           <span class="sidebar-item-text">게임 관리</span>
+          <span class="drag-grip">⋮⋮</span>
+        </div>
+        <div class="sidebar-item" data-id="arch" onclick="sidebarSystemNav('arch')" id="sidebar-arch" title="자동화 아키텍처">
+          <span class="sidebar-item-icon">⚙️</span>
+          <span class="sidebar-item-text">아키텍처</span>
           <span class="drag-grip">⋮⋮</span>
         </div>
         <div class="sidebar-item" data-id="guide" onclick="sidebarSystemNav('guide')" id="sidebar-guide" title="가이드">
@@ -1736,6 +1816,343 @@ function _renderIssueSummaryContent(games) {
 }
 
 /* ── 렌더링: 가이드 ── */
+
+/* ══════════════════════════════════════════════
+   자동화 아키텍처 페이지
+   ══════════════════════════════════════════════ */
+
+const ARCH_LAYERS = [
+  {
+    color: '#6366f1', icon: '🚀', name: '실행 계층<br>Trigger',
+    desc: '수동 CLI · 크론 스케줄 · 대시보드 예약 3가지 경로가 모두 동일한 오케스트레이터로 수렴합니다. 페르소나 루프(4종)와 결과 저장·리포트까지 이 계층이 담당합니다.',
+    chips: [['games/common/orchestrator.py', 1], ['games/{GAME}/scripts/run_freeplay.py', 1], ['scripts/run.py', 0], ['src/command_watcher.py', 0]]
+  },
+  {
+    color: '#3b82f6', icon: '🌐', name: '브라우저 제어<br>Selenium + CDP',
+    desc: '게임별 고정 포트로 열린 Chrome에 <b>attach</b>하고, 없으면 새로 띄웁니다. 세션 유지가 목적이라 브라우저를 매번 새로 만들지 않습니다. 저수준 입력·계측은 Selenium을 우회해 CDP를 직접 호출합니다.',
+    chips: [['attach_driver(port)', 1], ['create_driver()', 1], ['debugger_address', 0], ['--remote-debugging-port', 0], ['execute_cdp_cmd()', 0]]
+  },
+  {
+    color: '#10b981', icon: '🎯', name: '게임 런타임<br>Cocos Creator',
+    desc: 'Facebook Gaming의 중첩 iframe 체인을 자동 탐색해 게임 JS 컨텍스트에 진입합니다. 픽셀 분석 대신 <b>cc 전역 객체</b>로 씬·노드·게임 상태를 직접 읽는 것이 이 자동화의 핵심입니다.',
+    chips: [['src/cc_runtime.py · CCRuntime', 1], ['enter_game_iframe()', 1], ['cc.director.getScene()', 0], ['src/cc_game_state.py', 0], ['src/game_scanner.py', 0]]
+  },
+  {
+    color: '#8b5cf6', icon: '🧠', name: '판단 계층<br>FSM + 페르소나',
+    desc: '읽어온 화면 상태를 보고 다음 액션을 결정하는 상태 머신입니다. 게임별 구현은 공통 ABC를 상속하고, 페르소나가 판단 속도·실수율·베팅 성향을 바꿉니다.',
+    chips: [['src/base_state_machine.py', 1], ['games/{GAME}/src/state_machine.py', 1], ['src/personas.py · PersonaRegistry', 0], ['src/rl_explorer.py', 0]]
+  },
+  {
+    color: '#f59e0b', icon: '📊', name: '계측·적재<br>Collect → DB',
+    desc: 'API 호출·콘솔 로그·메모리 메트릭을 플레이 중 수집해 JSON으로 떨어뜨리고, Supabase에 적재하면 이 대시보드가 실시간으로 받아갑니다.',
+    chips: [['src/network_logger.py', 1], ['src/perf_monitor.py', 1], ['analysis/supabase_loader.py', 0], ['analysis/supabase_client.py', 0]]
+  },
+];
+
+const ARCH_STEPS = [
+  { t: '트리거', d: '수동 CLI · 크론 · 대시보드 예약 중 하나로 시작합니다. 대시보드 예약은 Watcher 데몬이 Supabase <code>freeplay_commands</code> 테이블을 폴링해 서브프로세스로 실행합니다.', c: 'src/command_watcher.py' },
+  { t: '설정 로드', d: '공통 설정과 게임별 설정을 합치고 <code>${game}</code> 변수를 실제 게임 ID로 치환합니다. API 도메인 목록도 여기서 읽어 네트워크 로거에 넘깁니다.', c: 'load_config() / replace_vars() — src/common.py' },
+  { t: '포트 프로브 → attach', d: '게임에 할당된 고정 포트를 0.3초 소켓 프로브로 먼저 확인합니다. 열려 있으면 실행 중인 Chrome에 그대로 붙어 재로그인·재로딩을 건너뜁니다.', c: 'attach_driver(9222) — src/common.py' },
+  { t: '신규 브라우저 (attach 실패 시)', d: '포트에 남은 좀비 프로세스를 <b>해당 포트만</b> 골라 정리한 뒤, 원격 디버깅 포트와 게임별 고정 프로필로 Chrome을 새로 띄웁니다. 자동화 감지 플래그도 제거합니다.', c: 'create_driver(config, debug_port=...)' },
+  { t: '계정 검증 · 자동 재로그인', d: '프로필에 남은 세션이 그 게임의 테스트 계정인지 확인하고, 다르면 자동으로 다시 로그인합니다. 프로필을 지우면 reCAPTCHA가 걸리므로 리셋하지 않습니다.', c: 'verify_and_fix_account() — src/facebook.py' },
+  { t: '게임 진입 · 런타임 확보', d: 'Facebook Gaming 페이지로 이동한 뒤 중첩 iframe 체인을 탐색해 게임 JS 컨텍스트로 진입하고, CC 런타임 핸들을 만듭니다.', c: 'navigate_to_game() → init_cc_runtime()' },
+  { t: '페르소나 결정', d: '지정이 없으면 4종(하드코어·평균·캐주얼·입문)을 순차 실행합니다. 각 페르소나가 판단 지연·실수율·베팅 성향을 바꿔 서로 다른 플레이 패턴을 만듭니다.', c: 'PersonaRegistry.resolve() — src/personas.py' },
+  { t: 'FSM 루프 (판 단위)', d: '화면 판정 → 팝업 처리 → 레벨 진입 → 상태 읽기 → 액션 선택 → 클릭 → 결과 판정을 판 수만큼 반복합니다. 판단 근거는 전부 런타임에서 읽은 실제 게임 데이터입니다.', c: 'GameStateMachine.run(max_levels, max_time)' },
+  { t: '계측 수집 · 로비 복귀', d: '레벨 경계마다 메모리 스냅샷을 찍고, 종료 시 API 호출·콘솔 로그를 한 번에 수집합니다. 리소스를 정확히 집계하려면 반드시 로비까지 돌아온 뒤 종료합니다.', c: 'PerfMonitor.summary() / NetworkLogger.collect()' },
+  { t: 'JSON 저장 → Supabase → 대시보드', d: '판별 결과를 날짜·페르소나별 JSON으로 저장하고 Supabase에 적재하면, 이 대시보드가 별도 배포 없이 실시간으로 반영합니다.', c: 'analysis/supabase_loader.py' },
+];
+
+const ARCH_DIVISION = [
+  ['브라우저 세션 연결 / 생성', 'Selenium', '<code>debugger_address</code>로 기존 Chrome에 attach, 실패 시 <code>webdriver.Chrome</code>으로 신규 실행'],
+  ['iframe 컨텍스트 전환', 'Selenium', 'Facebook Gaming의 중첩 iframe 체인 진입 — <code>switch_to.frame()</code>'],
+  ['게임 상태 조회', 'Selenium → CDP', '<code>execute_script()</code>가 내부적으로 <code>Runtime.evaluate</code>로 전달됨. <code>cc</code> 런타임 직접 조회'],
+  ['캔버스 좌표 클릭', 'CDP 직접', '<code>Input.dispatchMouseEvent</code> — 실제 마우스 입력과 같은 경로'],
+  ['API · 콘솔 로그 수집', 'CDP 로그', '<code>goog:loggingPrefs</code>로 performance/browser 로그 활성화 후 Network·Console 이벤트 파싱'],
+  ['메모리 · 성능 메트릭', 'CDP 직접', '<code>Performance.getMetrics</code> + JS <code>performance.memory</code>'],
+  ['광고 도메인 차단', 'CDP 직접', '네트워크 레벨 차단 — FBInstant mock의 보조 레이어'],
+  ['AOS WebView 제어', 'CDP 단독', 'Selenium 없이 WebSocket 직결. <code>CDPDriver</code>가 WebDriver 인터페이스를 대신 제공'],
+];
+
+const ARCH_FILES = [
+  ['src/common.py', '포트 매핑 · 드라이버 생성/attach · 타임아웃 · 설정 로드'],
+  ['src/facebook.py', 'Facebook 로그인 · 계정 검증 · 세션 재사용 진입점'],
+  ['src/cc_runtime.py', 'CC 런타임 공통 인터페이스 — iframe 진입 + JS 실행'],
+  ['src/cc_game_state.py', '게임 상태 조회 · 캔버스 클릭 좌표 변환 · 버튼 이벤트 발화'],
+  ['src/cdp_adapter.py', 'AOS용 CDP WebSocket → WebDriver 호환 어댑터'],
+  ['src/base_state_machine.py', '게임 상태 머신 ABC + 공통 result 포맷'],
+  ['src/personas.py', '페르소나 레지스트리 (키·별칭 해석)'],
+  ['src/network_logger.py', 'API 호출 · 콘솔 로그 캡처 (도메인 필터)'],
+  ['src/perf_monitor.py', '레벨별 메모리 · CPU 스냅샷'],
+  ['src/game_scanner.py', '씬 · 노드 · 인터랙티브 요소 런타임 스캔'],
+  ['src/command_watcher.py', '대시보드 예약 커맨드 폴링 데몬'],
+  ['games/common/orchestrator.py', '공통 프리플레이 실행 흐름 + 게임 레지스트리'],
+  ['games/{GAME}/src/state_machine.py', '게임별 FSM 구현'],
+  ['analysis/supabase_loader.py', 'JSON 결과 → Supabase 적재'],
+];
+
+function renderArchitecture() {
+  const layers = ARCH_LAYERS.map((L, i) => `
+    <div class="arch-layer" style="--al-color:${L.color}">
+      <div class="arch-layer-tag">
+        <span class="alt-icon">${L.icon}</span>
+        <span class="alt-name">${L.name}</span>
+      </div>
+      <div class="arch-layer-body">
+        <div class="arch-layer-desc">${L.desc}</div>
+        <div class="arch-chips">${L.chips.map(([c, hi]) => `<span class="arch-chip${hi ? ' hi' : ''}">${c}</span>`).join('')}</div>
+      </div>
+    </div>
+    ${i < ARCH_LAYERS.length - 1 ? '<div class="arch-stack-arrow">▼</div>' : ''}
+  `).join('');
+
+  const steps = ARCH_STEPS.map(s => `
+    <div class="arch-step">
+      <div class="as-title">${s.t}</div>
+      <div class="as-desc">${s.d}</div>
+      <span class="as-code">${s.c}</span>
+    </div>
+  `).join('');
+
+  const division = ARCH_DIVISION.map(([task, who, why]) => {
+    const color = who.startsWith('CDP') ? 'var(--status-warn)' : who.includes('→') ? 'var(--accent)' : 'var(--status-ok)';
+    return `<tr><td><b>${task}</b></td><td style="color:${color};font-weight:600;white-space:nowrap">${who}</td><td>${why}</td></tr>`;
+  }).join('');
+
+  const ports = ['SCJ', 'CTZ', 'PBM', 'MJG', 'CM', 'MS'].map((g, i) => {
+    const pc = 9222 + i;
+    const color = GAME_COLORS[g] || 'var(--text-secondary)';
+    return `<tr><td style="color:${color};font-weight:700">${g}</td><td>${pc}</td><td>${pc + 10000}</td><td>${pc + 20000}</td></tr>`;
+  }).join('');
+
+  const files = ARCH_FILES.map(([p, d]) => `<tr><td><span class="arch-code-path">${p}</span></td><td>${d}</td></tr>`).join('');
+
+  return `<div class="guide-wrap">
+  <div class="guide-hero">
+    <h2>자동화 아키텍처</h2>
+    <p>Selenium WebDriver + Chrome DevTools Protocol로 Cocos Creator 게임을 실제 유저처럼 조작하는 QA 자동화의 설계와 실행 흐름입니다.</p>
+  </div>
+
+  <div class="guide-toc">
+    <h4>목차</h4>
+    <div class="guide-toc-grid">
+      <a href="javascript:void(0)" onclick="document.getElementById('a-stack').scrollIntoView({behavior:'smooth',block:'start'})">
+        <span class="toc-icon">🧱</span> 전체 구조 (5계층)</a>
+      <a href="javascript:void(0)" onclick="document.getElementById('a-flow').scrollIntoView({behavior:'smooth',block:'start'})">
+        <span class="toc-icon">🔄</span> 실행 흐름</a>
+      <a href="javascript:void(0)" onclick="document.getElementById('a-division').scrollIntoView({behavior:'smooth',block:'start'})">
+        <span class="toc-icon">⚖️</span> Selenium vs CDP</a>
+      <a href="javascript:void(0)" onclick="document.getElementById('a-click').scrollIntoView({behavior:'smooth',block:'start'})">
+        <span class="toc-icon">🖱</span> 클릭 방식 3종</a>
+      <a href="javascript:void(0)" onclick="document.getElementById('a-collect').scrollIntoView({behavior:'smooth',block:'start'})">
+        <span class="toc-icon">📡</span> 계측 파이프라인</a>
+      <a href="javascript:void(0)" onclick="document.getElementById('a-aos').scrollIntoView({behavior:'smooth',block:'start'})">
+        <span class="toc-icon">📱</span> AOS 실기기 경로</a>
+      <a href="javascript:void(0)" onclick="document.getElementById('a-rules').scrollIntoView({behavior:'smooth',block:'start'})">
+        <span class="toc-icon">🛡</span> 운영 규칙</a>
+      <a href="javascript:void(0)" onclick="document.getElementById('a-files').scrollIntoView({behavior:'smooth',block:'start'})">
+        <span class="toc-icon">📁</span> 코드 위치</a>
+    </div>
+  </div>
+
+  <!-- 1. 전체 구조 -->
+  <div class="guide-section-card" id="a-stack">
+    <h3><span class="gs-icon">🧱</span> 전체 구조 — 5계층</h3>
+    <p>아래로 갈수록 게임에 가까워집니다. 각 계층은 위 계층에 인터페이스만 노출하므로, 새 게임을 추가할 때 실제로 새로 쓰는 코드는 <b>판단 계층</b>과 게임별 설정뿐입니다.</p>
+    <div class="arch-stack">${layers}</div>
+    <div class="arch-note ok">
+      <span class="an-icon">💡</span>
+      <span class="an-text"><b>왜 픽셀 분석이 아닌가</b> — 대상 게임이 모두 Cocos Creator라서 <code>cc</code> 전역 객체로 씬·노드·카드 상태를 직접 읽을 수 있습니다. 스크린샷 매칭보다 훨씬 안정적이고, 해상도·연출 변화에 흔들리지 않습니다. 이미지 매칭은 AOS 등 런타임 접근이 막힌 경우의 보조 수단으로만 씁니다.</span>
+    </div>
+  </div>
+
+  <!-- 2. 실행 흐름 -->
+  <div class="guide-section-card" id="a-flow">
+    <h3><span class="gs-icon">🔄</span> 실행 흐름 — 트리거에서 대시보드까지</h3>
+    <div class="arch-steps">${steps}</div>
+  </div>
+
+  <!-- 3. Selenium vs CDP -->
+  <div class="guide-section-card" id="a-division">
+    <h3><span class="gs-icon">⚖️</span> Selenium과 CDP의 역할 분담</h3>
+    <p>Selenium은 <b>세션과 컨텍스트</b>를 다루고, CDP는 <b>입력과 계측</b>을 다룹니다. Selenium API로 안 되거나 우회가 필요한 지점에서만 CDP를 직접 호출합니다.</p>
+    <table class="guide-table">
+      <thead><tr><th>작업</th><th>사용</th><th>방식 · 근거</th></tr></thead>
+      <tbody>${division}</tbody>
+    </table>
+    <div class="arch-note warn">
+      <span class="an-icon">⏱</span>
+      <span class="an-text"><b>타임아웃은 필수 설정</b> — 스크립트 60초 / 페이지 로드 120초 상한을 걸지 않으면 <code>execute_script</code>가 무기한 대기합니다. 상태 머신의 <code>max_time</code> 검사는 루프 맨 앞이라 사이클 내부에서 막히면 검사 자체가 돌지 못합니다. 실제로 2026-08-13 새벽 배치에서 5개 게임이 8시간 56분 동안 멈춘 원인이었습니다.</span>
+    </div>
+  </div>
+
+  <!-- 4. 클릭 방식 -->
+  <div class="guide-section-card" id="a-click">
+    <h3><span class="gs-icon">🖱</span> 클릭 방식 3종</h3>
+    <p>대상과 환경에 따라 세 경로를 나눠 씁니다. 어느 쪽이든 <b>게임이 실제 입력으로 인식하는 경로</b>만 사용합니다.</p>
+    <div class="arch-grid-2">
+      <div class="arch-panel">
+        <h4>① <code>emitEvents</code> — 버튼 이벤트 발화</h4>
+        <ul>
+          <li>대상 노드의 <code>cc.Button</code> clickEvents를 직접 발화</li>
+          <li>연출 중 <b>BlockInput 레이어</b>가 입력을 막을 때도 통과</li>
+          <li>카드·로비 버튼·팝업 닫기에 주로 사용</li>
+        </ul>
+      </div>
+      <div class="arch-panel">
+        <h4>② CDP <code>Input.dispatchMouseEvent</code></h4>
+        <ul>
+          <li>iframe 체인의 rect를 <b>매번 실측</b>해 오프셋 계산</li>
+          <li>Cocos 디자인 좌표(1280×720) → 실제 뷰포트 좌표로 변환</li>
+          <li>브라우저 입력 스택을 그대로 타는 진짜 마우스 이벤트</li>
+        </ul>
+      </div>
+    </div>
+    <div class="arch-panel" style="margin-top:0">
+      <h4>③ <code>dispatchEvent</code> — 터치/마우스 이벤트 주입</h4>
+      <ul>
+        <li>AOS WebView처럼 Selenium ActionChains를 쓸 수 없는 환경용</li>
+        <li>캔버스에 <code>mousedown → mouseup → click</code> 또는 touch 시퀀스를 순서대로 전달</li>
+      </ul>
+    </div>
+    <div class="arch-note">
+      <span class="an-icon">🚫</span>
+      <span class="an-text"><b>절대 금지</b> — 게임 내부 클리어 함수를 직접 호출하는 방식은 쓰지 않습니다. 클리어율·플레이 시간·이벤트 로그가 모두 실제 유저 지표와 달라져 QA 결과 자체가 무의미해집니다. 콘솔 강제 클리어 도구는 <b>수동 테스트 전용</b>으로만 분리해 둡니다.</span>
+    </div>
+  </div>
+
+  <!-- 5. 계측 -->
+  <div class="guide-section-card" id="a-collect">
+    <h3><span class="gs-icon">📡</span> 계측 파이프라인</h3>
+    <div class="arch-grid-2">
+      <div class="arch-panel">
+        <h4>🌐 NetworkLogger</h4>
+        <ul>
+          <li>Chrome Performance Log + JS 인터셉트로 API 호출 캡처</li>
+          <li>이미지·폰트·스타일시트 등 리소스 타입은 제외</li>
+          <li>공통 로그 도메인 + 게임별 <code>api_domains</code>만 필터</li>
+          <li>수집 결과는 단일 런 보고서의 로그·API 탭에 그대로 실림</li>
+        </ul>
+      </div>
+      <div class="arch-panel">
+        <h4>⚡ PerfMonitor</h4>
+        <ul>
+          <li>CDP <code>Performance.getMetrics</code> + <code>performance.memory</code></li>
+          <li>레벨 시작·종료 시점에 스냅샷</li>
+          <li>판별 메모리 증가 추이로 누수 징후 판단</li>
+        </ul>
+      </div>
+      <div class="arch-panel">
+        <h4>🔍 GameScanner — 런타임 스캔</h4>
+        <ul>
+          <li>씬·노드·인터랙티브 요소를 자동 발견</li>
+          <li>미사용 노드, 예상 밖 서버 통신 확인용</li>
+          <li>새 게임 온보딩 시 구조 파악의 출발점</li>
+        </ul>
+      </div>
+      <div class="arch-panel">
+        <h4>🗄 적재 · 반영</h4>
+        <ul>
+          <li>날짜/페르소나별 JSON으로 결과 저장</li>
+          <li><code>supabase_loader</code>가 runs · stages · logs로 분해 적재</li>
+          <li>대시보드는 Supabase를 직접 조회 — <b>재배포 불필요</b></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. AOS -->
+  <div class="guide-section-card" id="a-aos">
+    <h3><span class="gs-icon">📱</span> AOS 실기기 경로</h3>
+    <p>PC는 Selenium이 Chrome을 잡지만, 안드로이드 앱 내 WebView는 WebDriver로 접근할 수 없습니다. 그래서 CDP WebSocket에 직접 붙고, 기존 코드가 그대로 돌아가도록 <b>WebDriver 흉내를 내는 어댑터</b>를 한 겹 넣었습니다.</p>
+    <div class="guide-flow">
+      <div class="guide-flow-step">
+        <span class="fs-icon">📱</span><span class="fs-label">실기기 WebView</span><span class="fs-sub">Facebook 앱 내부</span>
+      </div>
+      <span class="guide-flow-arrow">→</span>
+      <div class="guide-flow-step">
+        <span class="fs-icon">🔌</span><span class="fs-label">ADB 포트 포워딩</span><span class="fs-sub">adb forward</span>
+      </div>
+      <span class="guide-flow-arrow">→</span>
+      <div class="guide-flow-step">
+        <span class="fs-icon">🔗</span><span class="fs-label">CDP WebSocket</span><span class="fs-sub">Runtime.evaluate</span>
+      </div>
+      <span class="guide-flow-arrow">→</span>
+      <div class="guide-flow-step">
+        <span class="fs-icon">🎭</span><span class="fs-label">CDPDriver 어댑터</span><span class="fs-sub">WebDriver 호환</span>
+      </div>
+      <span class="guide-flow-arrow">→</span>
+      <div class="guide-flow-step">
+        <span class="fs-icon">♻️</span><span class="fs-label">기존 핸들러 재사용</span><span class="fs-sub">코드 수정 없음</span>
+      </div>
+    </div>
+    <table class="guide-table">
+      <thead><tr><th>기존 호출</th><th>AOS에서의 처리</th></tr></thead>
+      <tbody>
+        <tr><td><code>driver.execute_script()</code></td><td><code>Runtime.evaluate(contextId)</code>로 변환</td></tr>
+        <tr><td><code>switch_to.frame()</code></td><td>게임 iframe의 <code>contextId</code>로 전환</td></tr>
+        <tr><td><code>switch_to.default_content()</code></td><td>부모(Facebook) <code>contextId</code>로 복귀</td></tr>
+        <tr><td>ActionChains 클릭</td><td>캔버스에 mouse 이벤트 직접 주입</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:12px;color:var(--text-muted);margin-top:8px">여러 기기는 프로세스 단위로 병렬 실행하고, 테스트 계정은 시트에서 할당·반납해 충돌을 막습니다.</p>
+  </div>
+
+  <!-- 7. 운영 규칙 -->
+  <div class="guide-section-card" id="a-rules">
+    <h3><span class="gs-icon">🛡</span> 운영 규칙</h3>
+    <p><b>포트 배정</b> — 게임마다 브라우저를 독립시켜 동시 실행이 서로를 건드리지 않게 합니다. 용도별로 +10000 오프셋을 둡니다.</p>
+    <table class="guide-table">
+      <thead><tr><th>게임</th><th>PC</th><th>BVT</th><th>AOS</th></tr></thead>
+      <tbody>${ports}</tbody>
+    </table>
+    <div class="arch-grid-2" style="margin-top:16px">
+      <div class="arch-panel">
+        <h4>👤 프로필 정책</h4>
+        <ul>
+          <li>게임별 고정 프로필: <code>~/.auto-test/chrome-profiles/{GAME}</code></li>
+          <li>브라우저를 재시작해도 로그인 세션 유지</li>
+          <li>BVT/NRU는 전용 계정이라 프로필 분리</li>
+          <li><b>삭제·리셋 금지</b> — reCAPTCHA가 발동됩니다</li>
+        </ul>
+      </div>
+      <div class="arch-panel">
+        <h4>🧹 프로세스 정리</h4>
+        <ul>
+          <li>포트로 필터한 <code>chromedriver</code>만 종료</li>
+          <li><b><code>pkill Chrome</code> 금지</b> — 다른 게임의 실행 중인 세션까지 죽습니다</li>
+          <li>attach 실패 시 해당 포트의 좀비 프로세스만 정리</li>
+        </ul>
+      </div>
+      <div class="arch-panel">
+        <h4>🏁 종료 정책</h4>
+        <ul>
+          <li>항상 <b>로비까지 이동한 뒤</b> 종료 — 리소스를 정확히 수집하기 위함</li>
+          <li>수동 실행: 브라우저 유지 (다음 런이 attach로 재사용)</li>
+          <li>크론 실행: <code>--close-browser</code>로 종료</li>
+        </ul>
+      </div>
+      <div class="arch-panel">
+        <h4>🎭 실행 기본값</h4>
+        <ul>
+          <li>페르소나 미지정 시 <b>4종 전체</b> 순차 실행</li>
+          <li>베팅은 항상 자동 모드 포함</li>
+          <li>새 게임 추가 시 <code>project.yaml</code>에 <code>api_domains</code> 필수 — 없으면 네트워크 로그가 비어 있습니다</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. 코드 위치 -->
+  <div class="guide-section-card" id="a-files">
+    <h3><span class="gs-icon">📁</span> 코드 위치</h3>
+    <p>공통 로직은 <code>src/</code>, 게임 전용 로직은 <code>games/{GAME}/src/</code>에 둡니다. 같은 역할의 파일은 게임마다 같은 이름을 씁니다.</p>
+    <table class="guide-table">
+      <thead><tr><th style="width:38%">경로</th><th>역할</th></tr></thead>
+      <tbody>${files}</tbody>
+    </table>
+  </div>
+</div>`;
+}
 
 function renderGuide() {
   return `<div class="guide-wrap">
@@ -3110,7 +3527,9 @@ async function switchTab(id, _btn) {
   if (cgHide) cgHide.style.display = 'none';
   const nruHide = document.getElementById('nru-system-section');
   if (nruHide) nruHide.style.display = 'none';
-  ['sidebar-cross-game','sidebar-health','sidebar-cron','sidebar-runs','sidebar-nru','sidebar-guide'].forEach(sid => {
+  const archHide = document.getElementById('arch-section');
+  if (archHide) archHide.style.display = 'none';
+  ['sidebar-cross-game','sidebar-health','sidebar-cron','sidebar-runs','sidebar-nru','sidebar-guide','sidebar-arch'].forEach(sid => {
     document.getElementById(sid)?.classList.remove('active');
   });
 
@@ -7835,7 +8254,7 @@ async function captureViewport() {
 const CAP_SECTION_SEL = '.metric-row, .persona-grid, .chart-grid, .tbl-wrap, .gold-flow, .check-grid, .perf-gauge, .ov-summary, .cards';
 /* NRU/게임비교/가이드/게임관리는 .game-detail 밖의 독립 시스템 페이지로 렌더링된다.
    이 페이지들이 열려 있으면 그 컨테이너만 스캔해야 숨겨진 페이지 섹션이 섞이지 않는다. */
-const CAP_SYSTEM_PAGES = ['nru-system-section', 'cross-game-section', 'game-mgmt-section', 'guide-section'];
+const CAP_SYSTEM_PAGES = ['nru-system-section', 'cross-game-section', 'game-mgmt-section', 'guide-section', 'arch-section'];
 
 function _capIsVisible(el) {
   if (!el) return false;
@@ -8677,15 +9096,46 @@ function restoreSidebar() {
 }
 
 function sidebarSystemNav(target) {
-  const SYSTEM_TITLES = { 'cross-game': '게임 비교', health: 'Health Check', cron: '정기 반복', runs: '런 관리', nru: 'NRU 현황', guide: '가이드', 'game-mgmt': '게임 관리' };
-  const sectionMap = { 'cross-game': 'cross-game-section', health: 'health-check-section', cron: 'cron-section', runs: 'run-manager', nru: 'nru-system-section', guide: 'guide-section', 'game-mgmt': 'game-mgmt-section' };
+  const SYSTEM_TITLES = { 'cross-game': '게임 비교', health: 'Health Check', cron: '정기 반복', runs: '런 관리', nru: 'NRU 현황', guide: '가이드', 'game-mgmt': '게임 관리', arch: '자동화 아키텍처' };
+  const sectionMap = { 'cross-game': 'cross-game-section', health: 'health-check-section', cron: 'cron-section', runs: 'run-manager', nru: 'nru-system-section', guide: 'guide-section', 'game-mgmt': 'game-mgmt-section', arch: 'arch-section' };
 
   // 모든 사이드바 active 초기화 (게임 + 시스템)
   document.querySelectorAll('#sidebar-games .sidebar-item').forEach(b => b.classList.remove('active'));
-  ['sidebar-cross-game','sidebar-health','sidebar-cron','sidebar-runs','sidebar-nru','sidebar-guide','sidebar-game-mgmt'].forEach(id => {
+  ['sidebar-cross-game','sidebar-health','sidebar-cron','sidebar-runs','sidebar-nru','sidebar-guide','sidebar-game-mgmt','sidebar-arch'].forEach(id => {
     document.getElementById(id)?.classList.remove('active');
   });
   document.getElementById(`sidebar-${target}`)?.classList.add('active');
+
+  // 자동화 아키텍처 페이지 (정적 콘텐츠 — 데이터 의존 없음)
+  if (target === 'arch') {
+    const overview = document.getElementById('overview-panel');
+    const panels = document.getElementById('game-panels');
+    if (overview) overview.style.display = 'none';
+    if (panels) panels.innerHTML = '';
+    _currentGameId = '';
+    _renderedCats = {};
+    const titleEl = document.getElementById('page-title');
+    if (titleEl) titleEl.textContent = '자동화 아키텍처';
+    ['guide-section','cross-game-section','nru-system-section','game-mgmt-section'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+    const content = document.querySelector('.content');
+    let archEl = document.getElementById('arch-section');
+    if (!archEl) {
+      archEl = document.createElement('div');
+      archEl.id = 'arch-section';
+      content.appendChild(archEl);
+    }
+    archEl.style.display = 'block';
+    archEl.innerHTML = renderArchitecture();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    _updateUrlHash(); _saveLastTab();
+    return;
+  }
+  // 아키텍처 숨기기
+  const archHideEl = document.getElementById('arch-section');
+  if (archHideEl) archHideEl.style.display = 'none';
 
   // 게임 비교 페이지
   if (target === 'cross-game') {
@@ -9572,7 +10022,7 @@ async function _restoreFromHash() {
   // 탭 복원
   if (params.tab) {
     const tabId = params.tab;
-    const sysIds = ['cross-game', 'health', 'cron', 'runs', 'nru', 'guide'];
+    const sysIds = ['cross-game', 'health', 'cron', 'runs', 'nru', 'guide', 'game-mgmt', 'arch'];
     if (tabId === 'overview') {
       await switchTab('overview', null);
     } else if (sysIds.includes(tabId)) {
