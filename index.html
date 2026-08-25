@@ -11387,8 +11387,7 @@ window.renderExecGameButtons = function() {
   grid.innerHTML = configs.map(g => {
     const id = g.game_id || g.id || '';
     const color = GAME_COLORS[id] || '#3b82f6';
-    return `<button class="exec-game-btn" data-game="${id}" style="--exec-gc:${color}" onclick="toggleExecGame(this)">${id}</button>
-            <button class="exec-game-btn" data-game="MS" style="--exec-gc:#00BCD4" onclick="toggleExecGame(this)">MS</button>`;
+    return `<button class="exec-game-btn" data-game="${id}" style="--exec-gc:${color}" onclick="toggleExecGame(this)">${id}</button>`;
   }).join('');
 };
 
