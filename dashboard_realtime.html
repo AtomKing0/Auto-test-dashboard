@@ -3463,9 +3463,9 @@ function renderCronHistory(cron) {
 
 /* ── 게임 탭 (사이드바 메뉴) ── */
 
-const GAME_ICONS = { SCJ: '🃏', CTZ: '🧩', PBM: '🧱', MJG: '🀄', CM: '🎮' , MS: '🀄'};
-const GAME_NAMES = { SCJ: 'Solitaire City', CTZ: 'Cozy Tiles', PBM: 'Block Blast', MJG: 'Mahjong World Tour', CM: 'Coin Match' , MS: 'MS'};
-const GAME_COLORS = { SCJ: '#3b82f6', CTZ: '#10b981', PBM: '#f59e0b', MJG: '#8b5cf6', CM: '#F44336', G6: '#06b6d4', G7: '#ec4899', G8: '#84cc16', G9: '#f97316', G10: '#6366f1' , MS: '#00BCD4'};
+const GAME_ICONS = { SCJ: '🃏', CTZ: '🧩', PBM: '🧱', MJG: '🀄', CM: '🎮' };
+const GAME_NAMES = { SCJ: 'Solitaire City', CTZ: 'Cozy Tiles', PBM: 'Block Blast', MJG: 'Mahjong World Tour', CM: 'Coin Match' };
+const GAME_COLORS = { SCJ: '#3b82f6', CTZ: '#10b981', PBM: '#f59e0b', MJG: '#8b5cf6', CM: '#F44336', G6: '#06b6d4', G7: '#ec4899', G8: '#84cc16', G9: '#f97316', G10: '#6366f1' };
 
 function renderGameTabs(gameIds) {
   const container = document.getElementById('sidebar-games');
@@ -4940,16 +4940,6 @@ const DEFAULT_CATS = {
     { id: 'security', label: '🔒 보안' },
     { id: 'logapi',   label: '📋 로그&API' },
     { id: 'perf',     label: '⚡ 성능' },
-  ],
-  MS: [
-    { id: 'summary', label: '📊 요약' },
-    { id: 'tiles', label: '🀄 타일' },
-    { id: 'items', label: '🎒 아이템' },
-    { id: 'time_analysis', label: '⏱️ 시간' },
-    { id: 'stages', label: '🗺️ 스테이지' },
-    { id: 'security', label: '🔒 보안' },
-    { id: 'logapi', label: '📋 로그&API' },
-    { id: 'perf', label: '⚡ 성능' },
   ],
 };
 
@@ -11383,7 +11373,7 @@ window.renderExecGameButtons = function() {
   if (!grid) return;
   const configs = (_gameConfigs && _gameConfigs.length)
     ? _gameConfigs
-    : [{game_id:'SCJ'},{game_id:'CTZ'},{game_id:'PBM'},{game_id:'MJG'},{game_id:'CM'},{game_id:'MS'}];
+    : [{game_id:'SCJ'},{game_id:'CTZ'},{game_id:'PBM'},{game_id:'MJG'},{game_id:'CM'}];
   grid.innerHTML = configs.map(g => {
     const id = g.game_id || g.id || '';
     const color = GAME_COLORS[id] || '#3b82f6';
@@ -11432,8 +11422,7 @@ function renderGameMgmt() {
     { id: 'PBM', name: 'Block Blast',             icon: '🧱', color: '#f59e0b', port: 9224, status: 'active' },
     { id: 'MJG', name: 'Mahjong World Tour',      icon: '🀄', color: '#8b5cf6', port: 9225, status: 'active' },
     { id: 'CM',  name: 'Coin Match',              icon: '🎮', color: '#F44336', port: 9226, status: 'active' },
-  
-    { id: 'MS', name: 'MS', icon: '🀄', color: '#00BCD4', port: 9227, status: 'active' },];
+  ];
   const REGISTERED = (_gameConfigs && _gameConfigs.length)
     ? _gameConfigs.map(g => ({
         id:     g.game_id,
